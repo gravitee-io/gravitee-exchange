@@ -1,3 +1,42 @@
-= Command-Reply Exchange Framework
+= Gravitee.io - Command-Reply Exchange Framework
 
-This repository contains all code related to the command-reply exchange framework.
+== Description
+The command-reply exchange framework offers a generic mechanism to exchange commands and replies between two components called Controller and Connectors.
+
+== Overview
+=== Connector
+A connector is identified by its id and its target-id. In order to scale connectors, connectors can be attached to the same target-id. The connector is managed by a controller.
+A Connector allows to send command to the controller.
+
+=== Controller
+A controller is the component where connectors can connect to. It will manage connectors life-cycle based health check, and primary election. Controllers work in cluster based on ClusterManager service offered by https://github.com/gravitee-io/gravitee-node/tree/master/gravitee-node-cluster[gravitee-node].
+A controller allows to send commands and batches to a connector via its target-id.
+
+=== Channel
+A channel is a way to exchange commands and replies between a connector and a controller. There is always a connector view and a controller view of the same channel. A channel can be embedded when both controller and connectors run on the same JVM or could represent a network when they are remote.
+
+=== Commands
+A command is a json payload send to a channel. For any commands a reply is expected.
+
+=== Workflow
+Bellow you could find advanced details on different connector<>controller workflows.
+
+==== Registration
+This is the first required step to allow connectors and controllers to exchange commands. The diagram bellow describes how a connector establishes the connection and how the controller registers it.
+
+image::docs/registration.png[width=980]
+
+==== Primary channel election
+The primary channel election is used in order to avoid cluster management on the connectors side. A channel get notified it is primary thanks to a specific command. Then, it can e.g. start a scheduled process to send the controller some specific commands. Note that primary and secondary channels can still be used to send and receive commands and replies, this mechanism exists so that a connector bound to the primary channel is responsible to send commands that no other connector is allowed to send.
+
+image::docs/primary-channel-election.png[width=1167]
+
+==== Sending command
+A command is the way to communicate between a connector and a controller. The schema bellow explain the various steps its processing involves.
+
+image::docs/sending-command.png[width=1125]
+
+==== Health check mechanism
+The purpose of health check is to verify that the connector is still properly working and able to receive commands, at network level and also at the business logic level. The connector can do business check to ensure it can react on any commands.
+
+image::docs/health-check.png[width=1125]
