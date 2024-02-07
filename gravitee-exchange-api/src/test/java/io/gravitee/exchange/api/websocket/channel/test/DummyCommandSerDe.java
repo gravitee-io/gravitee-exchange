@@ -17,26 +17,11 @@ package io.gravitee.exchange.api.websocket.channel.test;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.gravitee.exchange.api.websocket.command.DefaultExchangeSerDe;
-import java.util.HashMap;
 import java.util.Map;
 
 public class DummyCommandSerDe extends DefaultExchangeSerDe {
 
     public DummyCommandSerDe(final ObjectMapper objectMapper) {
-        super(objectMapper);
-    }
-
-    @Override
-    protected Map<String, Class<?>> commandTypes() {
-        Map<String, Class<?>> commandType = new HashMap<>(DEFAULT_COMMAND_TYPE);
-        commandType.put(DummyCommand.COMMAND_TYPE, DummyCommand.class);
-        return commandType;
-    }
-
-    @Override
-    protected Map<String, Class<?>> replyTypes() {
-        Map<String, Class<?>> replyType = new HashMap<>(DEFAULT_REPLY_TYPE);
-        replyType.put(DummyCommand.COMMAND_TYPE, DummyReply.class);
-        return replyType;
+        super(objectMapper, Map.of(DummyCommand.COMMAND_TYPE, DummyCommand.class), Map.of(DummyCommand.COMMAND_TYPE, DummyReply.class));
     }
 }
