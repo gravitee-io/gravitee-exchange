@@ -26,8 +26,10 @@ import io.gravitee.exchange.controller.websocket.auth.WebSocketControllerAuthent
 import io.gravitee.exchange.controller.websocket.server.WebSocketControllerServerConfiguration;
 import io.gravitee.exchange.controller.websocket.server.WebSocketControllerServerVerticle;
 import io.gravitee.node.api.cache.CacheManager;
+import io.gravitee.node.api.certificate.KeyStoreLoaderFactoryRegistry;
+import io.gravitee.node.api.certificate.KeyStoreLoaderOptions;
+import io.gravitee.node.api.certificate.TrustStoreLoaderOptions;
 import io.gravitee.node.api.cluster.ClusterManager;
-import io.gravitee.node.certificates.KeyStoreLoaderManager;
 import io.gravitee.node.vertx.server.http.VertxHttpServer;
 import io.gravitee.node.vertx.server.http.VertxHttpServerFactory;
 import io.gravitee.node.vertx.server.http.VertxHttpServerOptions;
@@ -49,7 +51,8 @@ public class WebSocketExchangeController extends DefaultExchangeController imple
     private static final String VERTICLE_INSTANCE = "controller.ws.instances";
 
     private final Vertx vertx;
-    private final KeyStoreLoaderManager keyStoreLoaderManager;
+    private final KeyStoreLoaderFactoryRegistry<KeyStoreLoaderOptions> keyStoreLoaderFactoryRegistry;
+    private final KeyStoreLoaderFactoryRegistry<TrustStoreLoaderOptions> trustStoreLoaderFactoryRegistry;
     private final WebSocketControllerServerConfiguration serverConfiguration;
     private final WebSocketControllerAuthentication<?> controllerAuthentication;
     private final ControllerCommandHandlersFactory controllerCommandHandlersFactory;
@@ -64,7 +67,8 @@ public class WebSocketExchangeController extends DefaultExchangeController imple
         final ClusterManager clusterManager,
         final CacheManager cacheManager,
         final Vertx vertx,
-        final KeyStoreLoaderManager keyStoreLoaderManager,
+        final KeyStoreLoaderFactoryRegistry<KeyStoreLoaderOptions> keyStoreLoaderFactoryRegistry,
+        final KeyStoreLoaderFactoryRegistry<TrustStoreLoaderOptions> trustStoreLoaderFactoryRegistry,
         final WebSocketControllerAuthentication<?> controllerAuthentication,
         final ControllerCommandHandlersFactory controllerCommandHandlersFactory,
         final ExchangeSerDe exchangeSerDe,
@@ -72,8 +76,9 @@ public class WebSocketExchangeController extends DefaultExchangeController imple
     ) {
         super(prefixConfiguration, controllerClusterManager, clusterManager, cacheManager);
         this.vertx = vertx;
-        this.keyStoreLoaderManager = keyStoreLoaderManager;
         this.serverConfiguration = new WebSocketControllerServerConfiguration(prefixConfiguration);
+        this.keyStoreLoaderFactoryRegistry = keyStoreLoaderFactoryRegistry;
+        this.trustStoreLoaderFactoryRegistry = trustStoreLoaderFactoryRegistry;
         this.controllerAuthentication = controllerAuthentication;
         this.controllerCommandHandlersFactory = controllerCommandHandlersFactory;
         this.commandSerDe = exchangeSerDe;
@@ -92,7 +97,11 @@ public class WebSocketExchangeController extends DefaultExchangeController imple
         log.info("Starting Exchange Controller Websocket [{} instance(s)]", verticleInstances);
 
         DeploymentOptions options = new DeploymentOptions().setInstances(verticleInstances);
-        VertxHttpServerFactory vertxHttpServerFactory = new VertxHttpServerFactory(vertx);
+        VertxHttpServerFactory vertxHttpServerFactory = new VertxHttpServerFactory(
+            vertx,
+            keyStoreLoaderFactoryRegistry,
+            trustStoreLoaderFactoryRegistry
+        );
         VertxHttpServerOptions vertxHttpServerOptions = createVertxHttpServerOptions();
         WebSocketRequestHandler webSocketRequestHandler = new WebSocketRequestHandler(
             vertx,
@@ -124,7 +133,6 @@ public class WebSocketExchangeController extends DefaultExchangeController imple
         VertxHttpServerOptions.VertxHttpServerOptionsBuilder<?, ?> builder = VertxHttpServerOptions
             .builder()
             .prefix(prefixConfiguration.prefixKey(HTTP_PREFIX))
-            .keyStoreLoaderManager(keyStoreLoaderManager)
             .environment(prefixConfiguration.environment())
             .defaultPort(serverConfiguration.port())
             .host(serverConfiguration.host())
@@ -133,12 +141,22 @@ public class WebSocketExchangeController extends DefaultExchangeController imple
             builder =
                 builder
                     .secured(true)
-                    .keyStoreType(serverConfiguration.keyStoreType())
-                    .keyStorePath(serverConfiguration.keyStorePath())
-                    .keyStorePassword(serverConfiguration.keyStorePassword())
-                    .trustStoreType(serverConfiguration.trustStoreType())
-                    .trustStorePaths(List.of(serverConfiguration.trustStorePath()))
-                    .trustStorePassword(serverConfiguration.trustStorePassword())
+                    .keyStoreLoaderOptions(
+                        KeyStoreLoaderOptions
+                            .builder()
+                            .type(serverConfiguration.keyStoreType())
+                            .paths(List.of(serverConfiguration.keyStorePath()))
+                            .password(serverConfiguration.keyStorePassword())
+                            .build()
+                    )
+                    .trustStoreLoaderOptions(
+                        TrustStoreLoaderOptions
+                            .builder()
+                            .type(serverConfiguration.trustStoreType())
+                            .paths(List.of(serverConfiguration.trustStorePath()))
+                            .password(serverConfiguration.trustStorePassword())
+                            .build()
+                    )
                     .clientAuth(serverConfiguration.clientAuth());
         }
         return builder

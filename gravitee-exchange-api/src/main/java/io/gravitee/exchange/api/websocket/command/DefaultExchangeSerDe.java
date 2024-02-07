@@ -37,6 +37,7 @@ import io.gravitee.exchange.api.websocket.command.exception.DeserializationExcep
 import io.gravitee.exchange.api.websocket.command.exception.SerializationException;
 import io.gravitee.exchange.api.websocket.protocol.ProtocolVersion;
 import io.gravitee.exchange.api.websocket.protocol.legacy.IgnoredReply;
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -45,7 +46,7 @@ import java.util.Map;
  */
 public class DefaultExchangeSerDe implements ExchangeSerDe {
 
-    public static final Map<String, Class<?>> DEFAULT_COMMAND_TYPE = Map.of(
+    private static final Map<String, Class<? extends Command<?>>> DEFAULT_COMMAND_TYPE = Map.of(
         // Command
         HelloCommand.COMMAND_TYPE,
         HelloCommand.class,
@@ -59,7 +60,7 @@ public class DefaultExchangeSerDe implements ExchangeSerDe {
         UnknownCommand.class
     );
 
-    public static final Map<String, Class<?>> DEFAULT_REPLY_TYPE = Map.of(
+    private static final Map<String, Class<? extends Reply<?>>> DEFAULT_REPLY_TYPE = Map.of(
         HelloCommand.COMMAND_TYPE,
         HelloReply.class,
         GoodByeCommand.COMMAND_TYPE,
@@ -78,17 +79,34 @@ public class DefaultExchangeSerDe implements ExchangeSerDe {
     private final ObjectMapper objectMapper;
 
     public DefaultExchangeSerDe(final ObjectMapper objectMapper) {
+        this(objectMapper, null, null);
+    }
+
+    public DefaultExchangeSerDe(
+        final ObjectMapper objectMapper,
+        final Map<String, Class<? extends Command<?>>> customCommandTypes,
+        final Map<String, Class<? extends Reply<?>>> customReplyTypes
+    ) {
         this.objectMapper = objectMapper;
-        commandTypes().forEach((type, aClass) -> objectMapper.registerSubtypes(new NamedType(aClass, type)));
-        replyTypes().forEach((type, aClass) -> objectMapper.registerSubtypes(new NamedType(aClass, type)));
+
+        registerCommandTypes(objectMapper, customCommandTypes);
+        registerReplyTypes(objectMapper, customReplyTypes);
     }
 
-    protected Map<String, Class<?>> commandTypes() {
-        return DEFAULT_COMMAND_TYPE;
+    private void registerCommandTypes(final ObjectMapper objectMapper, final Map<String, Class<? extends Command<?>>> customCommandTypes) {
+        Map<String, Class<? extends Command<?>>> commandTypes = new HashMap<>(DEFAULT_COMMAND_TYPE);
+        if (customCommandTypes != null) {
+            commandTypes.putAll(customCommandTypes);
+        }
+        commandTypes.forEach((type, aClass) -> objectMapper.registerSubtypes(new NamedType(aClass, type)));
     }
 
-    protected Map<String, Class<?>> replyTypes() {
-        return DEFAULT_REPLY_TYPE;
+    private void registerReplyTypes(final ObjectMapper objectMapper, final Map<String, Class<? extends Reply<?>>> customReplyTypes) {
+        Map<String, Class<? extends Reply<?>>> replyTypes = new HashMap<>(DEFAULT_REPLY_TYPE);
+        if (customReplyTypes != null) {
+            replyTypes.putAll(customReplyTypes);
+        }
+        replyTypes.forEach((type, aClass) -> objectMapper.registerSubtypes(new NamedType(aClass, type)));
     }
 
     @Override

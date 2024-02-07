@@ -39,17 +39,6 @@ import lombok.ToString;
  * @author GraviteeSource Team
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.EXISTING_PROPERTY, property = "type", defaultImpl = UnknownReply.class)
-@JsonSubTypes(
-    {
-        @JsonSubTypes.Type(value = HelloReply.class, name = HelloCommand.COMMAND_TYPE),
-        @JsonSubTypes.Type(value = GoodByeReply.class, name = GoodByeCommand.COMMAND_TYPE),
-        @JsonSubTypes.Type(value = HealthCheckReply.class, name = HealthCheckCommand.COMMAND_TYPE),
-        @JsonSubTypes.Type(value = PrimaryReply.class, name = PrimaryCommand.COMMAND_TYPE),
-        @JsonSubTypes.Type(value = NoReply.class, name = NoReply.COMMAND_TYPE),
-        @JsonSubTypes.Type(value = IgnoredReply.class, name = IgnoredReply.COMMAND_TYPE),
-        @JsonSubTypes.Type(value = UnknownReply.class, name = UnknownCommand.COMMAND_TYPE),
-    }
-)
 @Getter
 @EqualsAndHashCode(callSuper = true)
 @ToString(callSuper = true)

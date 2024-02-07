@@ -17,13 +17,8 @@ package io.gravitee.exchange.api.command;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
-import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import io.gravitee.common.utils.UUID;
-import io.gravitee.exchange.api.command.goodbye.GoodByeCommand;
-import io.gravitee.exchange.api.command.healtcheck.HealthCheckCommand;
-import io.gravitee.exchange.api.command.hello.HelloCommand;
-import io.gravitee.exchange.api.command.primary.PrimaryCommand;
 import io.gravitee.exchange.api.command.unknown.UnknownCommand;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -40,15 +35,6 @@ import lombok.ToString;
     include = JsonTypeInfo.As.EXISTING_PROPERTY,
     property = "type",
     defaultImpl = UnknownCommand.class
-)
-@JsonSubTypes(
-    {
-        @JsonSubTypes.Type(value = HelloCommand.class, name = HelloCommand.COMMAND_TYPE),
-        @JsonSubTypes.Type(value = GoodByeCommand.class, name = GoodByeCommand.COMMAND_TYPE),
-        @JsonSubTypes.Type(value = HealthCheckCommand.class, name = HealthCheckCommand.COMMAND_TYPE),
-        @JsonSubTypes.Type(value = PrimaryCommand.class, name = PrimaryCommand.COMMAND_TYPE),
-        @JsonSubTypes.Type(value = UnknownCommand.class, name = UnknownCommand.COMMAND_TYPE),
-    }
 )
 @NoArgsConstructor
 @Getter

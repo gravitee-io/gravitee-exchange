@@ -19,25 +19,26 @@ import io.gravitee.exchange.api.command.Command;
 import io.gravitee.exchange.api.command.CommandHandler;
 import io.gravitee.exchange.api.command.Reply;
 import io.gravitee.exchange.api.command.ReplyHandler;
-import java.util.Map;
+import java.util.List;
 
 public interface ConnectorCommandHandlersFactory {
     /**
      * Build a map of command handlers dedicated to the specified context.
      *
      * @param connectorCommandContext the command context
-     * @return a map of command handlers indexed by type.
+     * @return a list of command handlers
      */
-    Map<String, CommandHandler<? extends Command<?>, ? extends Reply<?>>> buildCommandHandlers(
+    List<CommandHandler<? extends Command<?>, ? extends Reply<?>>> buildCommandHandlers(
         final ConnectorCommandContext connectorCommandContext
     );
+
     /**
      * Build a map of reply handlers dedicated to the specified context.
      *
      * @param connectorCommandContext the command context
-     * @return a map of command handlers indexed by type.
+     * @return a list of command handlers
      */
-    Map<String, ReplyHandler<? extends Command<?>, ? extends Command<?>, ? extends Reply<?>>> buildReplyHandlers(
+    List<ReplyHandler<? extends Command<?>, ? extends Command<?>, ? extends Reply<?>>> buildReplyHandlers(
         final ConnectorCommandContext connectorCommandContext
     );
 }
