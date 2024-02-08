@@ -15,17 +15,20 @@
  */
 package io.gravitee.exchange.api.websocket.channel.test;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import io.gravitee.exchange.api.websocket.command.DefaultExchangeSerDe;
-import java.util.Map;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import io.gravitee.exchange.api.command.CommandStatus;
+import io.gravitee.exchange.api.command.Reply;
 
-public class DummyCommandSerDe extends DefaultExchangeSerDe {
+@JsonInclude(JsonInclude.Include.NON_NULL)
+public class AdaptedDummyReply extends Reply<DummyPayload> {
 
-    public DummyCommandSerDe(final ObjectMapper objectMapper) {
-        super(
-            objectMapper,
-            Map.of(DummyCommand.COMMAND_TYPE, DummyCommand.class, AdaptedDummyCommand.COMMAND_TYPE, AdaptedDummyCommand.class),
-            Map.of(DummyCommand.COMMAND_TYPE, DummyReply.class, AdaptedDummyCommand.COMMAND_TYPE, AdaptedDummyReply.class)
-        );
+    public AdaptedDummyReply() {
+        super(AdaptedDummyCommand.COMMAND_TYPE);
+    }
+
+    public AdaptedDummyReply(final String commandId, final DummyPayload dummyPayload) {
+        super(AdaptedDummyCommand.COMMAND_TYPE, commandId, CommandStatus.SUCCEEDED);
+        this.payload = dummyPayload;
     }
 }

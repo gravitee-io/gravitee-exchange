@@ -39,4 +39,10 @@ public class HelloCommand extends Command<HelloCommandPayload> {
         this();
         this.payload = helloCommandPayload;
     }
+
+    public HelloCommand(final String id, final HelloCommandPayload helloCommandPayload) {
+        this();
+        this.id = id;
+        this.payload = helloCommandPayload;
+    }
 }

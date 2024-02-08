@@ -13,32 +13,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.gravitee.exchange.api.websocket.channel.test;
+package io.gravitee.exchange.api.websocket.protocol.legacy.hello;
 
-import io.gravitee.exchange.api.command.ReplyHandler;
+import io.gravitee.exchange.api.command.ReplyAdapter;
+import io.gravitee.exchange.api.command.hello.HelloCommand;
 import io.reactivex.rxjava3.core.Single;
-import io.vertx.junit5.Checkpoint;
-import lombok.RequiredArgsConstructor;
 
-@RequiredArgsConstructor
-public class DummyDummyReplyHandler implements ReplyHandler<DummyCommand, DummyCommand, DummyReply> {
-
-    private final Checkpoint checkpoint;
+/**
+ * @author Guillaume LAMIRAND (guillaume.lamirand at graviteesource.com)
+ * @author GraviteeSource Team
+ */
+public class LegacyHelloReplyAdapter implements ReplyAdapter<io.gravitee.exchange.api.command.hello.HelloReply, HelloReply> {
 
     @Override
-    public String handleType() {
-        return DummyCommand.COMMAND_TYPE;
+    public String supportType() {
+        return HelloCommand.COMMAND_TYPE;
     }
 
     @Override
-    public Single<DummyCommand> decorate(final DummyCommand command) {
-        checkpoint.flag();
-        return Single.just(command);
-    }
-
-    @Override
-    public Single<DummyReply> handle(final DummyReply reply) {
-        checkpoint.flag();
-        return Single.just(reply);
+    public Single<HelloReply> adapt(final io.gravitee.exchange.api.command.hello.HelloReply helloReply) {
+        return Single.just(new HelloReply(helloReply.getCommandId(), helloReply.getCommandStatus()));
     }
 }

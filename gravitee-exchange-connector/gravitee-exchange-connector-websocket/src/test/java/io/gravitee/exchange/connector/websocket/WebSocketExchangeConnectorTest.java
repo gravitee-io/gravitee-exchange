@@ -50,7 +50,15 @@ class WebSocketExchangeConnectorTest extends AbstractWebSocketConnectorTest {
             new WebSocketClientConfiguration(new PrefixConfiguration(environment))
         );
         this.websocketExchangeConnector =
-            new WebSocketExchangeConnector(ProtocolVersion.V1, List.of(), List.of(), vertx, webSocketConnectorClientFactory, exchangeSerDe);
+            new WebSocketExchangeConnector(
+                ProtocolVersion.V1,
+                List.of(),
+                List.of(),
+                List.of(),
+                vertx,
+                webSocketConnectorClientFactory,
+                exchangeSerDe
+            );
     }
 
     @Test

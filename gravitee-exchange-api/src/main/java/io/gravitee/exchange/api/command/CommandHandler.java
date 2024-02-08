@@ -23,11 +23,11 @@ import io.reactivex.rxjava3.core.Single;
  */
 public interface CommandHandler<C extends Command<?>, R extends Reply<?>> {
     /**
-     * Returns the type of command handled by this command handler.
+     * Returns the type of command supported by this command handler.
      * The type is used to determine the right handler to use when a command need to be handled.
-     * @return the type of command handled.
+     * @return the type of command supported.
      */
-    String handleType();
+    String supportType();
 
     /**
      * Method invoked when a command of the expected type is received.
@@ -36,6 +36,6 @@ public interface CommandHandler<C extends Command<?>, R extends Reply<?>> {
      * @return the reply with a status indicating if the command has been successfully handled or not.
      */
     default Single<R> handle(C command) {
-        return Single.error(new RuntimeException("Handle command of type " + handleType() + " is not implemented"));
+        return Single.error(new RuntimeException("Handle command of type " + supportType() + " is not implemented"));
     }
 }

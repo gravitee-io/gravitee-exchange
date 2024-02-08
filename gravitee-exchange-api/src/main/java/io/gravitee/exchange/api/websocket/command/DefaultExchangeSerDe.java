@@ -36,7 +36,7 @@ import io.gravitee.exchange.api.command.unknown.UnknownReply;
 import io.gravitee.exchange.api.websocket.command.exception.DeserializationException;
 import io.gravitee.exchange.api.websocket.command.exception.SerializationException;
 import io.gravitee.exchange.api.websocket.protocol.ProtocolVersion;
-import io.gravitee.exchange.api.websocket.protocol.legacy.IgnoredReply;
+import io.gravitee.exchange.api.websocket.protocol.legacy.ignored.IgnoredReply;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -52,6 +52,10 @@ public class DefaultExchangeSerDe implements ExchangeSerDe {
         HelloCommand.class,
         GoodByeCommand.COMMAND_TYPE,
         GoodByeCommand.class,
+        io.gravitee.exchange.api.websocket.protocol.legacy.hello.HelloCommand.COMMAND_TYPE,
+        io.gravitee.exchange.api.websocket.protocol.legacy.hello.HelloCommand.class,
+        io.gravitee.exchange.api.websocket.protocol.legacy.goodbye.GoodByeCommand.COMMAND_TYPE,
+        io.gravitee.exchange.api.websocket.protocol.legacy.goodbye.GoodByeCommand.class,
         HealthCheckCommand.COMMAND_TYPE,
         HealthCheckCommand.class,
         PrimaryCommand.COMMAND_TYPE,

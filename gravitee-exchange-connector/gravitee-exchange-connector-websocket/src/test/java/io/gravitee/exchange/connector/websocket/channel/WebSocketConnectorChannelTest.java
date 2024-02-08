@@ -72,6 +72,7 @@ class WebSocketConnectorChannelTest extends AbstractWebSocketConnectorTest {
                 WebSocketConnectorChannel webSocketConnectorChannel = new WebSocketConnectorChannel(
                     List.of(),
                     List.of(),
+                    List.of(),
                     AbstractWebSocketTest.vertx,
                     webSocket,
                     protocolAdapter
@@ -103,6 +104,7 @@ class WebSocketConnectorChannelTest extends AbstractWebSocketConnectorTest {
             .rxWebSocket(webSocketConnectOptions)
             .flatMapCompletable(webSocket -> {
                 WebSocketConnectorChannel webSocketConnectorChannel = new WebSocketConnectorChannel(
+                    List.of(),
                     List.of(),
                     List.of(),
                     AbstractWebSocketTest.vertx,
@@ -147,6 +149,7 @@ class WebSocketConnectorChannelTest extends AbstractWebSocketConnectorTest {
                 WebSocketConnectorChannel webSocketConnectorChannel = new WebSocketConnectorChannel(
                     List.of(),
                     List.of(),
+                    List.of(),
                     AbstractWebSocketTest.vertx,
                     webSocket,
                     protocolAdapter
@@ -181,6 +184,7 @@ class WebSocketConnectorChannelTest extends AbstractWebSocketConnectorTest {
                 WebSocketConnectorChannel webSocketConnectorChannel = new WebSocketConnectorChannel(
                     List.of(),
                     List.of(),
+                    List.of(),
                     AbstractWebSocketTest.vertx,
                     webSocket,
                     protocolAdapter
@@ -208,6 +212,7 @@ class WebSocketConnectorChannelTest extends AbstractWebSocketConnectorTest {
             .rxWebSocket()
             .flatMapCompletable(webSocket -> {
                 WebSocketConnectorChannel webSocketConnectorChannel = new WebSocketConnectorChannel(
+                    List.of(),
                     List.of(),
                     List.of(),
                     AbstractWebSocketTest.vertx,
@@ -239,6 +244,7 @@ class WebSocketConnectorChannelTest extends AbstractWebSocketConnectorTest {
             .flatMapCompletable(webSocket -> {
                 WebSocketConnectorChannel webSocketConnectorChannel = new WebSocketConnectorChannel(
                     List.of(new DummyCommandHandler(handlerCheckpoint)),
+                    List.of(),
                     List.of(),
                     AbstractWebSocketTest.vertx,
                     webSocket,

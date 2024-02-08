@@ -33,7 +33,7 @@ public class PrimaryCommandHandler implements CommandHandler<PrimaryCommand, Pri
     private final ExchangeConnector exchangeConnector;
 
     @Override
-    public String handleType() {
+    public String supportType() {
         return PrimaryCommand.COMMAND_TYPE;
     }
 

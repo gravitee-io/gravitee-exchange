@@ -13,24 +13,33 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.gravitee.exchange.api.command.unknown;
+package io.gravitee.exchange.api.websocket.protocol.legacy.ignored;
 
-import io.gravitee.exchange.api.command.CommandHandler;
-import io.reactivex.rxjava3.core.Single;
+import io.gravitee.exchange.api.command.CommandStatus;
+import io.gravitee.exchange.api.command.Reply;
+import io.gravitee.exchange.api.command.noreply.NoReplyPayload;
 
 /**
+ * Only used with legacy protocol version
+ *
  * @author Guillaume LAMIRAND (guillaume.lamirand at graviteesource.com)
  * @author GraviteeSource Team
  */
-public class UnknownCommandHandler implements CommandHandler<UnknownCommand, UnknownReply> {
+@Deprecated
+public class IgnoredReply extends Reply<NoReplyPayload> {
 
-    @Override
-    public String supportType() {
-        return UnknownCommand.COMMAND_TYPE;
+    public static final String COMMAND_TYPE = "IGNORED_REPLY";
+
+    public IgnoredReply() {
+        super(COMMAND_TYPE);
+    }
+
+    public IgnoredReply(final String commandId) {
+        super(COMMAND_TYPE, commandId, CommandStatus.ERROR);
     }
 
     @Override
-    public Single<UnknownReply> handle(final UnknownCommand command) {
-        return Single.just(new UnknownReply(command.getId(), "Command unknown"));
+    public boolean stopOnErrorStatus() {
+        return true;
     }
 }

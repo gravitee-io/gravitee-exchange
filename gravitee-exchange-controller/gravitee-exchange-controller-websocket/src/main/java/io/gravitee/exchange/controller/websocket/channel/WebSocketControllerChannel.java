@@ -16,14 +16,14 @@
 package io.gravitee.exchange.controller.websocket.channel;
 
 import io.gravitee.exchange.api.command.Command;
+import io.gravitee.exchange.api.command.CommandAdapter;
 import io.gravitee.exchange.api.command.CommandHandler;
 import io.gravitee.exchange.api.command.Reply;
-import io.gravitee.exchange.api.command.ReplyHandler;
+import io.gravitee.exchange.api.command.ReplyAdapter;
 import io.gravitee.exchange.api.command.goodbye.GoodByeCommand;
 import io.gravitee.exchange.api.command.goodbye.GoodByeCommandPayload;
 import io.gravitee.exchange.api.controller.ControllerChannel;
 import io.gravitee.exchange.api.websocket.channel.AbstractWebSocketChannel;
-import io.gravitee.exchange.api.websocket.command.ExchangeSerDe;
 import io.gravitee.exchange.api.websocket.protocol.ProtocolAdapter;
 import io.gravitee.exchange.controller.core.channel.primary.PrimaryChannelManager;
 import io.reactivex.rxjava3.core.Completable;
@@ -31,7 +31,6 @@ import io.reactivex.rxjava3.core.CompletableEmitter;
 import io.vertx.rxjava3.core.Vertx;
 import io.vertx.rxjava3.core.http.ServerWebSocket;
 import java.util.List;
-import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -45,13 +44,14 @@ public class WebSocketControllerChannel extends AbstractWebSocketChannel impleme
 
     public WebSocketControllerChannel(
         final List<CommandHandler<? extends Command<?>, ? extends Reply<?>>> commandHandlers,
-        final List<ReplyHandler<? extends Command<?>, ? extends Command<?>, ? extends Reply<?>>> replyHandlers,
+        final List<CommandAdapter<? extends Command<?>, ? extends Command<?>, ? extends Reply<?>>> commandAdapters,
+        final List<ReplyAdapter<? extends Reply<?>, ? extends Reply<?>>> replyAdapters,
         final Vertx vertx,
         final ServerWebSocket webSocket,
         final ProtocolAdapter protocolAdapter,
         final PrimaryChannelManager primaryChannelManager
     ) {
-        super(commandHandlers, replyHandlers, vertx, webSocket, protocolAdapter);
+        super(commandHandlers, commandAdapters, replyAdapters, vertx, webSocket, protocolAdapter);
         this.primaryChannelManager = primaryChannelManager;
     }
 
@@ -96,7 +96,7 @@ public class WebSocketControllerChannel extends AbstractWebSocketChannel impleme
     }
 
     @Override
-    protected void handleHelloCommand(
+    protected Completable handleHelloCommand(
         final CompletableEmitter emitter,
         final Command<?> command,
         final CommandHandler<Command<?>, Reply<?>> commandHandler
@@ -104,8 +104,9 @@ public class WebSocketControllerChannel extends AbstractWebSocketChannel impleme
         if (commandHandler == null) {
             this.webSocket.close((short) 1011, "No handler for hello command").subscribe();
             emitter.onError(new WebSocketChannelInitializationException("No handler found for hello command. Closing connection."));
+            return Completable.complete();
         } else {
-            super.handleHelloCommand(emitter, command, commandHandler);
+            return super.handleHelloCommand(emitter, command, commandHandler);
         }
     }
 }

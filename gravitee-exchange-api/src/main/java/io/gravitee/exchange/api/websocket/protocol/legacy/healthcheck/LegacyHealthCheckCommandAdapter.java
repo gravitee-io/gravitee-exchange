@@ -13,26 +13,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.gravitee.exchange.connector.core.command.healtcheck;
+package io.gravitee.exchange.api.websocket.protocol.legacy.healthcheck;
 
-import io.gravitee.exchange.api.command.CommandHandler;
+import io.gravitee.exchange.api.channel.exception.ChannelTimeoutException;
+import io.gravitee.exchange.api.command.Command;
+import io.gravitee.exchange.api.command.CommandAdapter;
 import io.gravitee.exchange.api.command.healtcheck.HealthCheckCommand;
 import io.gravitee.exchange.api.command.healtcheck.HealthCheckReply;
 import io.gravitee.exchange.api.command.healtcheck.HealthCheckReplyPayload;
-import io.gravitee.exchange.api.connector.ExchangeConnector;
+import io.gravitee.exchange.api.command.primary.PrimaryCommand;
 import io.reactivex.rxjava3.core.Single;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 
 /**
  * @author Guillaume LAMIRAND (guillaume.lamirand at graviteesource.com)
  * @author GraviteeSource Team
  */
-@RequiredArgsConstructor
-@Slf4j
-public class HealthCheckCommandHandler implements CommandHandler<HealthCheckCommand, HealthCheckReply> {
-
-    private final ExchangeConnector exchangeConnector;
+public class LegacyHealthCheckCommandAdapter implements CommandAdapter<HealthCheckCommand, HealthCheckCommand, HealthCheckReply> {
 
     @Override
     public String supportType() {
@@ -40,10 +36,20 @@ public class HealthCheckCommandHandler implements CommandHandler<HealthCheckComm
     }
 
     @Override
-    public Single<HealthCheckReply> handle(HealthCheckCommand command) {
+    public Single<HealthCheckCommand> adapt(final HealthCheckCommand command) {
         return Single.fromCallable(() -> {
-            log.debug("Health check command received for target id [{}]", exchangeConnector.targetId());
-            return new HealthCheckReply(command.getId(), HealthCheckReplyPayload.builder().healthy(true).build());
+            command.setReplyTimeoutMs(0);
+            return command;
+        });
+    }
+
+    @Override
+    public Single<HealthCheckReply> onError(final Command<?> command, final Throwable throwable) {
+        return Single.defer(() -> {
+            if (throwable instanceof ChannelTimeoutException) {
+                return Single.just(new HealthCheckReply(command.getId(), new HealthCheckReplyPayload(true, null)));
+            }
+            return Single.error(throwable);
         });
     }
 }

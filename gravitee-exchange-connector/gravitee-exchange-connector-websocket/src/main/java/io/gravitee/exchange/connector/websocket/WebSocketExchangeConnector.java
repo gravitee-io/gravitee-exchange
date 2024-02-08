@@ -16,9 +16,10 @@
 package io.gravitee.exchange.connector.websocket;
 
 import io.gravitee.exchange.api.command.Command;
+import io.gravitee.exchange.api.command.CommandAdapter;
 import io.gravitee.exchange.api.command.CommandHandler;
 import io.gravitee.exchange.api.command.Reply;
-import io.gravitee.exchange.api.command.ReplyHandler;
+import io.gravitee.exchange.api.command.ReplyAdapter;
 import io.gravitee.exchange.api.controller.ws.WebsocketControllerConstants;
 import io.gravitee.exchange.api.websocket.command.ExchangeSerDe;
 import io.gravitee.exchange.api.websocket.protocol.ProtocolAdapterFactory;
@@ -53,7 +54,8 @@ public class WebSocketExchangeConnector extends EmbeddedExchangeConnector {
 
     private final ProtocolVersion protocolVersion;
     private final List<CommandHandler<? extends Command<?>, ? extends Reply<?>>> commandHandlers;
-    private final List<ReplyHandler<? extends Command<?>, ? extends Command<?>, ? extends Reply<?>>> replyHandlers;
+    private final List<CommandAdapter<? extends Command<?>, ? extends Command<?>, ? extends Reply<?>>> commandAdapters;
+    private final List<ReplyAdapter<? extends Reply<?>, ? extends Reply<?>>> replyAdapters;
     private final Vertx vertx;
     private final WebSocketConnectorClientFactory webSocketConnectorClientFactory;
     private final ExchangeSerDe exchangeSerDe;
@@ -67,7 +69,8 @@ public class WebSocketExchangeConnector extends EmbeddedExchangeConnector {
                 connectorChannel =
                     new WebSocketConnectorChannel(
                         commandHandlers,
-                        replyHandlers,
+                        commandAdapters,
+                        replyAdapters,
                         vertx,
                         webSocket,
                         ProtocolAdapterFactory.create(protocolVersion, exchangeSerDe)

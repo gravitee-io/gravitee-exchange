@@ -16,46 +16,35 @@
 package io.gravitee.exchange.api.command;
 
 import io.reactivex.rxjava3.core.Single;
-import io.reactivex.rxjava3.core.SingleSource;
 
 /**
  * @author Guillaume LAMIRAND (guillaume.lamirand at graviteesource.com)
  * @author GraviteeSource Team
  */
 @FunctionalInterface
-public interface ReplyHandler<C extends Command<?>, D extends Command<?>, R extends Reply<?>> {
+public interface CommandAdapter<C1 extends Command<?>, C2 extends Command<?>, R extends Reply<?>> {
     /**
-     * Returns the type of command handled by this reply handler.
+     * Returns the type of command supported by this adapter.
      *
-     * @return the type of command handled.
+     * @return the type of command supported.
      */
-    String handleType();
+    String supportType();
 
     /**
-     * Method invoked before sending the command in order to fill extra information into the command.
+     * Method invoked before sending the command.
 
-     * @return the command with all necessary information.
+     * @return the command adapted
      */
-    default Single<D> decorate(C command) {
-        return (Single<D>) Single.just(command);
+    default Single<C2> adapt(C1 command) {
+        return (Single<C2>) Single.just(command);
     }
 
     /**
-     * Method invoke after a reply has been received.
-     *
-     * @param reply the reply.
-     * @return the same reply altered if necessary.
-     */
-    default Single<R> handle(R reply) {
-        return Single.just(reply);
-    }
-
-    /**
-     * Method invoke when an error is raised when dealing with a reply.
+     * Method invoke when an error is raised when sending a command.
      *
      * @param throwable a throwable
      */
-    default Single<R> handleError(final C command, final Throwable throwable) {
+    default Single<R> onError(final Command<?> command, final Throwable throwable) {
         return Single.error(throwable);
     }
 }

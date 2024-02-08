@@ -16,20 +16,8 @@
 package io.gravitee.exchange.api.command;
 
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
-import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import io.gravitee.exchange.api.command.goodbye.GoodByeCommand;
-import io.gravitee.exchange.api.command.goodbye.GoodByeReply;
-import io.gravitee.exchange.api.command.healtcheck.HealthCheckCommand;
-import io.gravitee.exchange.api.command.healtcheck.HealthCheckReply;
-import io.gravitee.exchange.api.command.hello.HelloCommand;
-import io.gravitee.exchange.api.command.hello.HelloReply;
-import io.gravitee.exchange.api.command.noreply.NoReply;
-import io.gravitee.exchange.api.command.primary.PrimaryCommand;
-import io.gravitee.exchange.api.command.primary.PrimaryReply;
-import io.gravitee.exchange.api.command.unknown.UnknownCommand;
 import io.gravitee.exchange.api.command.unknown.UnknownReply;
-import io.gravitee.exchange.api.websocket.protocol.legacy.IgnoredReply;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.ToString;

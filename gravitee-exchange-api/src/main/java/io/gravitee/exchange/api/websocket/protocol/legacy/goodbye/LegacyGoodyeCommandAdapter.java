@@ -13,33 +13,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.gravitee.exchange.api.websocket.protocol.legacy;
+package io.gravitee.exchange.api.websocket.protocol.legacy.goodbye;
 
-import io.gravitee.exchange.api.command.CommandStatus;
-import io.gravitee.exchange.api.command.Reply;
-import io.gravitee.exchange.api.command.noreply.NoReplyPayload;
+import io.gravitee.exchange.api.command.CommandAdapter;
+import io.gravitee.exchange.api.command.goodbye.GoodByeReply;
+import io.reactivex.rxjava3.core.Single;
 
 /**
- * Only used with legacy protocol version
- *
  * @author Guillaume LAMIRAND (guillaume.lamirand at graviteesource.com)
  * @author GraviteeSource Team
  */
-@Deprecated
-public class IgnoredReply extends Reply<NoReplyPayload> {
+public class LegacyGoodyeCommandAdapter
+    implements CommandAdapter<io.gravitee.exchange.api.command.goodbye.GoodByeCommand, GoodByeCommand, GoodByeReply> {
 
-    public static final String COMMAND_TYPE = "IGNORED_REPLY";
-
-    public IgnoredReply() {
-        super(COMMAND_TYPE);
-    }
-
-    public IgnoredReply(final String commandId) {
-        super(COMMAND_TYPE, commandId, CommandStatus.ERROR);
+    @Override
+    public String supportType() {
+        return io.gravitee.exchange.api.command.goodbye.GoodByeCommand.COMMAND_TYPE;
     }
 
     @Override
-    public boolean stopOnErrorStatus() {
-        return true;
+    public Single<GoodByeCommand> adapt(final io.gravitee.exchange.api.command.goodbye.GoodByeCommand command) {
+        return Single.just(new GoodByeCommand(command.getId()));
     }
 }

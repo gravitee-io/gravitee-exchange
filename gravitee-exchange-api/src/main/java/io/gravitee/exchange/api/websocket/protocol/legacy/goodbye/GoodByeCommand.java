@@ -13,24 +13,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.gravitee.exchange.api.command.unknown;
+package io.gravitee.exchange.api.websocket.protocol.legacy.goodbye;
 
-import io.gravitee.exchange.api.command.CommandHandler;
-import io.reactivex.rxjava3.core.Single;
+import io.gravitee.exchange.api.command.Command;
 
 /**
  * @author Guillaume LAMIRAND (guillaume.lamirand at graviteesource.com)
  * @author GraviteeSource Team
  */
-public class UnknownCommandHandler implements CommandHandler<UnknownCommand, UnknownReply> {
+public class GoodByeCommand extends Command<GoodByeCommandPayload> {
 
-    @Override
-    public String supportType() {
-        return UnknownCommand.COMMAND_TYPE;
-    }
+    public static final String COMMAND_TYPE = "GOODBYE_COMMAND";
 
-    @Override
-    public Single<UnknownReply> handle(final UnknownCommand command) {
-        return Single.just(new UnknownReply(command.getId(), "Command unknown"));
+    public GoodByeCommand(String id) {
+        super(COMMAND_TYPE);
+        this.id = id;
     }
 }

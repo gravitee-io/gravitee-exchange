@@ -13,24 +13,32 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.gravitee.exchange.api.command.unknown;
+package io.gravitee.exchange.api.websocket.protocol.legacy.hello;
 
-import io.gravitee.exchange.api.command.CommandHandler;
+import io.gravitee.exchange.api.command.CommandAdapter;
+import io.gravitee.exchange.api.command.hello.HelloCommandPayload;
+import io.gravitee.exchange.api.command.hello.HelloReply;
 import io.reactivex.rxjava3.core.Single;
 
 /**
  * @author Guillaume LAMIRAND (guillaume.lamirand at graviteesource.com)
  * @author GraviteeSource Team
  */
-public class UnknownCommandHandler implements CommandHandler<UnknownCommand, UnknownReply> {
+public class LegacyHelloCommandAdapter
+    implements CommandAdapter<HelloCommand, io.gravitee.exchange.api.command.hello.HelloCommand, HelloReply> {
 
     @Override
     public String supportType() {
-        return UnknownCommand.COMMAND_TYPE;
+        return HelloCommand.COMMAND_TYPE;
     }
 
     @Override
-    public Single<UnknownReply> handle(final UnknownCommand command) {
-        return Single.just(new UnknownReply(command.getId(), "Command unknown"));
+    public Single<io.gravitee.exchange.api.command.hello.HelloCommand> adapt(final HelloCommand command) {
+        return Single.just(
+            new io.gravitee.exchange.api.command.hello.HelloCommand(
+                command.getId(),
+                new HelloCommandPayload(command.getPayload().node().installationId())
+            )
+        );
     }
 }
