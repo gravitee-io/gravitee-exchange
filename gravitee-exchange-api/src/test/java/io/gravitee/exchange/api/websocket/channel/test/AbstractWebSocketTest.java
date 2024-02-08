@@ -48,7 +48,6 @@ import org.springframework.test.util.TestSocketUtils;
 @ExtendWith(VertxExtension.class)
 public abstract class AbstractWebSocketTest {
 
-    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
     protected static HttpServer httpServer;
     protected static int serverPort;
     protected static Handler<ServerWebSocket> websocketServerHandler;
@@ -82,7 +81,7 @@ public abstract class AbstractWebSocketTest {
 
     @BeforeEach
     public void initSerDer() {
-        this.exchangeSerDe = new DummyCommandSerDe(OBJECT_MAPPER);
+        this.exchangeSerDe = new DummyCommandSerDe(new ObjectMapper());
     }
 
     @AfterAll

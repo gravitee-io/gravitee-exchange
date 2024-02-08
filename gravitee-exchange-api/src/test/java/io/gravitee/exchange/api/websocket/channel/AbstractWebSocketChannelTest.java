@@ -21,9 +21,10 @@ import io.gravitee.exchange.api.channel.Channel;
 import io.gravitee.exchange.api.channel.exception.ChannelNoReplyException;
 import io.gravitee.exchange.api.channel.exception.ChannelTimeoutException;
 import io.gravitee.exchange.api.command.Command;
+import io.gravitee.exchange.api.command.CommandAdapter;
 import io.gravitee.exchange.api.command.CommandHandler;
 import io.gravitee.exchange.api.command.Reply;
-import io.gravitee.exchange.api.command.ReplyHandler;
+import io.gravitee.exchange.api.command.ReplyAdapter;
 import io.gravitee.exchange.api.command.noreply.NoReply;
 import io.gravitee.exchange.api.command.primary.PrimaryCommand;
 import io.gravitee.exchange.api.command.primary.PrimaryCommandPayload;
@@ -31,16 +32,17 @@ import io.gravitee.exchange.api.command.primary.PrimaryReply;
 import io.gravitee.exchange.api.command.primary.PrimaryReplyPayload;
 import io.gravitee.exchange.api.command.unknown.UnknownReply;
 import io.gravitee.exchange.api.websocket.channel.test.AbstractWebSocketTest;
+import io.gravitee.exchange.api.websocket.channel.test.AdaptedDummyReply;
 import io.gravitee.exchange.api.websocket.channel.test.DummyCommand;
+import io.gravitee.exchange.api.websocket.channel.test.DummyCommandAdapter;
 import io.gravitee.exchange.api.websocket.channel.test.DummyCommandHandler;
-import io.gravitee.exchange.api.websocket.channel.test.DummyDummyReplyHandler;
 import io.gravitee.exchange.api.websocket.channel.test.DummyPayload;
 import io.gravitee.exchange.api.websocket.channel.test.DummyReply;
+import io.gravitee.exchange.api.websocket.channel.test.DummyReplyAdapter;
 import io.gravitee.exchange.api.websocket.protocol.ProtocolAdapter;
 import io.gravitee.exchange.api.websocket.protocol.ProtocolExchange;
 import io.gravitee.exchange.api.websocket.protocol.ProtocolVersion;
-import io.gravitee.exchange.api.websocket.protocol.legacy.IgnoredReply;
-import io.reactivex.rxjava3.core.CompletableEmitter;
+import io.gravitee.exchange.api.websocket.protocol.legacy.ignored.IgnoredReply;
 import io.reactivex.rxjava3.plugins.RxJavaPlugins;
 import io.reactivex.rxjava3.schedulers.TestScheduler;
 import io.vertx.junit5.Checkpoint;
@@ -93,7 +95,7 @@ class AbstractWebSocketChannelTest extends AbstractWebSocketTest {
         DummyCommand command = new DummyCommand(new DummyPayload());
         rxWebSocket()
             .<Reply<?>>flatMap(webSocket -> {
-                Channel webSocketChannel = new SimpleWebSocketChannel(List.of(), List.of(), vertx, webSocket, protocolAdapter);
+                Channel webSocketChannel = new SimpleWebSocketChannel(List.of(), List.of(), List.of(), vertx, webSocket, protocolAdapter);
                 return webSocketChannel.initialize().andThen(webSocketChannel.send(command));
             })
             .test()
@@ -118,7 +120,7 @@ class AbstractWebSocketChannelTest extends AbstractWebSocketTest {
         DummyCommand command = new DummyCommand(new DummyPayload());
         rxWebSocket()
             .flatMap(webSocket -> {
-                Channel webSocketChannel = new SimpleWebSocketChannel(List.of(), List.of(), vertx, webSocket, protocolAdapter);
+                Channel webSocketChannel = new SimpleWebSocketChannel(List.of(), List.of(), List.of(), vertx, webSocket, protocolAdapter);
                 return webSocketChannel.initialize().andThen(webSocketChannel.send(command));
             })
             .test()
@@ -152,7 +154,7 @@ class AbstractWebSocketChannelTest extends AbstractWebSocketTest {
         DummyCommand command = new DummyCommand(new DummyPayload());
         rxWebSocket()
             .<Reply<?>>flatMap(webSocket -> {
-                Channel webSocketChannel = new SimpleWebSocketChannel(List.of(), List.of(), vertx, webSocket, protocolAdapter);
+                Channel webSocketChannel = new SimpleWebSocketChannel(List.of(), List.of(), List.of(), vertx, webSocket, protocolAdapter);
                 return webSocketChannel.initialize().andThen(webSocketChannel.send(command));
             })
             .test()
@@ -162,7 +164,7 @@ class AbstractWebSocketChannelTest extends AbstractWebSocketTest {
 
     @ParameterizedTest
     @EnumSource(ProtocolVersion.class)
-    void should_send_decorated_command_and_handle_reply(ProtocolVersion protocolVersion, VertxTestContext vertxTestContext)
+    void should_send_decorated_command_and_reply(ProtocolVersion protocolVersion, VertxTestContext vertxTestContext)
         throws InterruptedException {
         ProtocolAdapter protocolAdapter = protocolAdapter(protocolVersion);
         Checkpoint handlerCheckpoint = vertxTestContext.checkpoint(3);
@@ -171,15 +173,15 @@ class AbstractWebSocketChannelTest extends AbstractWebSocketTest {
                 serverWebSocket.binaryMessageHandler(buffer -> {
                     ProtocolExchange websocketExchange = protocolAdapter.read(buffer);
                     Command<?> command = websocketExchange.asCommand();
-                    DummyReply dummyReply = new DummyReply(command.getId(), new DummyPayload());
+                    AdaptedDummyReply adaptedDummyReply = new AdaptedDummyReply(command.getId(), new DummyPayload());
                     serverWebSocket
                         .writeBinaryMessage(
                             protocolAdapter.write(
                                 ProtocolExchange
                                     .builder()
                                     .type(ProtocolExchange.Type.REPLY)
-                                    .exchangeType(dummyReply.getType())
-                                    .exchange(dummyReply)
+                                    .exchangeType(adaptedDummyReply.getType())
+                                    .exchange(adaptedDummyReply)
                                     .build()
                             )
                         )
@@ -191,7 +193,8 @@ class AbstractWebSocketChannelTest extends AbstractWebSocketTest {
             .<Reply<?>>flatMap(webSocket -> {
                 Channel webSocketChannel = new SimpleWebSocketChannel(
                     List.of(),
-                    List.of(new DummyDummyReplyHandler(handlerCheckpoint)),
+                    List.of(new DummyCommandAdapter(handlerCheckpoint)),
+                    List.of(new DummyReplyAdapter(handlerCheckpoint)),
                     vertx,
                     webSocket,
                     protocolAdapter
@@ -221,7 +224,7 @@ class AbstractWebSocketChannelTest extends AbstractWebSocketTest {
             };
         rxWebSocket()
             .flatMapCompletable(webSocket -> {
-                Channel webSocketChannel = new SimpleWebSocketChannel(List.of(), List.of(), vertx, webSocket, protocolAdapter);
+                Channel webSocketChannel = new SimpleWebSocketChannel(List.of(), List.of(), List.of(), vertx, webSocket, protocolAdapter);
                 return webSocketChannel.initialize();
             })
             .test()
@@ -243,6 +246,7 @@ class AbstractWebSocketChannelTest extends AbstractWebSocketTest {
             .flatMapCompletable(webSocket -> {
                 Channel webSocketChannel = new SimpleWebSocketChannel(
                     List.of(new DummyCommandHandler(handlerCheckpoint)),
+                    List.of(),
                     List.of(),
                     vertx,
                     webSocket,
@@ -294,7 +298,7 @@ class AbstractWebSocketChannelTest extends AbstractWebSocketTest {
             };
         rxWebSocket()
             .flatMapCompletable(webSocket -> {
-                Channel webSocketChannel = new SimpleWebSocketChannel(List.of(), List.of(), vertx, webSocket, protocolAdapter);
+                Channel webSocketChannel = new SimpleWebSocketChannel(List.of(), List.of(), List.of(), vertx, webSocket, protocolAdapter);
                 return webSocketChannel.initialize();
             })
             .test()
@@ -337,6 +341,7 @@ class AbstractWebSocketChannelTest extends AbstractWebSocketTest {
         rxWebSocket()
             .flatMapCompletable(webSocket -> {
                 Channel webSocketChannel = new SimpleWebSocketChannel(
+                    new ArrayList<>(),
                     new ArrayList<>(),
                     new ArrayList<>(),
                     vertx,
@@ -391,6 +396,7 @@ class AbstractWebSocketChannelTest extends AbstractWebSocketTest {
                 Channel webSocketChannel = new SimpleWebSocketChannel(
                     new ArrayList<>(),
                     new ArrayList<>(),
+                    new ArrayList<>(),
                     vertx,
                     webSocket,
                     protocolAdapter
@@ -407,12 +413,13 @@ class AbstractWebSocketChannelTest extends AbstractWebSocketTest {
 
         protected SimpleWebSocketChannel(
             final List<CommandHandler<? extends Command<?>, ? extends Reply<?>>> commandHandlers,
-            final List<ReplyHandler<? extends Command<?>, ? extends Command<?>, ? extends Reply<?>>> replyHandlers,
+            final List<CommandAdapter<? extends Command<?>, ? extends Command<?>, ? extends Reply<?>>> commandAdapters,
+            final List<ReplyAdapter<? extends Reply<?>, ? extends Reply<?>>> replyAdapters,
             final io.vertx.rxjava3.core.Vertx vertx,
             final WebSocketBase webSocket,
             final ProtocolAdapter protocolAdapter
         ) {
-            super(commandHandlers, replyHandlers, vertx, webSocket, protocolAdapter);
+            super(commandHandlers, commandAdapters, replyAdapters, vertx, webSocket, protocolAdapter);
         }
 
         @Override

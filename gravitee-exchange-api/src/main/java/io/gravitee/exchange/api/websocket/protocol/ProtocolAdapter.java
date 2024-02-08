@@ -16,9 +16,10 @@
 package io.gravitee.exchange.api.websocket.protocol;
 
 import io.gravitee.exchange.api.command.Command;
+import io.gravitee.exchange.api.command.CommandAdapter;
 import io.gravitee.exchange.api.command.CommandHandler;
 import io.gravitee.exchange.api.command.Reply;
-import io.gravitee.exchange.api.command.ReplyHandler;
+import io.gravitee.exchange.api.command.ReplyAdapter;
 import io.vertx.rxjava3.core.buffer.Buffer;
 import java.util.List;
 
@@ -31,7 +32,11 @@ public interface ProtocolAdapter {
         return List.of();
     }
 
-    default List<ReplyHandler<? extends Command<?>, ? extends Command<?>, ? extends Reply<?>>> replyHandlers() {
+    default List<CommandAdapter<? extends Command<?>, ? extends Command<?>, ? extends Reply<?>>> commandAdapters() {
+        return List.of();
+    }
+
+    default List<ReplyAdapter<? extends Reply<?>, ? extends Reply<?>>> replyAdapters() {
         return List.of();
     }
 

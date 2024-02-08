@@ -13,10 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.gravitee.exchange.api.websocket.protocol.legacy;
+package io.gravitee.exchange.api.websocket.protocol.legacy.primary;
 
 import io.gravitee.exchange.api.channel.exception.ChannelTimeoutException;
-import io.gravitee.exchange.api.command.ReplyHandler;
+import io.gravitee.exchange.api.command.Command;
+import io.gravitee.exchange.api.command.CommandAdapter;
 import io.gravitee.exchange.api.command.primary.PrimaryCommand;
 import io.gravitee.exchange.api.command.primary.PrimaryReply;
 import io.gravitee.exchange.api.command.primary.PrimaryReplyPayload;
@@ -26,15 +27,15 @@ import io.reactivex.rxjava3.core.Single;
  * @author Guillaume LAMIRAND (guillaume.lamirand at graviteesource.com)
  * @author GraviteeSource Team
  */
-public class LegacyPrimaryReplyHandler implements ReplyHandler<PrimaryCommand, PrimaryCommand, PrimaryReply> {
+public class LegacyPrimaryCommandAdapter implements CommandAdapter<PrimaryCommand, PrimaryCommand, PrimaryReply> {
 
     @Override
-    public String handleType() {
+    public String supportType() {
         return PrimaryCommand.COMMAND_TYPE;
     }
 
     @Override
-    public Single<PrimaryCommand> decorate(final PrimaryCommand command) {
+    public Single<PrimaryCommand> adapt(final PrimaryCommand command) {
         return Single.fromCallable(() -> {
             command.setReplyTimeoutMs(0);
             return command;
@@ -42,10 +43,10 @@ public class LegacyPrimaryReplyHandler implements ReplyHandler<PrimaryCommand, P
     }
 
     @Override
-    public Single<PrimaryReply> handleError(final PrimaryCommand primaryCommand, final Throwable throwable) {
+    public Single<PrimaryReply> onError(final Command<?> command, final Throwable throwable) {
         return Single.defer(() -> {
             if (throwable instanceof ChannelTimeoutException) {
-                return Single.just(new PrimaryReply(primaryCommand.getId(), new PrimaryReplyPayload()));
+                return Single.just(new PrimaryReply(command.getId(), new PrimaryReplyPayload()));
             }
             return Single.error(throwable);
         });

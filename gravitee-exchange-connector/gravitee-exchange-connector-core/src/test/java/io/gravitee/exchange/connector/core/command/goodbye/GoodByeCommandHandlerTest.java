@@ -53,7 +53,7 @@ class GoodByeCommandHandlerTest {
 
     @Test
     void should_handle_good_bye_command() {
-        assertThat(cut.handleType()).isEqualTo(GoodByeCommand.COMMAND_TYPE);
+        assertThat(cut.supportType()).isEqualTo(GoodByeCommand.COMMAND_TYPE);
     }
 
     @Test

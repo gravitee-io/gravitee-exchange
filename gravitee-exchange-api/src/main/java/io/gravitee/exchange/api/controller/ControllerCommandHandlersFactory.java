@@ -16,29 +16,39 @@
 package io.gravitee.exchange.api.controller;
 
 import io.gravitee.exchange.api.command.Command;
+import io.gravitee.exchange.api.command.CommandAdapter;
 import io.gravitee.exchange.api.command.CommandHandler;
 import io.gravitee.exchange.api.command.Reply;
-import io.gravitee.exchange.api.command.ReplyHandler;
+import io.gravitee.exchange.api.command.ReplyAdapter;
+import io.gravitee.exchange.api.connector.ConnectorCommandContext;
 import java.util.List;
-import java.util.Map;
 
 public interface ControllerCommandHandlersFactory {
     /**
      * Build a map of command handlers dedicated to the specified context.
      *
      * @param controllerCommandContext the command context
-     * @return a map of command handlers indexed by type.
+     * @return a list of command handlers indexed by type.
      */
     List<CommandHandler<? extends Command<?>, ? extends Reply<?>>> buildCommandHandlers(
         final ControllerCommandContext controllerCommandContext
     );
+
     /**
-     * Build a map of reply handlers dedicated to the specified context.
+     * Build a list of command decorators dedicated to the specified context.
      *
      * @param controllerCommandContext the command context
-     * @return a map of command handlers indexed by type.
+     * @return a list of command decorators
      */
-    List<ReplyHandler<? extends Command<?>, ? extends Command<?>, ? extends Reply<?>>> buildReplyHandlers(
+    List<CommandAdapter<? extends Command<?>, ? extends Command<?>, ? extends Reply<?>>> buildCommandAdapters(
         final ControllerCommandContext controllerCommandContext
     );
+
+    /**
+     * Build a list of command decorators dedicated to the specified context.
+     *
+     * @param controllerCommandContext the command context
+     * @return a list of command decorators
+     */
+    List<ReplyAdapter<? extends Reply<?>, ? extends Reply<?>>> buildReplyAdapters(final ControllerCommandContext controllerCommandContext);
 }

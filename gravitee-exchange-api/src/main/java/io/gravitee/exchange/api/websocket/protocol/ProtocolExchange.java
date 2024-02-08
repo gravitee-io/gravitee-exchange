@@ -40,12 +40,12 @@ public class ProtocolExchange {
 
     private final Exchange<?> exchange;
 
-    public Command<?> asCommand() {
-        return (Command<?>) exchange;
+    public <C extends Command<?>> C asCommand() {
+        return (C) exchange;
     }
 
-    public Reply<?> asReply() {
-        return (Reply<?>) exchange;
+    public <R extends Reply<?>> R asReply() {
+        return (R) exchange;
     }
 
     public enum Type {

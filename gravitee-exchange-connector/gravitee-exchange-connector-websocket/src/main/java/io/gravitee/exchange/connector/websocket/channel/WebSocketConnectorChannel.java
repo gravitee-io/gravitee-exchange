@@ -18,10 +18,11 @@ package io.gravitee.exchange.connector.websocket.channel;
 import io.gravitee.exchange.api.channel.exception.ChannelException;
 import io.gravitee.exchange.api.channel.exception.ChannelInitializationException;
 import io.gravitee.exchange.api.command.Command;
+import io.gravitee.exchange.api.command.CommandAdapter;
 import io.gravitee.exchange.api.command.CommandHandler;
 import io.gravitee.exchange.api.command.CommandStatus;
 import io.gravitee.exchange.api.command.Reply;
-import io.gravitee.exchange.api.command.ReplyHandler;
+import io.gravitee.exchange.api.command.ReplyAdapter;
 import io.gravitee.exchange.api.command.hello.HelloCommand;
 import io.gravitee.exchange.api.command.hello.HelloCommandPayload;
 import io.gravitee.exchange.api.connector.ConnectorChannel;
@@ -29,7 +30,6 @@ import io.gravitee.exchange.api.websocket.channel.AbstractWebSocketChannel;
 import io.gravitee.exchange.api.websocket.protocol.ProtocolAdapter;
 import io.gravitee.exchange.connector.websocket.exception.WebSocketConnectorException;
 import io.reactivex.rxjava3.core.Completable;
-import io.reactivex.rxjava3.core.CompletableEmitter;
 import io.reactivex.rxjava3.core.Single;
 import io.vertx.rxjava3.core.Vertx;
 import io.vertx.rxjava3.core.http.WebSocketBase;
@@ -46,12 +46,13 @@ public class WebSocketConnectorChannel extends AbstractWebSocketChannel implemen
 
     public WebSocketConnectorChannel(
         final List<CommandHandler<? extends Command<?>, ? extends Reply<?>>> commandHandlers,
-        final List<ReplyHandler<? extends Command<?>, ? extends Command<?>, ? extends Reply<?>>> replyHandlers,
+        final List<CommandAdapter<? extends Command<?>, ? extends Command<?>, ? extends Reply<?>>> commandAdapters,
+        final List<ReplyAdapter<? extends Reply<?>, ? extends Reply<?>>> replyAdapters,
         final Vertx vertx,
         final WebSocketBase webSocket,
         final ProtocolAdapter protocolAdapter
     ) {
-        super(commandHandlers, replyHandlers, vertx, webSocket, protocolAdapter);
+        super(commandHandlers, commandAdapters, replyAdapters, vertx, webSocket, protocolAdapter);
     }
 
     @Override

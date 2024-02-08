@@ -19,9 +19,10 @@ import io.gravitee.exchange.api.channel.exception.ChannelInactiveException;
 import io.gravitee.exchange.api.channel.exception.ChannelNoReplyException;
 import io.gravitee.exchange.api.channel.exception.ChannelTimeoutException;
 import io.gravitee.exchange.api.command.Command;
+import io.gravitee.exchange.api.command.CommandAdapter;
 import io.gravitee.exchange.api.command.CommandHandler;
 import io.gravitee.exchange.api.command.Reply;
-import io.gravitee.exchange.api.command.ReplyHandler;
+import io.gravitee.exchange.api.command.ReplyAdapter;
 import io.gravitee.exchange.api.connector.ConnectorChannel;
 import io.gravitee.exchange.api.controller.ControllerChannel;
 import io.reactivex.rxjava3.core.Completable;
@@ -44,18 +45,21 @@ public class EmbeddedChannel implements ControllerChannel, ConnectorChannel {
     private final String id = UUID.randomUUID().toString();
     private final String targetId;
     private final Map<String, CommandHandler<? extends Command<?>, ? extends Reply<?>>> commandHandlers = new ConcurrentHashMap<>();
-    private final Map<String, ReplyHandler<? extends Command<?>, ? extends Command<?>, ? extends Reply<?>>> replyHandlers = new ConcurrentHashMap<>();
+    protected final Map<String, CommandAdapter<? extends Command<?>, ? extends Command<?>, ? extends Reply<?>>> commandAdapters = new ConcurrentHashMap<>();
+    protected final Map<String, ReplyAdapter<? extends Reply<?>, ? extends Reply<?>>> replyAdapters = new ConcurrentHashMap<>();
     private boolean active = false;
 
     @Builder
     public EmbeddedChannel(
         final String targetId,
         final List<CommandHandler<? extends Command<?>, ? extends Reply<?>>> commandHandlers,
-        final List<ReplyHandler<? extends Command<?>, ? extends Command<?>, ? extends Reply<?>>> replyHandlers
+        final List<CommandAdapter<? extends Command<?>, ? extends Command<?>, ? extends Reply<?>>> commandAdapters,
+        final List<ReplyAdapter<? extends Reply<?>, ? extends Reply<?>>> replyAdapters
     ) {
         this.targetId = targetId;
         addCommandHandlers(commandHandlers);
-        addReplyHandlers(replyHandlers);
+        this.addCommandAdapters(commandAdapters);
+        this.addReplyAdapters(replyAdapters);
     }
 
     @Override
@@ -97,28 +101,18 @@ public class EmbeddedChannel implements ControllerChannel, ConnectorChannel {
                     if (!active) {
                         return Single.error(new ChannelInactiveException());
                     }
-                    ReplyHandler<Command<?>, Command<?>, Reply<?>> replyHandler = (ReplyHandler<Command<?>, Command<?>, Reply<?>>) replyHandlers.get(
+                    CommandAdapter<C, Command<?>, Reply<?>> commandAdapter = (CommandAdapter<C, Command<?>, Reply<?>>) commandAdapters.get(
                         command.getType()
                     );
-                    if (replyHandler != null) {
-                        return replyHandler.decorate(command);
+                    if (commandAdapter != null) {
+                        return commandAdapter.adapt(command);
                     } else {
                         return Single.just(command);
                     }
                 })
                 .flatMap(single -> {
-                    CommandHandler<C, R> castHandler = (CommandHandler<C, R>) commandHandler;
+                    CommandHandler<Command<?>, Reply<?>> castHandler = (CommandHandler<Command<?>, Reply<?>>) commandHandler;
                     return castHandler.handle(command);
-                })
-                .flatMap(reply -> {
-                    ReplyHandler<Command<?>, Command<?>, Reply<?>> replyHandler = (ReplyHandler<Command<?>, Command<?>, Reply<?>>) replyHandlers.get(
-                        reply.getType()
-                    );
-                    if (replyHandler != null) {
-                        return (Single<R>) replyHandler.handle(reply);
-                    } else {
-                        return Single.just(reply);
-                    }
                 })
                 .timeout(
                     command.getReplyTimeoutMs(),
@@ -127,7 +121,25 @@ public class EmbeddedChannel implements ControllerChannel, ConnectorChannel {
                         log.warn("No reply received in time for command [{}, {}]", command.getType(), command.getId());
                         throw new ChannelTimeoutException();
                     })
-                );
+                )
+                .onErrorResumeNext(throwable -> {
+                    CommandAdapter<C, Command<?>, R> commandAdapter = (CommandAdapter<C, Command<?>, R>) commandAdapters.get(
+                        command.getType()
+                    );
+                    if (commandAdapter != null) {
+                        return commandAdapter.onError(command, throwable);
+                    } else {
+                        return Single.error(throwable);
+                    }
+                })
+                .flatMap(reply -> {
+                    ReplyAdapter<Reply<?>, R> replyAdapter = (ReplyAdapter<Reply<?>, R>) replyAdapters.get(reply.getType());
+                    if (replyAdapter != null) {
+                        return replyAdapter.adapt(reply);
+                    } else {
+                        return Single.just((R) reply);
+                    }
+                });
         } else {
             return Single.error(() -> {
                 if (!active) {
@@ -142,14 +154,23 @@ public class EmbeddedChannel implements ControllerChannel, ConnectorChannel {
     @Override
     public void addCommandHandlers(final List<CommandHandler<? extends Command<?>, ? extends Reply<?>>> commandHandlers) {
         if (commandHandlers != null) {
-            commandHandlers.forEach(commandHandler -> this.commandHandlers.putIfAbsent(commandHandler.handleType(), commandHandler));
+            commandHandlers.forEach(commandHandler -> this.commandHandlers.putIfAbsent(commandHandler.supportType(), commandHandler));
         }
     }
 
     @Override
-    public void addReplyHandlers(final List<ReplyHandler<? extends Command<?>, ? extends Command<?>, ? extends Reply<?>>> replyHandlers) {
-        if (replyHandlers != null) {
-            replyHandlers.forEach(replyHandler -> this.replyHandlers.putIfAbsent(replyHandler.handleType(), replyHandler));
+    public void addCommandAdapters(
+        final List<CommandAdapter<? extends Command<?>, ? extends Command<?>, ? extends Reply<?>>> commandAdapters
+    ) {
+        if (commandAdapters != null) {
+            commandAdapters.forEach(commandDecorator -> this.commandAdapters.putIfAbsent(commandDecorator.supportType(), commandDecorator));
+        }
+    }
+
+    @Override
+    public void addReplyAdapters(final List<ReplyAdapter<? extends Reply<?>, ? extends Reply<?>>> replyAdapters) {
+        if (replyAdapters != null) {
+            replyAdapters.forEach(replyDecorator -> this.replyAdapters.putIfAbsent(replyDecorator.supportType(), replyDecorator));
         }
     }
 }

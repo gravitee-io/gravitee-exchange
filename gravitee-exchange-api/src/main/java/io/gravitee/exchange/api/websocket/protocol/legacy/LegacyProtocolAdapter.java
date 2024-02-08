@@ -15,14 +15,23 @@
  */
 package io.gravitee.exchange.api.websocket.protocol.legacy;
 
-import io.gravitee.exchange.api.command.ReplyHandler;
-import io.gravitee.exchange.api.command.noreply.NoReply;
+import io.gravitee.exchange.api.command.Command;
+import io.gravitee.exchange.api.command.CommandAdapter;
+import io.gravitee.exchange.api.command.Reply;
+import io.gravitee.exchange.api.command.ReplyAdapter;
 import io.gravitee.exchange.api.command.primary.PrimaryCommand;
 import io.gravitee.exchange.api.command.primary.PrimaryCommandPayload;
 import io.gravitee.exchange.api.websocket.command.ExchangeSerDe;
 import io.gravitee.exchange.api.websocket.protocol.ProtocolAdapter;
 import io.gravitee.exchange.api.websocket.protocol.ProtocolExchange;
 import io.gravitee.exchange.api.websocket.protocol.ProtocolVersion;
+import io.gravitee.exchange.api.websocket.protocol.legacy.goodbye.LegacyGoodByeReplyAdapter;
+import io.gravitee.exchange.api.websocket.protocol.legacy.goodbye.LegacyGoodyeCommandAdapter;
+import io.gravitee.exchange.api.websocket.protocol.legacy.healthcheck.LegacyHealthCheckCommandAdapter;
+import io.gravitee.exchange.api.websocket.protocol.legacy.hello.LegacyHelloCommandAdapter;
+import io.gravitee.exchange.api.websocket.protocol.legacy.hello.LegacyHelloReplyAdapter;
+import io.gravitee.exchange.api.websocket.protocol.legacy.ignored.LegacyNoReplyAdapter;
+import io.gravitee.exchange.api.websocket.protocol.legacy.primary.LegacyPrimaryCommandAdapter;
 import io.vertx.rxjava3.core.buffer.Buffer;
 import java.util.List;
 import java.util.Objects;
@@ -43,8 +52,18 @@ public class LegacyProtocolAdapter implements ProtocolAdapter {
     private final ExchangeSerDe exchangeSerDe;
 
     @Override
-    public List<ReplyHandler<?, ?, ?>> replyHandlers() {
-        return List.of(new LegacyPrimaryReplyHandler());
+    public List<CommandAdapter<? extends Command<?>, ? extends Command<?>, ? extends Reply<?>>> commandAdapters() {
+        return List.of(
+            new LegacyHelloCommandAdapter(),
+            new LegacyGoodyeCommandAdapter(),
+            new LegacyHealthCheckCommandAdapter(),
+            new LegacyPrimaryCommandAdapter()
+        );
+    }
+
+    @Override
+    public List<ReplyAdapter<? extends Reply<?>, ? extends Reply<?>>> replyAdapters() {
+        return List.of(new LegacyHelloReplyAdapter(), new LegacyGoodByeReplyAdapter(), new LegacyNoReplyAdapter());
     }
 
     @Override
@@ -61,14 +80,7 @@ public class LegacyProtocolAdapter implements ProtocolAdapter {
                 return Buffer.buffer(COMMAND_PREFIX + exchangeSerDe.serialize(ProtocolVersion.LEGACY, websocketExchange.exchange()));
             }
         } else if (websocketExchange.type() == ProtocolExchange.Type.REPLY) {
-            if (Objects.equals(websocketExchange.exchangeType(), NoReply.COMMAND_TYPE)) {
-                NoReply noReply = (NoReply) websocketExchange.exchange();
-                return Buffer.buffer(
-                    REPLY_PREFIX + exchangeSerDe.serialize(ProtocolVersion.LEGACY, new IgnoredReply(noReply.getCommandId()))
-                );
-            } else {
-                return Buffer.buffer(REPLY_PREFIX + exchangeSerDe.serialize(ProtocolVersion.LEGACY, websocketExchange.exchange()));
-            }
+            return Buffer.buffer(REPLY_PREFIX + exchangeSerDe.serialize(ProtocolVersion.LEGACY, websocketExchange.exchange()));
         }
         return Buffer.buffer();
     }

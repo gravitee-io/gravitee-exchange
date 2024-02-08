@@ -21,13 +21,13 @@ import io.gravitee.exchange.api.channel.exception.ChannelNoReplyException;
 import io.gravitee.exchange.api.channel.exception.ChannelTimeoutException;
 import io.gravitee.exchange.api.channel.exception.ChannelUnknownCommandException;
 import io.gravitee.exchange.api.command.Command;
+import io.gravitee.exchange.api.command.CommandAdapter;
 import io.gravitee.exchange.api.command.CommandHandler;
 import io.gravitee.exchange.api.command.Reply;
-import io.gravitee.exchange.api.command.ReplyHandler;
+import io.gravitee.exchange.api.command.ReplyAdapter;
 import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Single;
 import java.util.List;
-import java.util.Map;
 
 /**
  * @author Guillaume LAMIRAND (guillaume.lamirand at graviteesource.com)
@@ -78,8 +78,13 @@ public interface Channel {
      * Add customs {@link CommandHandler} to this channel
      */
     void addCommandHandlers(final List<CommandHandler<? extends Command<?>, ? extends Reply<?>>> commandHandlers);
+
     /**
-     * Add customs {@link Reply} to this channel
+     * Add customs {@link CommandAdapter} to this channel
      */
-    void addReplyHandlers(final List<ReplyHandler<? extends Command<?>, ? extends Command<?>, ? extends Reply<?>>> replyHandlers);
+    void addCommandAdapters(final List<CommandAdapter<? extends Command<?>, ? extends Command<?>, ? extends Reply<?>>> commandAdapters);
+    /**
+     * Add customs {@link ReplyAdapter} to this channel
+     */
+    void addReplyAdapters(final List<ReplyAdapter<? extends Reply<?>, ? extends Reply<?>>> replyAdapters);
 }

@@ -15,17 +15,24 @@
  */
 package io.gravitee.exchange.api.websocket.channel.test;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import io.gravitee.exchange.api.websocket.command.DefaultExchangeSerDe;
-import java.util.Map;
+import io.gravitee.exchange.api.command.CommandAdapter;
+import io.reactivex.rxjava3.core.Single;
+import io.vertx.junit5.Checkpoint;
+import lombok.RequiredArgsConstructor;
 
-public class DummyCommandSerDe extends DefaultExchangeSerDe {
+@RequiredArgsConstructor
+public class DummyCommandAdapter implements CommandAdapter<DummyCommand, AdaptedDummyCommand, DummyReply> {
 
-    public DummyCommandSerDe(final ObjectMapper objectMapper) {
-        super(
-            objectMapper,
-            Map.of(DummyCommand.COMMAND_TYPE, DummyCommand.class, AdaptedDummyCommand.COMMAND_TYPE, AdaptedDummyCommand.class),
-            Map.of(DummyCommand.COMMAND_TYPE, DummyReply.class, AdaptedDummyCommand.COMMAND_TYPE, AdaptedDummyReply.class)
-        );
+    private final Checkpoint checkpoint;
+
+    @Override
+    public String supportType() {
+        return DummyCommand.COMMAND_TYPE;
+    }
+
+    @Override
+    public Single<AdaptedDummyCommand> adapt(final DummyCommand command) {
+        checkpoint.flag();
+        return Single.just(new AdaptedDummyCommand(command.getId(), command.getPayload()));
     }
 }

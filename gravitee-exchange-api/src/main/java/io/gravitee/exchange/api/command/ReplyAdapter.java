@@ -13,19 +13,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.gravitee.exchange.api.websocket.channel.test;
+package io.gravitee.exchange.api.command;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import io.gravitee.exchange.api.websocket.command.DefaultExchangeSerDe;
-import java.util.Map;
+import io.reactivex.rxjava3.core.Single;
 
-public class DummyCommandSerDe extends DefaultExchangeSerDe {
+/**
+ * @author Guillaume LAMIRAND (guillaume.lamirand at graviteesource.com)
+ * @author GraviteeSource Team
+ */
+@FunctionalInterface
+public interface ReplyAdapter<R1 extends Reply<?>, R2 extends Reply<?>> {
+    /**
+     * Returns the type of reply handled by this adapter
+     *
+     * @return the type of reply supported.
+     */
+    String supportType();
 
-    public DummyCommandSerDe(final ObjectMapper objectMapper) {
-        super(
-            objectMapper,
-            Map.of(DummyCommand.COMMAND_TYPE, DummyCommand.class, AdaptedDummyCommand.COMMAND_TYPE, AdaptedDummyCommand.class),
-            Map.of(DummyCommand.COMMAND_TYPE, DummyReply.class, AdaptedDummyCommand.COMMAND_TYPE, AdaptedDummyReply.class)
-        );
+    /**
+     * Method invoked when receiving the reply
+     * @return the reply adapted
+     */
+    default Single<R2> adapt(R1 reply) {
+        return (Single<R2>) Single.just(reply);
     }
 }

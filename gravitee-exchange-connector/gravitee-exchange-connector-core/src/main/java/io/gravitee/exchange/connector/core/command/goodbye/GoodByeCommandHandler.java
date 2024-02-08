@@ -34,7 +34,7 @@ public class GoodByeCommandHandler implements CommandHandler<GoodByeCommand, Goo
     private final ExchangeConnector exchangeConnector;
 
     @Override
-    public String handleType() {
+    public String supportType() {
         return GoodByeCommand.COMMAND_TYPE;
     }
 

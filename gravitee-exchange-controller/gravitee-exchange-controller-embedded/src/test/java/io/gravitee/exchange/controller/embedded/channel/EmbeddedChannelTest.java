@@ -20,9 +20,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import io.gravitee.exchange.api.channel.exception.ChannelInactiveException;
 import io.gravitee.exchange.api.channel.exception.ChannelNoReplyException;
 import io.gravitee.exchange.api.command.Command;
+import io.gravitee.exchange.api.command.CommandAdapter;
 import io.gravitee.exchange.api.command.CommandHandler;
 import io.gravitee.exchange.api.command.Reply;
-import io.gravitee.exchange.api.command.ReplyHandler;
+import io.gravitee.exchange.api.command.ReplyAdapter;
 import io.gravitee.exchange.api.command.primary.PrimaryCommand;
 import io.gravitee.exchange.api.command.primary.PrimaryCommandPayload;
 import io.gravitee.exchange.api.command.primary.PrimaryReply;
@@ -32,9 +33,7 @@ import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayNameGeneration;
@@ -54,7 +53,14 @@ class EmbeddedChannelTest {
 
     @BeforeEach
     public void beforeEach() {
-        cut = EmbeddedChannel.builder().commandHandlers(new ArrayList<>()).replyHandlers(new ArrayList<>()).targetId("targetId").build();
+        cut =
+            EmbeddedChannel
+                .builder()
+                .commandHandlers(new ArrayList<>())
+                .commandAdapters(new ArrayList<>())
+                .replyAdapters(new ArrayList<>())
+                .targetId("targetId")
+                .build();
     }
 
     @Test
@@ -102,7 +108,7 @@ class EmbeddedChannelTest {
             List.of(
                 new CommandHandler<>() {
                     @Override
-                    public String handleType() {
+                    public String supportType() {
                         return PrimaryCommand.COMMAND_TYPE;
                     }
 
@@ -133,7 +139,7 @@ class EmbeddedChannelTest {
                     List.of(
                         new CommandHandler<>() {
                             @Override
-                            public String handleType() {
+                            public String supportType() {
                                 return PrimaryCommand.COMMAND_TYPE;
                             }
 
@@ -145,22 +151,32 @@ class EmbeddedChannelTest {
                         }
                     )
                 )
-                .replyHandlers(
+                .commandAdapters(
                     List.of(
-                        new ReplyHandler<>() {
+                        new CommandAdapter<>() {
                             @Override
-                            public String handleType() {
+                            public String supportType() {
                                 return PrimaryCommand.COMMAND_TYPE;
                             }
 
                             @Override
-                            public Single<Command<?>> decorate(final Command<?> command) {
+                            public Single<Command<?>> adapt(final Command<?> command) {
                                 checkpoint.flag();
                                 return Single.just(command);
                             }
+                        }
+                    )
+                )
+                .replyAdapters(
+                    List.of(
+                        new ReplyAdapter<>() {
+                            @Override
+                            public String supportType() {
+                                return PrimaryCommand.COMMAND_TYPE;
+                            }
 
                             @Override
-                            public Single<Reply<?>> handle(final Reply<?> reply) {
+                            public Single<Reply<?>> adapt(final Reply<?> reply) {
                                 checkpoint.flag();
                                 return Single.just(reply);
                             }

@@ -26,7 +26,7 @@ public class DummyCommandHandler implements CommandHandler<DummyCommand, DummyRe
     private final Checkpoint checkpoint;
 
     @Override
-    public String handleType() {
+    public String supportType() {
         return DummyCommand.COMMAND_TYPE;
     }
 
