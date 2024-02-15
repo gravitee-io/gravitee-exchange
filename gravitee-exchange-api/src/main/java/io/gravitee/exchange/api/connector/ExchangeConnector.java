@@ -52,9 +52,16 @@ public interface ExchangeConnector {
     String targetId();
 
     /**
+     * Return <code>true</code> when the current instance is active and ready, <code>false</code> otherwise.
+     *
+     * @return status of the connector.
+     */
+    boolean isActive();
+
+    /**
      * Returns <code>true</code> when the current instance is PRIMARY.
      *
-     * @return boolean
+     * @return boolean about primary status
      */
     boolean isPrimary();
 

@@ -15,7 +15,6 @@
  */
 package io.gravitee.exchange.api.websocket.protocol.legacy.goodbye;
 
-import io.gravitee.exchange.api.command.CommandAdapter;
 import io.gravitee.exchange.api.command.ReplyAdapter;
 import io.gravitee.exchange.api.command.goodbye.GoodByeReplyPayload;
 import io.reactivex.rxjava3.core.Single;

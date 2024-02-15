@@ -29,7 +29,7 @@
 
     <groupId>io.gravitee.exchange</groupId>
     <artifactId>gravitee-exchange</artifactId>
-    <version>1.0.0-alpha.4</version>
+    <version>1.0.0-alpha.5</version>
     <name>Gravitee.io - Exchange</name>
     <packaging>pom</packaging>
 

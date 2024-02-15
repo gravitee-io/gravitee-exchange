@@ -57,6 +57,11 @@ public class EmbeddedExchangeConnector implements ExchangeConnector {
     }
 
     @Override
+    public boolean isActive() {
+        return connectorChannel.isActive();
+    }
+
+    @Override
     public boolean isPrimary() {
         return primary;
     }

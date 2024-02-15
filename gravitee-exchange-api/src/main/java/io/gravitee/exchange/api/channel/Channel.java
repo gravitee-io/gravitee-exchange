@@ -63,6 +63,13 @@ public interface Channel {
     Completable close();
 
     /**
+     * Return <code>true</code> is the current channel is active and ready to receive new commands, <code>false</code> otherwise.
+     *
+     * @return status of the channel.
+     */
+    boolean isActive();
+
+    /**
      * Send the actual commands to the current channel. In case of error, different exception could be returned:
      * <ul>
      * <li>if the channel is inactive {@link ChannelInitializationException} is signaled</li>
