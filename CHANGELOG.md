@@ -1,3 +1,10 @@
+# [1.0.0-alpha.4](https://github.com/gravitee-io/gravitee-exchange/compare/1.0.0-alpha.3...1.0.0-alpha.4) (2024-02-15)
+
+
+### Bug Fixes
+
+* apply correct version ([a3bac9e](https://github.com/gravitee-io/gravitee-exchange/commit/a3bac9e794e85eeccb3ab89a39bcf716823ec7d1))
+
 # [1.0.0-alpha.3](https://github.com/gravitee-io/gravitee-exchange/compare/1.0.0-alpha.2...1.0.0-alpha.3) (2024-02-15)
 
 
