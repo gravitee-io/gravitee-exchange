@@ -23,13 +23,6 @@ import io.gravitee.exchange.api.channel.Channel;
  */
 public interface ControllerChannel extends Channel {
     /**
-     * Return <code>true</code> is the current channel is active and ready to receive new commands, <code>false</code> otherwise.
-     *
-     * @return status of the channel.
-     */
-    boolean isActive();
-
-    /**
      * Enforce the active status of this controller channel.
      */
     void enforceActiveStatus(final boolean isActive);

@@ -107,6 +107,11 @@ public abstract class AbstractWebSocketChannel implements Channel {
     }
 
     @Override
+    public boolean isActive() {
+        return this.active;
+    }
+
+    @Override
     public Completable initialize() {
         return Completable.create(emitter -> {
             webSocket.closeHandler(v -> {
