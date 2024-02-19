@@ -50,6 +50,11 @@ public class Batch {
     private String id = UUID.random().toString();
 
     /**
+     * The key to identify the batch
+     */
+    private String key;
+
+    /**
      * The target id of the batch
      */
     private String targetId;
