@@ -94,7 +94,9 @@ public class DefaultExchangeController extends AbstractService<ExchangeControlle
                     if (clusterManager.self().primary()) {
                         log.debug("Executing Batch scheduled tasks");
                         this.batchStore.findByStatus(BatchStatus.PENDING)
-                            .doOnNext(batch -> log.debug("Retry Batch {} for target id {}", batch.id(), batch.targetId()))
+                            .doOnNext(batch ->
+                                log.info("Retrying batch '{}' with key '{}' and target id '{}'", batch.id(), batch.key(), batch.targetId())
+                            )
                             .flatMapSingle(this::sendBatchCommands)
                             .ignoreElements()
                             .blockingAwait();
@@ -152,7 +154,9 @@ public class DefaultExchangeController extends AbstractService<ExchangeControlle
     @Override
     public Single<Batch> executeBatch(final Batch batch) {
         if (isBatchFeatureEnabled()) {
-            return this.batchStore.add(batch).flatMap(this::sendBatchCommands);
+            return this.batchStore.add(batch)
+                .doOnSuccess(b -> log.info("Executing batch '%s' with key '%s'".formatted(b.id(), b.key())))
+                .flatMap(this::sendBatchCommands);
         } else {
             return Single.error(new BatchDisabledException());
         }
@@ -173,6 +177,7 @@ public class DefaultExchangeController extends AbstractService<ExchangeControlle
     private Single<Batch> sendBatchCommands(final Batch batch) {
         return this.updateBatch(batch.start())
             .filter(a -> a.status().equals(BatchStatus.IN_PROGRESS))
+            .doOnSuccess(b -> log.debug("Batch '%s' for target '%s' and key '%s' in progress".formatted(b.id(), b.targetId(), b.key())))
             .flatMapSingle(updateBatch -> {
                 List<BatchCommand> commands = updateBatch
                     .batchCommands()
@@ -205,7 +210,20 @@ public class DefaultExchangeController extends AbstractService<ExchangeControlle
                     .flatMap(this::updateBatch)
             )
             .takeWhile(updatedBatch -> updatedBatch.status() == BatchStatus.IN_PROGRESS)
-            .last(batch);
+            .last(batch)
+            .doOnSuccess(b -> {
+                switch (b.status()) {
+                    case PENDING -> log.info(
+                        "Batch '%s' for target id '%s' and key '%s' is scheduled for retry".formatted(b.id(), b.targetId(), b.key())
+                    );
+                    case SUCCEEDED -> log.info(
+                        "Batch '%s' for target id '%s' and key '%s' has succeed".formatted(b.id(), b.targetId(), b.key())
+                    );
+                    case ERROR -> log.info(
+                        "Batch '%s' for target id '%s' and key '%s' stopped in error".formatted(b.id(), b.targetId(), b.key())
+                    );
+                }
+            });
     }
 
     private Single<Batch> updateBatch(final Batch batch) {
