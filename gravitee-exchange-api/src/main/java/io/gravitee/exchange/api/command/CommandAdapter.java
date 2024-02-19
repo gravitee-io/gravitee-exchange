@@ -21,7 +21,6 @@ import io.reactivex.rxjava3.core.Single;
  * @author Guillaume LAMIRAND (guillaume.lamirand at graviteesource.com)
  * @author GraviteeSource Team
  */
-@FunctionalInterface
 public interface CommandAdapter<C1 extends Command<?>, C2 extends Command<?>, R extends Reply<?>> {
     /**
      * Returns the type of command supported by this adapter.

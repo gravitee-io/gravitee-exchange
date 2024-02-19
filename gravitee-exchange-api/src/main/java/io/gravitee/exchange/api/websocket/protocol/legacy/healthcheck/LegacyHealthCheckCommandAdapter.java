@@ -21,7 +21,6 @@ import io.gravitee.exchange.api.command.CommandAdapter;
 import io.gravitee.exchange.api.command.healtcheck.HealthCheckCommand;
 import io.gravitee.exchange.api.command.healtcheck.HealthCheckReply;
 import io.gravitee.exchange.api.command.healtcheck.HealthCheckReplyPayload;
-import io.gravitee.exchange.api.command.primary.PrimaryCommand;
 import io.reactivex.rxjava3.core.Single;
 
 /**

@@ -19,7 +19,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.gravitee.exchange.api.controller.ws.WebsocketControllerConstants;
 import io.gravitee.exchange.api.websocket.command.DefaultExchangeSerDe;
 import io.gravitee.exchange.api.websocket.protocol.ProtocolAdapter;
-import io.gravitee.exchange.api.websocket.protocol.ProtocolAdapterFactory;
 import io.gravitee.exchange.api.websocket.protocol.ProtocolVersion;
 import io.reactivex.rxjava3.core.Single;
 import io.reactivex.rxjava3.disposables.Disposable;
@@ -101,7 +100,7 @@ public abstract class AbstractWebSocketTest {
     }
 
     public ProtocolAdapter protocolAdapter(final ProtocolVersion protocolVersion) {
-        return ProtocolAdapterFactory.create(protocolVersion, this.exchangeSerDe);
+        return protocolVersion.adapterFactory().apply(this.exchangeSerDe);
     }
 
     protected static Single<WebSocket> rxWebSocket() {

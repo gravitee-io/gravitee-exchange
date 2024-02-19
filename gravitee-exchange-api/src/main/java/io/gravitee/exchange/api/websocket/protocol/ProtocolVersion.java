@@ -15,8 +15,12 @@
  */
 package io.gravitee.exchange.api.websocket.protocol;
 
+import io.gravitee.exchange.api.websocket.command.ExchangeSerDe;
+import io.gravitee.exchange.api.websocket.protocol.legacy.LegacyProtocolAdapter;
+import io.gravitee.exchange.api.websocket.protocol.v1.V1ProtocolAdapter;
 import java.util.Arrays;
 import java.util.Objects;
+import java.util.function.Function;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.Accessors;
@@ -29,10 +33,11 @@ import lombok.experimental.Accessors;
 @Getter
 @Accessors(fluent = true)
 public enum ProtocolVersion {
-    LEGACY("legacy"),
-    V1("v1");
+    LEGACY("legacy", LegacyProtocolAdapter::new),
+    V1("v1", V1ProtocolAdapter::new);
 
     private final String version;
+    private final Function<ExchangeSerDe, ProtocolAdapter> adapterFactory;
 
     public static ProtocolVersion parse(final String version) {
         if (version == null) {

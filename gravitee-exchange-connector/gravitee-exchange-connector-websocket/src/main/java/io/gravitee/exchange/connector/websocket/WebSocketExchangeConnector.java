@@ -15,6 +15,8 @@
  */
 package io.gravitee.exchange.connector.websocket;
 
+import static io.gravitee.exchange.api.controller.ws.WebsocketControllerConstants.EXCHANGE_PROTOCOL_HEADER;
+
 import io.gravitee.exchange.api.command.Command;
 import io.gravitee.exchange.api.command.CommandAdapter;
 import io.gravitee.exchange.api.command.CommandHandler;
@@ -22,7 +24,6 @@ import io.gravitee.exchange.api.command.Reply;
 import io.gravitee.exchange.api.command.ReplyAdapter;
 import io.gravitee.exchange.api.controller.ws.WebsocketControllerConstants;
 import io.gravitee.exchange.api.websocket.command.ExchangeSerDe;
-import io.gravitee.exchange.api.websocket.protocol.ProtocolAdapterFactory;
 import io.gravitee.exchange.api.websocket.protocol.ProtocolVersion;
 import io.gravitee.exchange.connector.embedded.EmbeddedExchangeConnector;
 import io.gravitee.exchange.connector.websocket.channel.WebSocketConnectorChannel;
@@ -73,7 +74,7 @@ public class WebSocketExchangeConnector extends EmbeddedExchangeConnector {
                         replyAdapters,
                         vertx,
                         webSocket,
-                        ProtocolAdapterFactory.create(protocolVersion, exchangeSerDe)
+                        protocolVersion.adapterFactory().apply(exchangeSerDe)
                     );
                 return connectorChannel
                     .initialize()
@@ -112,7 +113,7 @@ public class WebSocketExchangeConnector extends EmbeddedExchangeConnector {
                 HttpClient httpClient = webSocketConnectorClientFactory.createHttpClient(webSocketEndpoint);
                 WebSocketConnectOptions webSocketConnectOptions = new WebSocketConnectOptions()
                     .setURI(webSocketEndpoint.resolvePath(WebsocketControllerConstants.EXCHANGE_CONTROLLER_PATH))
-                    .addHeader(ProtocolAdapterFactory.REQUEST_HEADER, protocolVersion.version());
+                    .addHeader(EXCHANGE_PROTOCOL_HEADER, protocolVersion.version());
 
                 if (webSocketConnectorClientFactory.getConfiguration().headers() != null) {
                     webSocketConnectorClientFactory.getConfiguration().headers().forEach(webSocketConnectOptions::addHeader);
