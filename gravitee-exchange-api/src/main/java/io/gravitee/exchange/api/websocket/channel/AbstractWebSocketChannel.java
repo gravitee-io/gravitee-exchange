@@ -447,7 +447,6 @@ public abstract class AbstractWebSocketChannel implements Channel {
         }
     }
 
-    @Override
     public void addCommandAdapters(
         final List<CommandAdapter<? extends Command<?>, ? extends Command<?>, ? extends Reply<?>>> commandAdapters
     ) {
@@ -456,7 +455,6 @@ public abstract class AbstractWebSocketChannel implements Channel {
         }
     }
 
-    @Override
     public void addReplyAdapters(final List<ReplyAdapter<? extends Reply<?>, ? extends Reply<?>>> replyAdapters) {
         if (replyAdapters != null) {
             replyAdapters.forEach(replyAdapter -> this.replyAdapters.putIfAbsent(replyAdapter.supportType(), replyAdapter));

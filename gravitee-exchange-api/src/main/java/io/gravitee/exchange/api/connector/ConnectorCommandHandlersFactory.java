@@ -20,6 +20,7 @@ import io.gravitee.exchange.api.command.CommandAdapter;
 import io.gravitee.exchange.api.command.CommandHandler;
 import io.gravitee.exchange.api.command.Reply;
 import io.gravitee.exchange.api.command.ReplyAdapter;
+import io.gravitee.exchange.api.websocket.protocol.ProtocolVersion;
 import java.util.List;
 
 public interface ConnectorCommandHandlersFactory {
@@ -40,7 +41,8 @@ public interface ConnectorCommandHandlersFactory {
      * @return a list of command decorators
      */
     List<CommandAdapter<? extends Command<?>, ? extends Command<?>, ? extends Reply<?>>> buildCommandAdapters(
-        final ConnectorCommandContext connectorCommandContext
+        final ConnectorCommandContext connectorCommandContext,
+        final ProtocolVersion protocolVersion
     );
 
     /**
@@ -49,5 +51,8 @@ public interface ConnectorCommandHandlersFactory {
      * @param connectorCommandContext the command context
      * @return a list of command decorators
      */
-    List<ReplyAdapter<? extends Reply<?>, ? extends Reply<?>>> buildReplyAdapters(final ConnectorCommandContext connectorCommandContext);
+    List<ReplyAdapter<? extends Reply<?>, ? extends Reply<?>>> buildReplyAdapters(
+        final ConnectorCommandContext connectorCommandContext,
+        final ProtocolVersion protocolVersion
+    );
 }

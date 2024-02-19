@@ -15,6 +15,8 @@
  */
 package io.gravitee.exchange.controller.websocket;
 
+import static io.gravitee.exchange.api.controller.ws.WebsocketControllerConstants.EXCHANGE_PROTOCOL_HEADER;
+
 import io.gravitee.common.http.HttpStatusCode;
 import io.gravitee.exchange.api.command.Command;
 import io.gravitee.exchange.api.command.CommandAdapter;
@@ -26,7 +28,7 @@ import io.gravitee.exchange.api.controller.ControllerCommandContext;
 import io.gravitee.exchange.api.controller.ControllerCommandHandlersFactory;
 import io.gravitee.exchange.api.controller.ExchangeController;
 import io.gravitee.exchange.api.websocket.command.ExchangeSerDe;
-import io.gravitee.exchange.api.websocket.protocol.ProtocolAdapterFactory;
+import io.gravitee.exchange.api.websocket.protocol.ProtocolVersion;
 import io.gravitee.exchange.controller.core.channel.primary.PrimaryChannelManager;
 import io.gravitee.exchange.controller.websocket.auth.WebSocketControllerAuthentication;
 import io.gravitee.exchange.controller.websocket.channel.WebSocketControllerChannel;
@@ -58,6 +60,10 @@ public class WebSocketRequestHandler implements io.vertx.core.Handler<io.vertx.r
         HttpServerRequest request = routingContext.request();
         ControllerCommandContext controllerContext = controllerAuthentication.authenticate(request);
         if (controllerContext.isValid()) {
+            // Resolve protocol version from header
+            String headerValue = request.getHeader(EXCHANGE_PROTOCOL_HEADER);
+            ProtocolVersion protocolVersion = ProtocolVersion.parse(headerValue);
+
             request
                 .toWebSocket()
                 .flatMapCompletable(webSocket -> {
@@ -65,10 +71,12 @@ public class WebSocketRequestHandler implements io.vertx.core.Handler<io.vertx.r
                         controllerContext
                     );
                     List<CommandAdapter<? extends Command<?>, ? extends Command<?>, ? extends Reply<?>>> commandAdapters = controllerCommandHandlersFactory.buildCommandAdapters(
-                        controllerContext
+                        controllerContext,
+                        protocolVersion
                     );
                     List<ReplyAdapter<? extends Reply<?>, ? extends Reply<?>>> replyAdapters = controllerCommandHandlersFactory.buildReplyAdapters(
-                        controllerContext
+                        controllerContext,
+                        protocolVersion
                     );
 
                     ControllerChannel websocketControllerChannel = new WebSocketControllerChannel(
@@ -77,7 +85,7 @@ public class WebSocketRequestHandler implements io.vertx.core.Handler<io.vertx.r
                         replyAdapters,
                         vertx,
                         webSocket,
-                        ProtocolAdapterFactory.create(request, commandSerDe),
+                        protocolVersion.adapterFactory().apply(commandSerDe),
                         primaryChannelManager
                     );
                     return exchangeController

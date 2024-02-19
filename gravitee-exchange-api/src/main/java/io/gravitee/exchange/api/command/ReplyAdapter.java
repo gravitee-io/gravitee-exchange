@@ -21,7 +21,6 @@ import io.reactivex.rxjava3.core.Single;
  * @author Guillaume LAMIRAND (guillaume.lamirand at graviteesource.com)
  * @author GraviteeSource Team
  */
-@FunctionalInterface
 public interface ReplyAdapter<R1 extends Reply<?>, R2 extends Reply<?>> {
     /**
      * Returns the type of reply handled by this adapter

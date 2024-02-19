@@ -15,8 +15,6 @@
  */
 package io.gravitee.exchange.api.websocket.protocol.v1;
 
-import io.gravitee.exchange.api.command.goodbye.GoodByeCommand;
-import io.gravitee.exchange.api.command.hello.HelloCommand;
 import io.gravitee.exchange.api.websocket.command.ExchangeSerDe;
 import io.gravitee.exchange.api.websocket.protocol.ProtocolAdapter;
 import io.gravitee.exchange.api.websocket.protocol.ProtocolExchange;
