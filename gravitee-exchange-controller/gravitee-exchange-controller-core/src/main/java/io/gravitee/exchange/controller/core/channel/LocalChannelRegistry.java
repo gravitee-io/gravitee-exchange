@@ -27,7 +27,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * @author Guillaume LAMIRAND (guillaume.lamirand at graviteesource.com)
  * @author GraviteeSource Team
  */
-public class ChannelRegistry {
+public class LocalChannelRegistry {
 
     private final Map<String, ControllerChannel> channels = new ConcurrentHashMap<>();
 
