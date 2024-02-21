@@ -17,6 +17,8 @@ package io.gravitee.exchange.controller.core.channel.primary;
 
 import io.gravitee.node.api.cache.Cache;
 import io.reactivex.rxjava3.core.Flowable;
+import io.reactivex.rxjava3.core.Maybe;
+import io.reactivex.rxjava3.core.Single;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -27,8 +29,15 @@ public class PrimaryChannelCandidateStore {
 
     private final Cache<String, List<String>> store;
 
-    public Flowable<Map.Entry<String, List<String>>> entries() {
+    public Flowable<Map.Entry<String, List<String>>> rxEntries() {
         return store.rxEntrySet();
+    }
+
+    public Maybe<List<String>> rxGet(final String targetId) {
+        if (targetId == null) {
+            return Maybe.error(new IllegalArgumentException("Target id cannot be null"));
+        }
+        return store.rxGet(targetId);
     }
 
     public List<String> get(final String targetId) {

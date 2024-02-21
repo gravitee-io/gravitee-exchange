@@ -52,7 +52,6 @@ public class WebSocketRequestHandler implements io.vertx.core.Handler<io.vertx.r
     private final WebSocketControllerAuthentication<?> controllerAuthentication;
     private final ControllerCommandHandlersFactory controllerCommandHandlersFactory;
     private final ExchangeSerDe commandSerDe;
-    private final PrimaryChannelManager primaryChannelManager;
 
     @Override
     public void handle(final RoutingContext routingContext) {

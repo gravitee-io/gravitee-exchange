@@ -18,7 +18,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.entry;
 import static org.assertj.core.groups.Tuple.tuple;
 
-import io.gravitee.exchange.api.configuration.PrefixConfiguration;
+import io.gravitee.exchange.api.configuration.IdentifyConfiguration;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayNameGeneration;
 import org.junit.jupiter.api.DisplayNameGenerator;
@@ -49,11 +49,11 @@ class WebSocketClientConfigurationTest {
         @BeforeEach
         void beforeEach() {
             if (prefix == null) {
-                PrefixConfiguration prefixConfiguration = new PrefixConfiguration(environment);
-                prefix = prefixConfiguration.keyPrefix();
-                cut = new WebSocketClientConfiguration(prefixConfiguration);
+                IdentifyConfiguration identifyConfiguration = new IdentifyConfiguration(environment);
+                prefix = identifyConfiguration.id();
+                cut = new WebSocketClientConfiguration(identifyConfiguration);
             } else {
-                cut = new WebSocketClientConfiguration(new PrefixConfiguration(environment, prefix));
+                cut = new WebSocketClientConfiguration(new IdentifyConfiguration(environment, prefix));
             }
         }
 

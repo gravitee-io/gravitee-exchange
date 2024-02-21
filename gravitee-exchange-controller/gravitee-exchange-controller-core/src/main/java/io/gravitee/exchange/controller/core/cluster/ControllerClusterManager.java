@@ -18,6 +18,7 @@ package io.gravitee.exchange.controller.core.cluster;
 import io.gravitee.common.service.AbstractService;
 import io.gravitee.exchange.api.command.Command;
 import io.gravitee.exchange.api.command.Reply;
+import io.gravitee.exchange.api.configuration.IdentifyConfiguration;
 import io.gravitee.exchange.api.controller.ControllerChannel;
 import io.gravitee.exchange.api.controller.metrics.ChannelMetric;
 import io.gravitee.exchange.controller.core.channel.ChannelManager;
@@ -39,7 +40,6 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -51,23 +51,30 @@ import org.springframework.stereotype.Service;
 @Service
 public class ControllerClusterManager extends AbstractService<ControllerClusterManager> {
 
+    private final IdentifyConfiguration identifyConfiguration;
     private final ClusterManager clusterManager;
     private final ChannelManager channelManager;
     private final Map<String, SingleEmitter<Reply<?>>> resultEmittersByCommand = new ConcurrentHashMap<>();
     private final Map<String, String> subscriptionsListenersByChannel = new ConcurrentHashMap<>();
-    private final String replyQueueName = "controller-cluster-replies-" + UUID.randomUUID();
+    private final String replyQueueName;
 
     private Queue<ClusteredReply<?>> clusteredReplyQueue;
     private String clusteredReplySubscriptionId;
 
-    public ControllerClusterManager(final ClusterManager clusterManager, final CacheManager cacheManager) {
+    public ControllerClusterManager(
+        final IdentifyConfiguration identifyConfiguration,
+        final ClusterManager clusterManager,
+        final CacheManager cacheManager
+    ) {
+        this.identifyConfiguration = identifyConfiguration;
         this.clusterManager = clusterManager;
-        this.channelManager = new ChannelManager(clusterManager, cacheManager);
+        this.channelManager = new ChannelManager(identifyConfiguration, clusterManager, cacheManager);
+        this.replyQueueName = identifyConfiguration.identifyName("controller-cluster-replies-" + UUID.randomUUID());
     }
 
     @Override
     protected void doStart() throws Exception {
-        log.debug("Starting controller cluster manager");
+        log.debug("[{}] Starting controller cluster manager", identifyConfiguration.id());
         super.doStart();
         channelManager.start();
 
@@ -91,7 +98,7 @@ public class ControllerClusterManager extends AbstractService<ControllerClusterM
 
     @Override
     protected void doStop() throws Exception {
-        log.debug("Stopping controller cluster manager");
+        log.debug("[{}] Stopping controller cluster manager", identifyConfiguration.id());
         super.doStop();
         // Stop channel manager
         channelManager.stop();
@@ -119,6 +126,10 @@ public class ControllerClusterManager extends AbstractService<ControllerClusterM
         return channelManager.channelMetrics();
     }
 
+    public Flowable<ChannelMetric> channelMetrics(final String targetId) {
+        return channelManager.channelMetrics(targetId);
+    }
+
     /**
      * Indicates to the controller cluster that a <code>ControllerChannel</code> must be registered.
      * It means that this current controller instance will be able to accept command addressed to the specified channel from anywhere in the cluster and forward them to the appropriate target.
@@ -138,8 +149,8 @@ public class ControllerClusterManager extends AbstractService<ControllerClusterM
         subscriptionsListenersByChannel.put(channelId, subscriptionId);
     }
 
-    private static String getTargetQueueName(final String targetId) {
-        return "command-" + targetId;
+    private String getTargetQueueName(final String targetId) {
+        return this.identifyConfiguration.identifyName("command-" + targetId);
     }
 
     private void onClusterCommand(final Message<ClusteredCommand<?>> clusteredCommandMessage) {
@@ -185,7 +196,12 @@ public class ControllerClusterManager extends AbstractService<ControllerClusterM
                 command.getReplyTimeoutMs(),
                 TimeUnit.MILLISECONDS,
                 Single.error(() -> {
-                    log.warn("No reply received in time from cluster manager for command [{}, {}]", command.getType(), command.getId());
+                    log.warn(
+                        "[{}] No reply received in time from cluster manager for command [{}, {}]",
+                        this.identifyConfiguration.id(),
+                        command.getType(),
+                        command.getId()
+                    );
                     return new ControllerClusterTimeoutException();
                 })
             )
@@ -198,7 +214,8 @@ public class ControllerClusterManager extends AbstractService<ControllerClusterM
         final String queueName = getTargetQueueName(targetId);
 
         log.debug(
-            "Trying to send a command [{} ({})] to the target [{}] through the cluster.",
+            "[{}] Trying to send a command [{} ({})] to the target [{}] through the cluster.",
+            this.identifyConfiguration.id(),
             clusteredCommand.command().getId(),
             clusteredCommand.command().getType(),
             targetId
@@ -212,7 +229,7 @@ public class ControllerClusterManager extends AbstractService<ControllerClusterM
             final Queue<ClusteredCommand<?>> queue = clusterManager.queue(queueName);
             queue.add(clusteredCommand);
         } catch (Exception e) {
-            log.error("Failed to send command to the installation [{}].", targetId, e);
+            log.error("[{}] Failed to send command to the installation [{}].", this.identifyConfiguration.id(), targetId, e);
             emitter.onError(e);
         }
     }

@@ -29,10 +29,10 @@ import org.springframework.mock.env.MockEnvironment;
  * @author GraviteeSource Team
  */
 @DisplayNameGeneration(DisplayNameGenerator.ReplaceUnderscores.class)
-class PrefixConfigurationTest {
+class IdentifyConfigurationTest {
 
     private MockEnvironment environment;
-    private PrefixConfiguration cut;
+    private IdentifyConfiguration cut;
 
     @BeforeEach
     public void beforeEach() {
@@ -44,13 +44,13 @@ class PrefixConfigurationTest {
 
         @BeforeEach
         public void beforeEach() {
-            cut = new PrefixConfiguration(environment);
+            cut = new IdentifyConfiguration(environment);
         }
 
         @Test
         void should_be_default() {
             assertThat(cut.environment()).isEqualTo(environment);
-            assertThat(cut.keyPrefix()).isEqualTo("exchange");
+            assertThat(cut.id()).isEqualTo("exchange");
         }
 
         @Test
@@ -83,8 +83,13 @@ class PrefixConfigurationTest {
         }
 
         @Test
-        void should_return_prefixed_key() {
-            assertThat(cut.prefixKey("key")).isEqualTo("exchange.key");
+        void should_return_identify_property() {
+            assertThat(cut.identifyProperty("key")).isEqualTo("exchange.key");
+        }
+
+        @Test
+        void should_return_identify_name() {
+            assertThat(cut.identifyName("name")).isEqualTo("exchange-name");
         }
     }
 
@@ -93,13 +98,13 @@ class PrefixConfigurationTest {
 
         @BeforeEach
         public void beforeEach() {
-            cut = new PrefixConfiguration(environment, "custom");
+            cut = new IdentifyConfiguration(environment, "custom");
         }
 
         @Test
         void should_be_default() {
             assertThat(cut.environment()).isEqualTo(environment);
-            assertThat(cut.keyPrefix()).isEqualTo("custom");
+            assertThat(cut.id()).isEqualTo("custom");
         }
 
         @Test
@@ -132,8 +137,13 @@ class PrefixConfigurationTest {
         }
 
         @Test
-        void should_return_prefixed_key() {
-            assertThat(cut.prefixKey("key")).isEqualTo("custom.key");
+        void should_return_identify_property() {
+            assertThat(cut.identifyProperty("key")).isEqualTo("custom.key");
+        }
+
+        @Test
+        void should_return_identify_name() {
+            assertThat(cut.identifyName("name")).isEqualTo("custom-name");
         }
     }
 }

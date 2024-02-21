@@ -21,7 +21,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
 import com.google.common.io.Resources;
-import io.gravitee.exchange.api.configuration.PrefixConfiguration;
+import io.gravitee.exchange.api.configuration.IdentifyConfiguration;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.junit5.VertxExtension;
@@ -57,7 +57,7 @@ class WebSocketConnectorClientFactoryTest {
     public void beforeEach(Vertx vertx) {
         this.vertx = io.vertx.rxjava3.core.Vertx.newInstance(vertx);
         this.environment = new MockEnvironment();
-        this.webSocketClientConfiguration = new WebSocketClientConfiguration(new PrefixConfiguration(environment));
+        this.webSocketClientConfiguration = new WebSocketClientConfiguration(new IdentifyConfiguration(environment));
         cut = new WebSocketConnectorClientFactory(this.vertx, webSocketClientConfiguration);
     }
 

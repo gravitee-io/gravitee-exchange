@@ -24,7 +24,7 @@ import io.gravitee.exchange.api.batch.KeyBatchObserver;
 import io.gravitee.exchange.api.command.Command;
 import io.gravitee.exchange.api.command.CommandStatus;
 import io.gravitee.exchange.api.command.Reply;
-import io.gravitee.exchange.api.configuration.PrefixConfiguration;
+import io.gravitee.exchange.api.configuration.IdentifyConfiguration;
 import io.gravitee.exchange.api.controller.ControllerChannel;
 import io.gravitee.exchange.api.controller.ExchangeController;
 import io.gravitee.exchange.api.controller.metrics.ChannelMetric;
@@ -44,7 +44,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledFuture;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.scheduling.support.CronTrigger;
@@ -53,33 +52,32 @@ import org.springframework.scheduling.support.CronTrigger;
  * @author Guillaume LAMIRAND (guillaume.lamirand at graviteesource.com)
  * @author GraviteeSource Team
  */
-@RequiredArgsConstructor
 @Slf4j
 public class DefaultExchangeController extends AbstractService<ExchangeController> implements ExchangeController {
 
     private final Map<String, List<BatchObserver>> keyBasedBatchObservers = new ConcurrentHashMap<>();
     private final Map<String, BatchObserver> idBasedBatchObservers = new ConcurrentHashMap<>();
-    protected final PrefixConfiguration prefixConfiguration;
-    protected final ControllerClusterManager controllerClusterManager;
+    protected final IdentifyConfiguration identifyConfiguration;
     protected final ClusterManager clusterManager;
     protected final CacheManager cacheManager;
+    protected final ControllerClusterManager controllerClusterManager;
     private BatchStore batchStore;
     private ScheduledFuture<?> scheduledFuture;
 
     public DefaultExchangeController(
-        final PrefixConfiguration prefixConfiguration,
+        final IdentifyConfiguration identifyConfiguration,
         final ClusterManager clusterManager,
         final CacheManager cacheManager
     ) {
-        this.prefixConfiguration = prefixConfiguration;
+        this.identifyConfiguration = identifyConfiguration;
         this.clusterManager = clusterManager;
         this.cacheManager = cacheManager;
-        this.controllerClusterManager = new ControllerClusterManager(clusterManager, cacheManager);
+        this.controllerClusterManager = new ControllerClusterManager(identifyConfiguration, clusterManager, cacheManager);
     }
 
     @Override
     protected void doStart() throws Exception {
-        log.debug("Starting %s controller".formatted(this.getClass().getSimpleName()));
+        log.debug("[{}] Starting {} controller", this.identifyConfiguration.id(), this.getClass().getSimpleName());
         super.doStart();
         controllerClusterManager.start();
         startBatchFeature();
@@ -92,7 +90,7 @@ public class DefaultExchangeController extends AbstractService<ExchangeControlle
                 batchStore =
                     new BatchStore(
                         cacheManager.getOrCreateCache(
-                            "controller-exchange-batch-store",
+                            identifyConfiguration.identifyName("controller-batch-store"),
                             CacheConfiguration.builder().timeToLiveInMs(3600000).distributed(true).build()
                         )
                     );
@@ -103,26 +101,32 @@ public class DefaultExchangeController extends AbstractService<ExchangeControlle
     }
 
     private void startBatchScheduler() {
-        log.debug("Starting batch scheduler");
+        log.debug("[{}] Starting batch scheduler", this.identifyConfiguration.id());
         ThreadPoolTaskScheduler taskScheduler = new ThreadPoolTaskScheduler();
-        taskScheduler.setThreadNamePrefix("controller-exchange-batch-scheduler-");
+        taskScheduler.setThreadNamePrefix(this.identifyConfiguration.identifyName("controller-batch-scheduler-"));
         taskScheduler.initialize();
         scheduledFuture =
             taskScheduler.schedule(
                 () -> {
                     if (clusterManager.self().primary()) {
-                        log.debug("Executing Batch scheduled tasks");
+                        log.debug("[{}] Executing Batch scheduled tasks", this.identifyConfiguration.id());
                         this.batchStore.findByStatus(BatchStatus.PENDING)
                             .doOnNext(batch ->
-                                log.info("Retrying batch '{}' with key '{}' and target id '{}'", batch.id(), batch.key(), batch.targetId())
+                                log.info(
+                                    "[{}] Retrying batch '{}' with key '{}' and target id '{}'",
+                                    this.identifyConfiguration.id(),
+                                    batch.id(),
+                                    batch.key(),
+                                    batch.targetId()
+                                )
                             )
                             .flatMapSingle(this::sendBatchCommands)
                             .ignoreElements()
                             .blockingAwait();
-                        log.debug("Batch scheduled tasks executed");
+                        log.debug("[{}] Batch scheduled tasks executed", this.identifyConfiguration.id());
                     }
                 },
-                new CronTrigger(prefixConfiguration.getProperty("controller.batch.cron", String.class, "*/60 * * * * *"))
+                new CronTrigger(identifyConfiguration.getProperty("controller.batch.cron", String.class, "*/60 * * * * *"))
             );
     }
 
@@ -137,7 +141,7 @@ public class DefaultExchangeController extends AbstractService<ExchangeControlle
 
     @Override
     protected void doStop() throws Exception {
-        log.debug("Stopping %s controller".formatted(this.getClass().getSimpleName()));
+        log.debug("[{}] Stopping {} controller", this.identifyConfiguration.id(), this.getClass().getSimpleName());
         super.doStop();
         controllerClusterManager.stop();
         stopBatchFeature();
@@ -161,11 +165,30 @@ public class DefaultExchangeController extends AbstractService<ExchangeControlle
     }
 
     @Override
+    public Flowable<ChannelMetric> metrics(final String targetId) {
+        return controllerClusterManager.channelMetrics(targetId);
+    }
+
+    @Override
     public Completable register(final ControllerChannel channel) {
         return controllerClusterManager
             .register(channel)
-            .doOnComplete(() -> log.debug("Channel '{}' for target '{}' has been registered", channel.id(), channel.targetId()))
-            .doOnError(throwable -> log.warn("Unable to register channel '{}' for target '{}'", channel.id(), channel.targetId(), throwable)
+            .doOnComplete(() ->
+                log.debug(
+                    "[{}] Channel '{}' for target '{}' has been registered",
+                    this.identifyConfiguration.id(),
+                    channel.id(),
+                    channel.targetId()
+                )
+            )
+            .doOnError(throwable ->
+                log.warn(
+                    "[{}] Unable to register channel '{}' for target '{}'",
+                    this.identifyConfiguration.id(),
+                    channel.id(),
+                    channel.targetId(),
+                    throwable
+                )
             );
     }
 
@@ -173,9 +196,22 @@ public class DefaultExchangeController extends AbstractService<ExchangeControlle
     public Completable unregister(final ControllerChannel channel) {
         return controllerClusterManager
             .unregister(channel)
-            .doOnComplete(() -> log.debug("Channel '{}' for target '{}' has been unregistered", channel.id(), channel.targetId()))
+            .doOnComplete(() ->
+                log.debug(
+                    "[{}] Channel '{}' for target '{}' has been unregistered",
+                    this.identifyConfiguration.id(),
+                    channel.id(),
+                    channel.targetId()
+                )
+            )
             .doOnError(throwable ->
-                log.warn("Unable to unregister channel '{}' for target '{}'", channel.id(), channel.targetId(), throwable)
+                log.warn(
+                    "[{}] Unable to unregister channel '{}' for target '{}'",
+                    this.identifyConfiguration.id(),
+                    channel.id(),
+                    channel.targetId(),
+                    throwable
+                )
             );
     }
 
@@ -183,8 +219,23 @@ public class DefaultExchangeController extends AbstractService<ExchangeControlle
     public Single<Reply<?>> sendCommand(final Command<?> command, final String targetId) {
         return controllerClusterManager
             .sendCommand(command, targetId)
-            .doOnSuccess(reply -> log.debug("Command '{}' has been successfully sent to  target '{}'", command.getId(), targetId))
-            .doOnError(throwable -> log.warn("Unable to send command '{}' to  target '{}'", command.getId(), targetId, throwable));
+            .doOnSuccess(reply ->
+                log.debug(
+                    "[{}] Command '{}' has been successfully sent to  target '{}'",
+                    this.identifyConfiguration.id(),
+                    command.getId(),
+                    targetId
+                )
+            )
+            .doOnError(throwable ->
+                log.warn(
+                    "[{}] Unable to send command '{}' to  target '{}'",
+                    this.identifyConfiguration.id(),
+                    command.getId(),
+                    targetId,
+                    throwable
+                )
+            );
     }
 
     @Override
@@ -216,7 +267,7 @@ public class DefaultExchangeController extends AbstractService<ExchangeControlle
     public Single<Batch> executeBatch(final Batch batch) {
         if (isBatchFeatureEnabled()) {
             return this.batchStore.add(batch)
-                .doOnSuccess(b -> log.debug("Executing batch '%s' with key '%s'".formatted(b.id(), b.key())))
+                .doOnSuccess(b -> log.debug("[{}] Executing batch '{}' with key '{}'", this.identifyConfiguration.id(), b.id(), b.key()))
                 .flatMap(this::sendBatchCommands);
         } else {
             return Single.error(new BatchDisabledException());
@@ -234,7 +285,15 @@ public class DefaultExchangeController extends AbstractService<ExchangeControlle
     private Single<Batch> sendBatchCommands(final Batch batch) {
         return this.updateBatch(batch.start())
             .filter(a -> a.status().equals(BatchStatus.IN_PROGRESS))
-            .doOnSuccess(b -> log.debug("Batch '%s' for target '%s' and key '%s' in progress".formatted(b.id(), b.targetId(), b.key())))
+            .doOnSuccess(b ->
+                log.debug(
+                    "[{}] Batch '{}' for target '{}' and key '{}' in progress",
+                    this.identifyConfiguration.id(),
+                    b.id(),
+                    b.targetId(),
+                    b.key()
+                )
+            )
             .flatMapSingle(updateBatch -> {
                 List<BatchCommand> commands = updateBatch
                     .batchCommands()
@@ -246,14 +305,30 @@ public class DefaultExchangeController extends AbstractService<ExchangeControlle
             .doOnSuccess(b -> {
                 switch (b.status()) {
                     case PENDING -> log.info(
-                        "Batch '%s' for target id '%s' and key '%s' is scheduled for retry".formatted(b.id(), b.targetId(), b.key())
+                        "[{}] Batch '{}' for target id '{}' and key '{}' is scheduled for retry",
+                        this.identifyConfiguration.id(),
+                        b.id(),
+                        b.targetId(),
+                        b.key()
                     );
                     case SUCCEEDED -> {
-                        log.info("Batch '%s' for target id '%s' and key '%s' has succeed".formatted(b.id(), b.targetId(), b.key()));
+                        log.info(
+                            "[{}] Batch '{}' for target id '{}' and key '{}' has succeed",
+                            this.identifyConfiguration.id(),
+                            b.id(),
+                            b.targetId(),
+                            b.key()
+                        );
                         notifyObservers(b);
                     }
                     case ERROR -> {
-                        log.info("Batch '%s' for target id '%s' and key '%s' stopped in error".formatted(b.id(), b.targetId(), b.key()));
+                        log.info(
+                            "[{}] Batch '{}' for target id '{}' and key '{}' stopped in error",
+                            this.identifyConfiguration.id(),
+                            b.id(),
+                            b.targetId(),
+                            b.key()
+                        );
                         notifyObservers(b);
                     }
                 }
@@ -277,7 +352,8 @@ public class DefaultExchangeController extends AbstractService<ExchangeControlle
                     .subscribeOn(Schedulers.computation())
                     .doOnError(throwable ->
                         log.warn(
-                            "Unable to notify batch observer with batch '{}' for target id '{}' and key '{}' has succeed",
+                            "[{}] Unable to notify batch observer with batch '{}' for target id '{}' and key '{}' has succeed",
+                            this.identifyConfiguration.id(),
                             batch.id(),
                             batch.targetId(),
                             batch.key()
@@ -285,7 +361,8 @@ public class DefaultExchangeController extends AbstractService<ExchangeControlle
                     )
                     .doOnComplete(() ->
                         log.debug(
-                            "Notify batch observer in success with batch '{}' for target id '{}' and key '{}' has succeed",
+                            "[{}] Notify batch observer in success with batch '{}' for target id '{}' and key '{}' has succeed",
+                            this.identifyConfiguration.id(),
                             batch.id(),
                             batch.targetId(),
                             batch.key()
@@ -326,6 +403,6 @@ public class DefaultExchangeController extends AbstractService<ExchangeControlle
     }
 
     private boolean isBatchFeatureEnabled() {
-        return prefixConfiguration.getProperty("exchange.controller.batch.enabled", Boolean.class, true);
+        return identifyConfiguration.getProperty("controller.batch.enabled", Boolean.class, true);
     }
 }

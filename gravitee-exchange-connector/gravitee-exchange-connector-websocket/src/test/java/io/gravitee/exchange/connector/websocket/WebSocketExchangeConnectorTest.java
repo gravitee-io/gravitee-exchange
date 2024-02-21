@@ -17,7 +17,7 @@ package io.gravitee.exchange.connector.websocket;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import io.gravitee.exchange.api.configuration.PrefixConfiguration;
+import io.gravitee.exchange.api.configuration.IdentifyConfiguration;
 import io.gravitee.exchange.api.websocket.protocol.ProtocolVersion;
 import io.gravitee.exchange.connector.websocket.client.WebSocketClientConfiguration;
 import io.gravitee.exchange.connector.websocket.client.WebSocketConnectorClientFactory;
@@ -47,7 +47,7 @@ class WebSocketExchangeConnectorTest extends AbstractWebSocketConnectorTest {
         environment.setProperty("exchange.connector.ws.endpoints[0]", "http://localhost:%s".formatted(serverPort));
         WebSocketConnectorClientFactory webSocketConnectorClientFactory = new WebSocketConnectorClientFactory(
             vertx,
-            new WebSocketClientConfiguration(new PrefixConfiguration(environment))
+            new WebSocketClientConfiguration(new IdentifyConfiguration(environment))
         );
         this.websocketExchangeConnector =
             new WebSocketExchangeConnector(

@@ -32,11 +32,19 @@ import io.reactivex.rxjava3.core.Single;
  */
 public interface ExchangeController extends Service<ExchangeController> {
     /**
-     * Return metric information about channels managed
+     * Return metric information about all channels managed
      *
      * @return channel metrics.
      */
     Flowable<ChannelMetric> metrics();
+
+    /**
+     * Return metric information about channels of the given target
+     *
+     * @param targetId the target id to search for
+     * @return channel metrics.
+     */
+    Flowable<ChannelMetric> metrics(String targetId);
 
     /**
      * Register a new {@code ControllerChannel} on this controller
