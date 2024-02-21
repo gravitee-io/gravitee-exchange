@@ -24,8 +24,4 @@ public class ControllerClusterShutdownException extends ControllerClusterExcepti
     public ControllerClusterShutdownException() {
         super();
     }
-
-    public ControllerClusterShutdownException(Throwable cause) {
-        super(cause);
-    }
 }

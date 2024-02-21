@@ -13,47 +13,31 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.gravitee.exchange.api.command;
-
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
-import lombok.experimental.Accessors;
+package io.gravitee.exchange.api.batch;
 
 /**
  * @author Guillaume LAMIRAND (guillaume.lamirand at graviteesource.com)
  * @author GraviteeSource Team
  */
-@AllArgsConstructor
-@NoArgsConstructor
-@Builder
-@Getter
-@Accessors(fluent = true, chain = true)
-public class BatchCommand {
-
+public enum BatchStatus {
     /**
-     * The status of the command
+     * The batch was just created
      */
-    @Builder.Default
-    @Setter
-    private CommandStatus status = CommandStatus.PENDING;
-
+    CREATED,
     /**
-     * The reply if any received yet
+     * The batch is waiting for one of its commands to be retried
      */
-    @Setter
-    private Reply<?> reply;
-
+    PENDING,
     /**
-     * An optional message that is used to give some details about the reply error.
+     * The batch is currently being processed
      */
-    @Setter
-    private String errorDetails;
-
+    IN_PROGRESS,
     /**
-     * The real command to execute.
+     * The batch has been processed successfully
      */
-    private Command<?> command;
+    SUCCEEDED,
+    /**
+     * The batch has been processed but ends in error even after multiple retries
+     */
+    ERROR,
 }

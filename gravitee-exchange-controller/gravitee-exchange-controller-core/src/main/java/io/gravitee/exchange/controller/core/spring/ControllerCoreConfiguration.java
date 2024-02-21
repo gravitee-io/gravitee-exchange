@@ -16,10 +16,9 @@
 package io.gravitee.exchange.controller.core.spring;
 
 import io.gravitee.exchange.controller.core.channel.ChannelManager;
-import io.gravitee.exchange.controller.core.channel.ChannelRegistry;
+import io.gravitee.exchange.controller.core.channel.LocalChannelRegistry;
 import io.gravitee.exchange.controller.core.channel.primary.PrimaryChannelManager;
 import io.gravitee.exchange.controller.core.cluster.ControllerClusterManager;
-import io.gravitee.exchange.controller.core.cluster.ControllerClusterManagerImpl;
 import io.gravitee.node.api.cache.CacheManager;
 import io.gravitee.node.api.cluster.ClusterManager;
 import org.springframework.context.annotation.Bean;
@@ -34,8 +33,8 @@ import org.springframework.context.annotation.Lazy;
 public class ControllerCoreConfiguration {
 
     @Bean
-    public ChannelRegistry channelRegistry() {
-        return new ChannelRegistry();
+    public LocalChannelRegistry channelRegistry() {
+        return new LocalChannelRegistry();
     }
 
     @Bean
@@ -45,18 +44,19 @@ public class ControllerCoreConfiguration {
 
     @Bean
     public ChannelManager channelManager(
-        final ChannelRegistry channelRegistry,
-        final PrimaryChannelManager primaryChannelManager,
-        final @Lazy ClusterManager clusterManager
+            final LocalChannelRegistry localChannelRegistry,
+            final PrimaryChannelManager primaryChannelManager,
+            final @Lazy ClusterManager clusterManager
     ) {
-        return new ChannelManager(channelRegistry, primaryChannelManager, clusterManager);
+        return new ChannelManager(localChannelRegistry, primaryChannelManager, clusterManager);
     }
 
     @Bean
     public ControllerClusterManager controllerClusterManager(
-        final @Lazy ClusterManager clusterManager,
-        final ChannelManager channelManager
+            final @Lazy ClusterManager clusterManager,
+            final ChannelManager channelManager
     ) {
-        return new ControllerClusterManagerImpl(clusterManager, channelManager);
+        return new ControllerClusterManager(clusterManager, channelManager);
     }
+
 }

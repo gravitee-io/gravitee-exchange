@@ -15,8 +15,8 @@
  */
 package io.gravitee.exchange.controller.core.batch;
 
-import io.gravitee.exchange.api.command.Batch;
-import io.gravitee.exchange.api.command.BatchStatus;
+import io.gravitee.exchange.api.batch.Batch;
+import io.gravitee.exchange.api.batch.BatchStatus;
 import io.gravitee.exchange.controller.core.batch.exception.BatchAlreadyExistsException;
 import io.gravitee.exchange.controller.core.batch.exception.BatchNotExistException;
 import io.gravitee.node.api.cache.Cache;
