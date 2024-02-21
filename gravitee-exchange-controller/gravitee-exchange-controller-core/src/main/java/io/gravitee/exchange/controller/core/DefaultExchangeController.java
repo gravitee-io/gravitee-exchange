@@ -124,16 +124,9 @@ public class DefaultExchangeController extends AbstractService<ExchangeControlle
         stopBatchFeature();
     }
 
-    private void stopBatchFeature() {
-        boolean enabled = isBatchFeatureEnabled();
-        if (enabled) {
-            if (scheduledFuture != null) {
-                scheduledFuture.cancel(true);
-            }
-            if (batchStore != null) {
-                batchStore.clear();
-            }
-        }
+    @Override
+    public Flowable<ChannelMetric> metrics() {
+        return controllerClusterManager.channelMetrics();
     }
 
     @Override

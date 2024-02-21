@@ -22,7 +22,10 @@ import io.gravitee.node.api.cache.CacheConfiguration;
 import io.gravitee.node.api.cache.CacheManager;
 import io.gravitee.node.api.cluster.ClusterManager;
 import io.gravitee.node.api.cluster.messaging.Topic;
+import io.reactivex.rxjava3.core.Flowable;
+import io.reactivex.rxjava3.core.Single;
 import java.util.List;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.RandomUtils;
@@ -82,6 +85,14 @@ public class PrimaryChannelManager extends AbstractService<PrimaryChannelManager
         if (primaryChannelEventTopic != null && subscriptionListenerId != null) {
             primaryChannelEventTopic.removeMessageListener(subscriptionListenerId);
         }
+    }
+
+    public Flowable<Map.Entry<String, List<String>>> candidatesChannel() {
+        return primaryChannelCandidateStore.entries();
+    }
+
+    public Single<String> primaryChannelBy(final String targetId) {
+        return primaryChannelCache.rxGet(targetId);
     }
 
     public void sendChannelEvent(final ControllerChannel controllerChannel, final boolean alive) {

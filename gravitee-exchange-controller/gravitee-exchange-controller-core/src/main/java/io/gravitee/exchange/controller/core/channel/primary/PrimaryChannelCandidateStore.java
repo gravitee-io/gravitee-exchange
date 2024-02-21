@@ -16,14 +16,20 @@
 package io.gravitee.exchange.controller.core.channel.primary;
 
 import io.gravitee.node.api.cache.Cache;
+import io.reactivex.rxjava3.core.Flowable;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
 public class PrimaryChannelCandidateStore {
 
     private final Cache<String, List<String>> store;
+
+    public Flowable<Map.Entry<String, List<String>>> entries() {
+        return store.rxEntrySet();
+    }
 
     public List<String> get(final String targetId) {
         if (targetId == null) {

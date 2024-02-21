@@ -19,6 +19,7 @@ import io.gravitee.common.service.Service;
 import io.gravitee.exchange.api.command.Batch;
 import io.gravitee.exchange.api.command.Command;
 import io.gravitee.exchange.api.command.Reply;
+import io.gravitee.exchange.api.controller.metrics.ChannelMetric;
 import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Single;
 
@@ -27,6 +28,13 @@ import io.reactivex.rxjava3.core.Single;
  * @author GraviteeSource Team
  */
 public interface ExchangeController extends Service<ExchangeController> {
+    /**
+     * Return metric information about channels managed
+     *
+     * @return channel metrics.
+     */
+    Flowable<ChannelMetric> metrics();
+
     /**
      * Register a new {@code ControllerChannel} on this controller
      *

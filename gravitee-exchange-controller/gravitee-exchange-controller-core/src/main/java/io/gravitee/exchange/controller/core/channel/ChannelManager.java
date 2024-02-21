@@ -27,6 +27,7 @@ import io.gravitee.exchange.api.command.primary.PrimaryCommand;
 import io.gravitee.exchange.api.command.primary.PrimaryCommandPayload;
 import io.gravitee.exchange.api.command.primary.PrimaryReply;
 import io.gravitee.exchange.api.controller.ControllerChannel;
+import io.gravitee.exchange.api.controller.metrics.ChannelMetric;
 import io.gravitee.exchange.controller.core.channel.exception.NoChannelFoundException;
 import io.gravitee.exchange.controller.core.channel.primary.PrimaryChannelElectedEvent;
 import io.gravitee.exchange.controller.core.channel.primary.PrimaryChannelManager;
@@ -37,6 +38,7 @@ import io.reactivex.rxjava3.core.Flowable;
 import io.reactivex.rxjava3.core.Maybe;
 import io.reactivex.rxjava3.core.Single;
 import io.reactivex.rxjava3.disposables.Disposable;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -52,7 +54,7 @@ public class ChannelManager extends AbstractService<ChannelManager> {
     // TODO makes those constant configurable
     private static final int HEALTH_CHECK_DELAY = 30000;
     private static final TimeUnit HEALTH_CHECK_DELAY_UNIT = TimeUnit.MILLISECONDS;
-    private final ChannelRegistry channelRegistry;
+    private final LocalChannelRegistry localChannelRegistry;
     private final PrimaryChannelManager primaryChannelManager;
     private final ClusterManager clusterManager;
     private Disposable healthCheckDisposable;
@@ -91,7 +93,7 @@ public class ChannelManager extends AbstractService<ChannelManager> {
                 log.debug("Handling primary channel elected event for channel [{}] on target [{}].", channelId, targetId);
 
                 return Maybe
-                    .fromOptional(channelRegistry.getById(channelId))
+                    .fromOptional(localChannelRegistry.getById(channelId))
                     .switchIfEmpty(
                         Maybe.fromRunnable(() ->
                             log.debug(
@@ -104,7 +106,7 @@ public class ChannelManager extends AbstractService<ChannelManager> {
                     .flatMapCompletable(channel -> sendPrimaryCommand(channel, true))
                     .andThen(
                         Flowable
-                            .fromIterable(channelRegistry.getAllByTargetId(targetId))
+                            .fromIterable(localChannelRegistry.getAllByTargetId(targetId))
                             .flatMapCompletable(controllerChannel -> sendPrimaryCommand(controllerChannel, false))
                     );
             })
@@ -134,7 +136,7 @@ public class ChannelManager extends AbstractService<ChannelManager> {
 
     private Completable sendHealthCheckCommand() {
         return Flowable
-            .fromIterable(channelRegistry.getAll())
+            .fromIterable(localChannelRegistry.getAll())
             .filter(ControllerChannel::isActive)
             .flatMapCompletable(controllerChannel ->
                 controllerChannel
@@ -176,17 +178,33 @@ public class ChannelManager extends AbstractService<ChannelManager> {
         }
     }
 
+    public Flowable<ChannelMetric> channelMetrics() {
+        return this.primaryChannelManager.candidatesChannel()
+            .flatMap(candidatesChannelEntries -> {
+                String targetId = candidatesChannelEntries.getKey();
+                List<String> channelIds = candidatesChannelEntries.getValue();
+                return this.primaryChannelManager.primaryChannelBy(targetId)
+                    .flattenStreamAsFlowable(primaryChannel ->
+                        channelIds
+                            .stream()
+                            .map(channelId ->
+                                ChannelMetric.builder().id(channelId).targetId(targetId).primary(channelId.equals(primaryChannel)).build()
+                            )
+                    );
+            });
+    }
+
     public ControllerChannel getChannelById(final String id) {
-        return channelRegistry.getById(id).filter(ControllerChannel::isActive).orElse(null);
+        return localChannelRegistry.getById(id).filter(ControllerChannel::isActive).orElse(null);
     }
 
     public ControllerChannel getOneChannelByTargetId(final String targetId) {
-        return channelRegistry.getAllByTargetId(targetId).stream().filter(ControllerChannel::isActive).findFirst().orElse(null);
+        return localChannelRegistry.getAllByTargetId(targetId).stream().filter(ControllerChannel::isActive).findFirst().orElse(null);
     }
 
     public Completable register(ControllerChannel controllerChannel) {
         return Completable
-            .fromRunnable(() -> channelRegistry.add(controllerChannel))
+            .fromRunnable(() -> localChannelRegistry.add(controllerChannel))
             .andThen(controllerChannel.initialize())
             .doOnComplete(() -> {
                 log.debug("Channel [{}] successfully register for target [{}]", controllerChannel.id(), controllerChannel.targetId());
@@ -205,7 +223,7 @@ public class ChannelManager extends AbstractService<ChannelManager> {
 
     public Completable unregister(ControllerChannel controllerChannel) {
         return Completable
-            .fromRunnable(() -> channelRegistry.remove(controllerChannel))
+            .fromRunnable(() -> localChannelRegistry.remove(controllerChannel))
             .andThen(controllerChannel.close())
             .doOnComplete(() -> {
                 log.debug("Channel [{}] successfully unregister for target [{}]", controllerChannel.id(), controllerChannel.targetId());
