@@ -18,17 +18,16 @@ package io.gravitee.exchange.api.batch;
 import io.gravitee.common.utils.UUID;
 import io.gravitee.exchange.api.command.CommandStatus;
 import io.gravitee.exchange.api.command.Reply;
+import java.time.ZonedDateTime;
+import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.Accessors;
-
-import java.time.ZonedDateTime;
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
 
 /**
  * @author Guillaume LAMIRAND (guillaume.lamirand at graviteesource.com)
@@ -87,11 +86,11 @@ public class Batch {
     public Batch start() {
         ZonedDateTime now = ZonedDateTime.now();
         boolean shouldRetry = Optional
-                .ofNullable(this.lastRetryAt)
-                .map(ZonedDateTime::toInstant)
-                .map(t -> now.toInstant().compareTo(t.plusSeconds(this.retry * DEFAULT_SCHEDULER_PERIOD_IN_SECONDS)))
-                .map(compare -> compare >= 0)
-                .orElse(true);
+            .ofNullable(this.lastRetryAt)
+            .map(ZonedDateTime::toInstant)
+            .map(t -> now.toInstant().compareTo(t.plusSeconds(this.retry * DEFAULT_SCHEDULER_PERIOD_IN_SECONDS)))
+            .map(compare -> compare >= 0)
+            .orElse(true);
 
         if (shouldRetry) {
             this.status = BatchStatus.IN_PROGRESS;

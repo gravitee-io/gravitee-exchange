@@ -16,8 +16,6 @@
 package io.gravitee.exchange.controller.core.spring;
 
 import io.gravitee.exchange.controller.core.channel.ChannelManager;
-import io.gravitee.exchange.controller.core.channel.LocalChannelRegistry;
-import io.gravitee.exchange.controller.core.channel.primary.PrimaryChannelManager;
 import io.gravitee.exchange.controller.core.cluster.ControllerClusterManager;
 import io.gravitee.node.api.cache.CacheManager;
 import io.gravitee.node.api.cluster.ClusterManager;
@@ -33,30 +31,15 @@ import org.springframework.context.annotation.Lazy;
 public class ControllerCoreConfiguration {
 
     @Bean
-    public LocalChannelRegistry channelRegistry() {
-        return new LocalChannelRegistry();
-    }
-
-    @Bean
-    public PrimaryChannelManager primaryChannelManager(final @Lazy ClusterManager clusterManager, final @Lazy CacheManager cacheManager) {
-        return new PrimaryChannelManager(clusterManager, cacheManager);
-    }
-
-    @Bean
-    public ChannelManager channelManager(
-            final LocalChannelRegistry localChannelRegistry,
-            final PrimaryChannelManager primaryChannelManager,
-            final @Lazy ClusterManager clusterManager
-    ) {
-        return new ChannelManager(localChannelRegistry, primaryChannelManager, clusterManager);
+    public ChannelManager channelManager(final @Lazy ClusterManager clusterManager, final @Lazy CacheManager cacheManager) {
+        return new ChannelManager(clusterManager, cacheManager);
     }
 
     @Bean
     public ControllerClusterManager controllerClusterManager(
-            final @Lazy ClusterManager clusterManager,
-            final ChannelManager channelManager
+        final @Lazy ClusterManager clusterManager,
+        final ChannelManager channelManager
     ) {
         return new ControllerClusterManager(clusterManager, channelManager);
     }
-
 }
