@@ -16,11 +16,14 @@
 package io.gravitee.exchange.api.controller;
 
 import io.gravitee.common.service.Service;
-import io.gravitee.exchange.api.command.Batch;
+import io.gravitee.exchange.api.batch.Batch;
+import io.gravitee.exchange.api.batch.BatchObserver;
+import io.gravitee.exchange.api.batch.KeyBatchObserver;
 import io.gravitee.exchange.api.command.Command;
 import io.gravitee.exchange.api.command.Reply;
 import io.gravitee.exchange.api.controller.metrics.ChannelMetric;
 import io.reactivex.rxjava3.core.Completable;
+import io.reactivex.rxjava3.core.Flowable;
 import io.reactivex.rxjava3.core.Single;
 
 /**
@@ -56,12 +59,38 @@ public interface ExchangeController extends Service<ExchangeController> {
      * @param targetId the if of the target
      */
     Single<Reply<?>> sendCommand(final Command<?> command, final String targetId);
+
     /**
-     * Execute a {@code Batch} of command
+     * Execute a {@code Batch} of command.
+     * If any key based {@link KeyBatchObserver} has been registered, they will be notified when the batch finishes
+     * in {@link io.gravitee.exchange.api.batch.BatchStatus#SUCCEEDED}
+     * or {@link io.gravitee.exchange.api.batch.BatchStatus#ERROR}.
      *
      * @param batch the batch to execute
      */
     Single<Batch> executeBatch(final Batch batch);
 
-    Single<Batch> watchBatch(String batchId);
+    /**
+     * As {@link ExchangeController#executeBatch(Batch)} but with an {@link BatchObserver} which will be notified when
+     * the batch finished in {@link io.gravitee.exchange.api.batch.BatchStatus#SUCCEEDED}
+     * or {@link io.gravitee.exchange.api.batch.BatchStatus#ERROR}
+     *
+     * @param batch the batch to execute
+     * @param batchObserver the given will be executed when the given batch finished
+     */
+    Completable executeBatch(final Batch batch, final BatchObserver batchObserver);
+
+    /**
+     * Add a key based {@link BatchObserver} which will be called when any batches with the according key finish
+     *
+     * @param keyBasedObserver the given will be executed when any batch with the according key finish
+     */
+    void addKeyBasedBatchObserver(final KeyBatchObserver keyBasedObserver);
+
+    /**
+     * Remove a key based {@link BatchObserver} which will be called when any batches with the according key finish
+     *
+     * @param keyBasedObserver the observer to unregister
+     */
+    void removeKeyBasedBatchObserver(final KeyBatchObserver keyBasedObserver);
 }

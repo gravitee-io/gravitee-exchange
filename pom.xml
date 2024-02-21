@@ -36,7 +36,7 @@
     <properties>
         <gravitee-bom.version>6.0.23</gravitee-bom.version>
         <gravitee-common.version>3.3.3</gravitee-common.version>
-        <gravitee-node.version>5.4.0</gravitee-node.version>
+        <gravitee-node.version>5.6.1</gravitee-node.version>
 
         <commons-lang3.version>3.14.0</commons-lang3.version>
         <jakarta.annotation-api.version>2.1.1</jakarta.annotation-api.version>

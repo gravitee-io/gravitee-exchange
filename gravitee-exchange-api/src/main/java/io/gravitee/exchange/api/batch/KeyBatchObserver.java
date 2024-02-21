@@ -13,31 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.gravitee.exchange.api.command;
+package io.gravitee.exchange.api.batch;
 
 /**
  * @author Guillaume LAMIRAND (guillaume.lamirand at graviteesource.com)
  * @author GraviteeSource Team
  */
-public enum BatchStatus {
-    /**
-     * The batch was just created
-     */
-    CREATED,
-    /**
-     * The batch is waiting for one of its commands to be retried
-     */
-    PENDING,
-    /**
-     * The batch is currently being processed
-     */
-    IN_PROGRESS,
-    /**
-     * The batch has been processed successfully
-     */
-    SUCCEEDED,
-    /**
-     * The batch has been processed but ends in error even after multiple retries
-     */
-    ERROR,
+public interface KeyBatchObserver extends BatchObserver {
+    String batchKey();
 }

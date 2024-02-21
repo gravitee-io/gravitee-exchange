@@ -13,16 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.gravitee.exchange.controller.core.cluster.exception;
+package io.gravitee.exchange.api.batch;
+
+import io.reactivex.rxjava3.core.Completable;
 
 /**
  * @author Guillaume LAMIRAND (guillaume.lamirand at graviteesource.com)
  * @author GraviteeSource Team
  */
-public class ControllerClusterTimeoutException extends ControllerClusterException {
-
-    public ControllerClusterTimeoutException() {
-        super();
-    }
-
+public interface BatchObserver {
+    Completable notify(final Batch batch);
 }
