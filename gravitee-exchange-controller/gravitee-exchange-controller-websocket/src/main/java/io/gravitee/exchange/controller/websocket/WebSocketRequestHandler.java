@@ -85,8 +85,7 @@ public class WebSocketRequestHandler implements io.vertx.core.Handler<io.vertx.r
                         replyAdapters,
                         vertx,
                         webSocket,
-                        protocolVersion.adapterFactory().apply(commandSerDe),
-                        primaryChannelManager
+                        protocolVersion.adapterFactory().apply(commandSerDe)
                     );
                     return exchangeController
                         .register(websocketControllerChannel)

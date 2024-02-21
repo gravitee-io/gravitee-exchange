@@ -31,15 +31,10 @@ import org.springframework.context.annotation.Lazy;
 public class ControllerCoreConfiguration {
 
     @Bean
-    public ChannelManager channelManager(final @Lazy ClusterManager clusterManager, final @Lazy CacheManager cacheManager) {
-        return new ChannelManager(clusterManager, cacheManager);
-    }
-
-    @Bean
     public ControllerClusterManager controllerClusterManager(
         final @Lazy ClusterManager clusterManager,
-        final ChannelManager channelManager
+        final @Lazy CacheManager cacheManager
     ) {
-        return new ControllerClusterManager(clusterManager, channelManager);
+        return new ControllerClusterManager(clusterManager, cacheManager);
     }
 }

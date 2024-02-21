@@ -26,6 +26,7 @@ import io.gravitee.exchange.controller.core.cluster.command.ClusteredReply;
 import io.gravitee.exchange.controller.core.cluster.exception.ControllerClusterException;
 import io.gravitee.exchange.controller.core.cluster.exception.ControllerClusterShutdownException;
 import io.gravitee.exchange.controller.core.cluster.exception.ControllerClusterTimeoutException;
+import io.gravitee.node.api.cache.CacheManager;
 import io.gravitee.node.api.cluster.ClusterManager;
 import io.gravitee.node.api.cluster.messaging.Message;
 import io.gravitee.node.api.cluster.messaging.Queue;
@@ -47,7 +48,6 @@ import org.springframework.stereotype.Service;
  * @author GraviteeSource Team
  */
 @Slf4j
-@RequiredArgsConstructor
 @Service
 public class ControllerClusterManager extends AbstractService<ControllerClusterManager> {
 
@@ -59,6 +59,11 @@ public class ControllerClusterManager extends AbstractService<ControllerClusterM
 
     private Queue<ClusteredReply<?>> clusteredReplyQueue;
     private String clusteredReplySubscriptionId;
+
+    public ControllerClusterManager(final ClusterManager clusterManager, final CacheManager cacheManager) {
+        this.clusterManager = clusterManager;
+        this.channelManager = new ChannelManager(clusterManager, cacheManager);
+    }
 
     @Override
     protected void doStart() throws Exception {

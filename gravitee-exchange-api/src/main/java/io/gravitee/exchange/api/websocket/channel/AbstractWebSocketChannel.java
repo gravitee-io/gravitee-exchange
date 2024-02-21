@@ -115,11 +115,12 @@ public abstract class AbstractWebSocketChannel implements Channel {
     public Completable initialize() {
         return Completable.create(emitter -> {
             webSocket.closeHandler(v -> {
+                log.warn("Channel '{}' for target '{}' is closing", id, targetId);
                 active = false;
-                closeHandler();
                 cleanChannel();
             });
-            webSocket.pongHandler(buffer -> pongHandler());
+
+            webSocket.pongHandler(buffer -> log.warn("Receiving pong frame from channel '{}' for target '{}'", id, targetId));
 
             webSocket.textMessageHandler(buffer -> webSocket.close((short) 1003, "Unsupported text frame").subscribe());
 
@@ -248,16 +249,6 @@ public abstract class AbstractWebSocketChannel implements Channel {
             this.webSocket.close((short) 1000).subscribe();
         }
     }
-
-    /**
-     * Method call to handle close event
-     */
-    protected void closeHandler() {}
-
-    /**
-     * Method call to handle pong frame
-     */
-    protected void pongHandler() {}
 
     /**
      * Method call to handle initialize command type

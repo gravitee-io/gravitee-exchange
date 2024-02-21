@@ -41,7 +41,6 @@ import io.reactivex.rxjava3.core.Single;
 import io.reactivex.rxjava3.disposables.Disposable;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -156,7 +155,7 @@ public class ChannelManager extends AbstractService<ChannelManager> {
                         );
                         HealthCheckReplyPayload payload = reply.getPayload();
                         controllerChannel.enforceActiveStatus(payload.healthy());
-                        primaryChannelManager.sendChannelEvent(controllerChannel, reply.getPayload().healthy());
+                        signalChannelAlive(controllerChannel, reply.getPayload().healthy());
                     })
                     .ignoreElement()
                     .onErrorResumeNext(throwable -> {
@@ -166,7 +165,7 @@ public class ChannelManager extends AbstractService<ChannelManager> {
                             controllerChannel.targetId()
                         );
                         controllerChannel.enforceActiveStatus(false);
-                        primaryChannelManager.sendChannelEvent(controllerChannel, false);
+                        signalChannelAlive(controllerChannel, false);
                         return Completable.complete();
                     })
             );
@@ -215,7 +214,7 @@ public class ChannelManager extends AbstractService<ChannelManager> {
             .andThen(controllerChannel.initialize())
             .doOnComplete(() -> {
                 log.debug("Channel [{}] successfully register for target [{}]", controllerChannel.id(), controllerChannel.targetId());
-                primaryChannelManager.sendChannelEvent(controllerChannel, true);
+                signalChannelAlive(controllerChannel, true);
             })
             .onErrorResumeNext(throwable -> {
                 log.warn(
@@ -234,7 +233,7 @@ public class ChannelManager extends AbstractService<ChannelManager> {
             .andThen(controllerChannel.close())
             .doOnComplete(() -> {
                 log.debug("Channel [{}] successfully unregister for target [{}]", controllerChannel.id(), controllerChannel.targetId());
-                primaryChannelManager.sendChannelEvent(controllerChannel, false);
+                signalChannelAlive(controllerChannel, false);
             })
             .doOnError(throwable ->
                 log.warn(
@@ -257,5 +256,9 @@ public class ChannelManager extends AbstractService<ChannelManager> {
             })
             .doOnSuccess(reply -> log.debug("Command [{}] successfully sent", command.getId()))
             .doOnError(throwable -> log.warn("Unable to send command [{}]", command.getId(), throwable));
+    }
+
+    public void signalChannelAlive(final ControllerChannel controllerChannel, final boolean isAlive) {
+        this.primaryChannelManager.sendChannelEvent(controllerChannel, isAlive);
     }
 }

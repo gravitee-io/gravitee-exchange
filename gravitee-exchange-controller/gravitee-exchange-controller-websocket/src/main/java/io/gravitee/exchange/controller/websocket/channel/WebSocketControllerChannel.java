@@ -40,19 +40,15 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class WebSocketControllerChannel extends AbstractWebSocketChannel implements ControllerChannel {
 
-    private final PrimaryChannelManager primaryChannelManager;
-
     public WebSocketControllerChannel(
         final List<CommandHandler<? extends Command<?>, ? extends Reply<?>>> commandHandlers,
         final List<CommandAdapter<? extends Command<?>, ? extends Command<?>, ? extends Reply<?>>> commandAdapters,
         final List<ReplyAdapter<? extends Reply<?>, ? extends Reply<?>>> replyAdapters,
         final Vertx vertx,
         final ServerWebSocket webSocket,
-        final ProtocolAdapter protocolAdapter,
-        final PrimaryChannelManager primaryChannelManager
+        final ProtocolAdapter protocolAdapter
     ) {
         super(commandHandlers, commandAdapters, replyAdapters, vertx, webSocket, protocolAdapter);
-        this.primaryChannelManager = primaryChannelManager;
     }
 
     @Override
@@ -81,18 +77,6 @@ public class WebSocketControllerChannel extends AbstractWebSocketChannel impleme
     @Override
     public void enforceActiveStatus(final boolean isActive) {
         this.active = isActive;
-    }
-
-    @Override
-    protected void closeHandler() {
-        this.primaryChannelManager.sendChannelEvent(this, false);
-    }
-
-    @Override
-    protected void pongHandler() {
-        if (this.active) {
-            primaryChannelManager.sendChannelEvent(this, true);
-        }
     }
 
     @Override
