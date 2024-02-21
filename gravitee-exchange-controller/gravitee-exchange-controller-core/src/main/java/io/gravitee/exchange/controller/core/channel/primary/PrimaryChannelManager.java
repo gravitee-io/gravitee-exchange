@@ -16,6 +16,7 @@
 package io.gravitee.exchange.controller.core.channel.primary;
 
 import io.gravitee.common.service.AbstractService;
+import io.gravitee.exchange.api.configuration.IdentifyConfiguration;
 import io.gravitee.exchange.api.controller.ControllerChannel;
 import io.gravitee.node.api.cache.Cache;
 import io.gravitee.node.api.cache.CacheConfiguration;
@@ -23,6 +24,7 @@ import io.gravitee.node.api.cache.CacheManager;
 import io.gravitee.node.api.cluster.ClusterManager;
 import io.gravitee.node.api.cluster.messaging.Topic;
 import io.reactivex.rxjava3.core.Flowable;
+import io.reactivex.rxjava3.core.Maybe;
 import io.reactivex.rxjava3.core.Single;
 import java.util.List;
 import java.util.Map;
@@ -42,6 +44,7 @@ public class PrimaryChannelManager extends AbstractService<PrimaryChannelManager
     public static final String PRIMARY_CHANNEL_EVENTS_ELECTED_TOPIC = "controller-primary-channel-elected-events";
     public static final String PRIMARY_CHANNEL_CACHE = "controller-primary-channel";
     public static final String PRIMARY_CHANNEL_CANDIDATE_CACHE = "controller-primary-channel-candidate";
+    private final IdentifyConfiguration identifyConfiguration;
     private final ClusterManager clusterManager;
     private final CacheManager cacheManager;
     private PrimaryChannelCandidateStore primaryChannelCandidateStore;
@@ -53,25 +56,31 @@ public class PrimaryChannelManager extends AbstractService<PrimaryChannelManager
 
     @Override
     protected void doStart() throws Exception {
-        log.debug("Starting primary channel manager");
+        log.debug("[{}] Starting primary channel manager", this.identifyConfiguration.id());
         super.doStart();
         cacheConfiguration = CacheConfiguration.builder().distributed(true).build();
-        primaryChannelCandidateStore =
-            new PrimaryChannelCandidateStore(cacheManager.getOrCreateCache(PRIMARY_CHANNEL_CANDIDATE_CACHE, cacheConfiguration));
-        primaryChannelCache = cacheManager.getOrCreateCache(PRIMARY_CHANNEL_CACHE, cacheConfiguration);
-        primaryChannelEventTopic = clusterManager.topic(PRIMARY_CHANNEL_EVENTS_TOPIC);
-        primaryChannelElectedEventTopic = clusterManager.topic(PRIMARY_CHANNEL_EVENTS_ELECTED_TOPIC);
+        if (primaryChannelCandidateStore == null) {
+            primaryChannelCandidateStore =
+                new PrimaryChannelCandidateStore(
+                    cacheManager.getOrCreateCache(identifyConfiguration.identifyName(PRIMARY_CHANNEL_CANDIDATE_CACHE), cacheConfiguration)
+                );
+        }
+        primaryChannelCache = cacheManager.getOrCreateCache(identifyConfiguration.identifyName(PRIMARY_CHANNEL_CACHE), cacheConfiguration);
+        primaryChannelEventTopic = clusterManager.topic(identifyConfiguration.identifyName(PRIMARY_CHANNEL_EVENTS_TOPIC));
+        primaryChannelElectedEventTopic = clusterManager.topic(identifyConfiguration.identifyName(PRIMARY_CHANNEL_EVENTS_ELECTED_TOPIC));
         subscriptionListenerId =
             primaryChannelEventTopic.addMessageListener(message -> {
                 ChannelEvent channelEvent = message.content();
                 log.debug(
-                    "New PrimaryChannelEvent received for channel [{}] on target [{}]",
+                    "[{}] New PrimaryChannelEvent received for channel '{}' on target '{}'",
+                    this.identifyConfiguration.id(),
                     channelEvent.channelId(),
                     channelEvent.targetId()
                 );
                 if (clusterManager.self().primary()) {
                     log.debug(
-                        "Handling PrimaryChannelEvent for channel [{}] on target [{}]",
+                        "[{}] Handling PrimaryChannelEvent for channel '{}' on target '{}'",
+                        this.identifyConfiguration.id(),
                         channelEvent.channelId(),
                         channelEvent.targetId()
                     );
@@ -82,7 +91,7 @@ public class PrimaryChannelManager extends AbstractService<PrimaryChannelManager
 
     @Override
     protected void doStop() throws Exception {
-        log.debug("Stopping primary channel manager");
+        log.debug("[{}] Stopping primary channel manager", this.identifyConfiguration.id());
         super.doStop();
         if (primaryChannelEventTopic != null && subscriptionListenerId != null) {
             primaryChannelEventTopic.removeMessageListener(subscriptionListenerId);
@@ -90,11 +99,15 @@ public class PrimaryChannelManager extends AbstractService<PrimaryChannelManager
     }
 
     public Flowable<Map.Entry<String, List<String>>> candidatesChannel() {
-        return primaryChannelCandidateStore.entries();
+        return primaryChannelCandidateStore.rxEntries();
+    }
+
+    public Maybe<List<String>> candidatesChannel(final String targetId) {
+        return primaryChannelCandidateStore.rxGet(targetId);
     }
 
     public Single<String> primaryChannelBy(final String targetId) {
-        return primaryChannelCache.rxGet(targetId);
+        return primaryChannelCache.rxGet(targetId).defaultIfEmpty("unknown");
     }
 
     public void sendChannelEvent(final ControllerChannel controllerChannel, final boolean alive) {
@@ -119,7 +132,11 @@ public class PrimaryChannelManager extends AbstractService<PrimaryChannelManager
         List<String> channelIds = primaryChannelCandidateStore.get(targetId);
 
         if (null == channelIds || channelIds.isEmpty()) {
-            log.warn("Unable to elect a primary channel because there is no channel for target id [{}]", targetId);
+            log.warn(
+                "[{}] Unable to elect a primary channel because there is no channel for target id '{}'",
+                this.identifyConfiguration.id(),
+                targetId
+            );
             primaryChannelCache.evict(targetId);
             return;
         }

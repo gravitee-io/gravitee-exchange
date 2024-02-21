@@ -15,7 +15,7 @@
  */
 package io.gravitee.exchange.connector.websocket.client;
 
-import io.gravitee.exchange.api.configuration.PrefixConfiguration;
+import io.gravitee.exchange.api.configuration.IdentifyConfiguration;
 import io.vertx.core.http.HttpServerOptions;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -48,7 +48,7 @@ public class WebSocketClientConfiguration {
     public static final String MAX_WEB_SOCKET_MESSAGE_SIZE_KEY = "connector.ws.maxWebSocketMessageSize";
     public static final int MAX_WEB_SOCKET_MESSAGE_SIZE_DEFAULT = 13107200;
     public static final String ENDPOINTS_KEY = "connector.ws.endpoints";
-    private final PrefixConfiguration prefixConfiguration;
+    private final IdentifyConfiguration identifyConfiguration;
 
     private List<WebSocketEndpoint> endpoints;
     private Map<String, String> headers;
@@ -64,9 +64,9 @@ public class WebSocketClientConfiguration {
         int endpointIndex = 0;
         String key = ("%s[%s]").formatted(HEADERS_KEY, endpointIndex);
         Map<String, String> computedHeaders = new HashMap<>();
-        while (prefixConfiguration.containsProperty(key + ".name")) {
-            String name = prefixConfiguration.getProperty(key + ".name");
-            String value = prefixConfiguration.getProperty(key + ".value");
+        while (identifyConfiguration.containsProperty(key + ".name")) {
+            String name = identifyConfiguration.getProperty(key + ".name");
+            String value = identifyConfiguration.getProperty(key + ".value");
             if (name != null && value != null) {
                 computedHeaders.put(name, value);
             }
@@ -77,39 +77,39 @@ public class WebSocketClientConfiguration {
     }
 
     public int maxRetry() {
-        return prefixConfiguration.getProperty(MAX_RETRY_KEY, Integer.class, MAX_RETRY_DEFAULT);
+        return identifyConfiguration.getProperty(MAX_RETRY_KEY, Integer.class, MAX_RETRY_DEFAULT);
     }
 
     public boolean trustAll() {
-        return prefixConfiguration.getProperty(TRUST_ALL_KEY, Boolean.class, TRUST_ALL_DEFAULT);
+        return identifyConfiguration.getProperty(TRUST_ALL_KEY, Boolean.class, TRUST_ALL_DEFAULT);
     }
 
     public boolean verifyHost() {
-        return prefixConfiguration.getProperty(VERIFY_HOST_KEY, Boolean.class, VERIFY_HOST_DEFAULT);
+        return identifyConfiguration.getProperty(VERIFY_HOST_KEY, Boolean.class, VERIFY_HOST_DEFAULT);
     }
 
     public String keyStoreType() {
-        return prefixConfiguration.getProperty(KEYSTORE_TYPE_KEY);
+        return identifyConfiguration.getProperty(KEYSTORE_TYPE_KEY);
     }
 
     public String keyStorePath() {
-        return prefixConfiguration.getProperty(KEYSTORE_PATH_KEY);
+        return identifyConfiguration.getProperty(KEYSTORE_PATH_KEY);
     }
 
     public String keyStorePassword() {
-        return prefixConfiguration.getProperty(KEYSTORE_PASSWORD_KEY);
+        return identifyConfiguration.getProperty(KEYSTORE_PASSWORD_KEY);
     }
 
     public String trustStoreType() {
-        return prefixConfiguration.getProperty(TRUSTSTORE_TYPE_KEY);
+        return identifyConfiguration.getProperty(TRUSTSTORE_TYPE_KEY);
     }
 
     public String trustStorePath() {
-        return prefixConfiguration.getProperty(TRUSTSTORE_PATH_KEY);
+        return identifyConfiguration.getProperty(TRUSTSTORE_PATH_KEY);
     }
 
     public String trustStorePassword() {
-        return prefixConfiguration.getProperty(TRUSTSTORE_PASSWORD_KEY);
+        return identifyConfiguration.getProperty(TRUSTSTORE_PASSWORD_KEY);
     }
 
     /**
@@ -126,7 +126,7 @@ public class WebSocketClientConfiguration {
      * @see HttpServerOptions#DEFAULT_MAX_WEBSOCKET_FRAME_SIZE
      */
     public int maxWebSocketFrameSize() {
-        return prefixConfiguration.getProperty(MAX_WEB_SOCKET_FRAME_SIZE_KEY, Integer.class, MAX_WEB_SOCKET_FRAME_SIZE_DEFAULT);
+        return identifyConfiguration.getProperty(MAX_WEB_SOCKET_FRAME_SIZE_KEY, Integer.class, MAX_WEB_SOCKET_FRAME_SIZE_DEFAULT);
     }
 
     /**
@@ -141,7 +141,7 @@ public class WebSocketClientConfiguration {
      * @see HttpServerOptions#DEFAULT_MAX_WEBSOCKET_MESSAGE_SIZE
      */
     public int maxWebSocketMessageSize() {
-        return prefixConfiguration.getProperty(MAX_WEB_SOCKET_MESSAGE_SIZE_KEY, Integer.class, MAX_WEB_SOCKET_MESSAGE_SIZE_DEFAULT);
+        return identifyConfiguration.getProperty(MAX_WEB_SOCKET_MESSAGE_SIZE_KEY, Integer.class, MAX_WEB_SOCKET_MESSAGE_SIZE_DEFAULT);
     }
 
     public List<WebSocketEndpoint> endpoints() {
@@ -157,8 +157,8 @@ public class WebSocketClientConfiguration {
         String key = ("%s[%s]").formatted(ENDPOINTS_KEY, endpointIndex);
         List<WebSocketEndpoint> endpointsConfiguration = new ArrayList<>();
 
-        while (prefixConfiguration.containsProperty(key)) {
-            String url = prefixConfiguration.getProperty(key);
+        while (identifyConfiguration.containsProperty(key)) {
+            String url = identifyConfiguration.getProperty(key);
             if (url != null && !url.isBlank()) {
                 endpointsConfiguration.add(new WebSocketEndpoint(url, maxRetry()));
             }

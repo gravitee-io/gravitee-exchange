@@ -27,29 +27,41 @@ import org.springframework.core.env.Environment;
 @RequiredArgsConstructor
 @Getter
 @Accessors(fluent = true)
-public class PrefixConfiguration {
+public class IdentifyConfiguration {
 
-    private static final String DEFAULT_EXCHANGE_PREFIX = "exchange";
+    private static final String DEFAULT_EXCHANGE_ID = "exchange";
     private final Environment environment;
-    private final String keyPrefix;
+    private final String id;
 
-    public PrefixConfiguration(final Environment environment) {
-        this(environment, DEFAULT_EXCHANGE_PREFIX);
+    public IdentifyConfiguration(final Environment environment) {
+        this(environment, DEFAULT_EXCHANGE_ID);
     }
 
     public boolean containsProperty(final String key) {
-        return environment.containsProperty(prefixKey(key));
+        return environment.containsProperty(identifyProperty(key));
+    }
+
+    public String id() {
+        return id;
     }
 
     public String getProperty(final String key) {
-        return environment.getProperty(prefixKey(key));
+        return environment.getProperty(identifyProperty(key));
     }
 
     public <T> T getProperty(final String key, final Class<T> clazz, final T defaultValue) {
-        return environment.getProperty(prefixKey(key), clazz, defaultValue);
+        return environment.getProperty(identifyProperty(key), clazz, defaultValue);
     }
 
-    public String prefixKey(final String key) {
-        return "%s.%s".formatted(keyPrefix, key);
+    public String identifyProperty(final String key) {
+        return identify("%s.%s", key);
+    }
+
+    public String identifyName(final String key) {
+        return identify("%s-%s", key);
+    }
+
+    private String identify(final String format, final String key) {
+        return format.formatted(id, key);
     }
 }

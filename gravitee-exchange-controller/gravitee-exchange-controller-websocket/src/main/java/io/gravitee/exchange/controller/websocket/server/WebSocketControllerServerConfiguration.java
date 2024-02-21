@@ -15,7 +15,7 @@
  */
 package io.gravitee.exchange.controller.websocket.server;
 
-import io.gravitee.exchange.api.configuration.PrefixConfiguration;
+import io.gravitee.exchange.api.configuration.IdentifyConfiguration;
 import io.vertx.core.http.HttpServerOptions;
 import io.vertx.core.net.TCPSSLOptions;
 import lombok.RequiredArgsConstructor;
@@ -56,77 +56,77 @@ public class WebSocketControllerServerConfiguration {
     public static final int MAX_WEB_SOCKET_FRAME_SIZE_DEFAULT = 65536;
     public static final String MAX_WEB_SOCKET_MESSAGE_SIZE_KEY = "controller.ws.maxWebSocketMessageSize";
     public static final int MAX_WEB_SOCKET_MESSAGE_SIZE_DEFAULT = 13107200;
-    private final PrefixConfiguration prefixConfiguration;
+    private final IdentifyConfiguration identifyConfiguration;
 
     public int port() {
-        return prefixConfiguration.getProperty(PORT_KEY, Integer.class, PORT_DEFAULT);
+        return identifyConfiguration.getProperty(PORT_KEY, Integer.class, PORT_DEFAULT);
     }
 
     public String host() {
-        return prefixConfiguration.getProperty(HOST_KEY, String.class, HOST_DEFAULT);
+        return identifyConfiguration.getProperty(HOST_KEY, String.class, HOST_DEFAULT);
     }
 
     public boolean alpn() {
-        return prefixConfiguration.getProperty(ALPN_KEY, Boolean.class, ALPN_DEFAULT);
+        return identifyConfiguration.getProperty(ALPN_KEY, Boolean.class, ALPN_DEFAULT);
     }
 
     public boolean secured() {
-        return prefixConfiguration.getProperty(SECURED_KEY, Boolean.class, SECURED_DEFAULT);
+        return identifyConfiguration.getProperty(SECURED_KEY, Boolean.class, SECURED_DEFAULT);
     }
 
     public String keyStoreType() {
-        return prefixConfiguration.getProperty(KEYSTORE_TYPE_KEY);
+        return identifyConfiguration.getProperty(KEYSTORE_TYPE_KEY);
     }
 
     public String keyStorePath() {
-        return prefixConfiguration.getProperty(KEYSTORE_PATH_KEY);
+        return identifyConfiguration.getProperty(KEYSTORE_PATH_KEY);
     }
 
     public String keyStorePassword() {
-        return prefixConfiguration.getProperty(KEYSTORE_PASSWORD_KEY);
+        return identifyConfiguration.getProperty(KEYSTORE_PASSWORD_KEY);
     }
 
     public String trustStoreType() {
-        return prefixConfiguration.getProperty(TRUSTSTORE_TYPE_KEY);
+        return identifyConfiguration.getProperty(TRUSTSTORE_TYPE_KEY);
     }
 
     public String trustStorePath() {
-        return prefixConfiguration.getProperty(TRUSTSTORE_PATH_KEY);
+        return identifyConfiguration.getProperty(TRUSTSTORE_PATH_KEY);
     }
 
     public String trustStorePassword() {
-        return prefixConfiguration.getProperty(TRUSTSTORE_PASSWORD_KEY);
+        return identifyConfiguration.getProperty(TRUSTSTORE_PASSWORD_KEY);
     }
 
     public String clientAuth() {
-        return prefixConfiguration.getProperty(CLIENT_AUTH_KEY);
+        return identifyConfiguration.getProperty(CLIENT_AUTH_KEY);
     }
 
     public boolean compressionSupported() {
-        return prefixConfiguration.getProperty(COMPRESSION_SUPPORTED_KEY, Boolean.class, COMPRESSION_SUPPORTED_DEFAULT);
+        return identifyConfiguration.getProperty(COMPRESSION_SUPPORTED_KEY, Boolean.class, COMPRESSION_SUPPORTED_DEFAULT);
     }
 
     public int idleTimeout() {
-        return prefixConfiguration.getProperty(IDLE_TIMEOUT_KEY, Integer.class, IDLE_TIMEOUT_DEFAULT);
+        return identifyConfiguration.getProperty(IDLE_TIMEOUT_KEY, Integer.class, IDLE_TIMEOUT_DEFAULT);
     }
 
     public boolean tcpKeepAlive() {
-        return prefixConfiguration.getProperty(TCP_KEEP_ALIVE_KEY, Boolean.class, TCP_KEEP_ALIVE_DEFAULT);
+        return identifyConfiguration.getProperty(TCP_KEEP_ALIVE_KEY, Boolean.class, TCP_KEEP_ALIVE_DEFAULT);
     }
 
     public int maxHeaderSize() {
-        return prefixConfiguration.getProperty(MAX_HEADER_SIZE_KEY, Integer.class, MAX_HEADER_SIZE_DEFAULT);
+        return identifyConfiguration.getProperty(MAX_HEADER_SIZE_KEY, Integer.class, MAX_HEADER_SIZE_DEFAULT);
     }
 
     public int maxChunkSize() {
-        return prefixConfiguration.getProperty(MAX_CHUNK_SIZE_KEY, Integer.class, MAX_CHUNK_SIZE_DEFAULT);
+        return identifyConfiguration.getProperty(MAX_CHUNK_SIZE_KEY, Integer.class, MAX_CHUNK_SIZE_DEFAULT);
     }
 
     public int maxWebSocketFrameSize() {
-        return prefixConfiguration.getProperty(MAX_WEB_SOCKET_FRAME_SIZE_KEY, Integer.class, MAX_WEB_SOCKET_FRAME_SIZE_DEFAULT);
+        return identifyConfiguration.getProperty(MAX_WEB_SOCKET_FRAME_SIZE_KEY, Integer.class, MAX_WEB_SOCKET_FRAME_SIZE_DEFAULT);
     }
 
     public int maxWebSocketMessageSize() {
-        return prefixConfiguration.getProperty(MAX_WEB_SOCKET_MESSAGE_SIZE_KEY, Integer.class, MAX_WEB_SOCKET_MESSAGE_SIZE_DEFAULT);
+        return identifyConfiguration.getProperty(MAX_WEB_SOCKET_MESSAGE_SIZE_KEY, Integer.class, MAX_WEB_SOCKET_MESSAGE_SIZE_DEFAULT);
     }
 }

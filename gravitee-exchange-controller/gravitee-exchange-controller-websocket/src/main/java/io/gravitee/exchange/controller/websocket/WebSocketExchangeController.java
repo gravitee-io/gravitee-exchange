@@ -15,7 +15,7 @@
  */
 package io.gravitee.exchange.controller.websocket;
 
-import io.gravitee.exchange.api.configuration.PrefixConfiguration;
+import io.gravitee.exchange.api.configuration.IdentifyConfiguration;
 import io.gravitee.exchange.api.controller.ControllerCommandHandlersFactory;
 import io.gravitee.exchange.api.controller.ExchangeController;
 import io.gravitee.exchange.api.websocket.command.ExchangeSerDe;
@@ -57,13 +57,10 @@ public class WebSocketExchangeController extends DefaultExchangeController imple
     private final WebSocketControllerAuthentication<?> controllerAuthentication;
     private final ControllerCommandHandlersFactory controllerCommandHandlersFactory;
     private final ExchangeSerDe commandSerDe;
-    private final PrimaryChannelManager primaryChannelManager;
-
     private String websocketServerVerticleId;
 
     public WebSocketExchangeController(
-        final PrefixConfiguration prefixConfiguration,
-        final ControllerClusterManager controllerClusterManager,
+        final IdentifyConfiguration identifyConfiguration,
         final ClusterManager clusterManager,
         final CacheManager cacheManager,
         final Vertx vertx,
@@ -71,18 +68,16 @@ public class WebSocketExchangeController extends DefaultExchangeController imple
         final KeyStoreLoaderFactoryRegistry<TrustStoreLoaderOptions> trustStoreLoaderFactoryRegistry,
         final WebSocketControllerAuthentication<?> controllerAuthentication,
         final ControllerCommandHandlersFactory controllerCommandHandlersFactory,
-        final ExchangeSerDe exchangeSerDe,
-        final PrimaryChannelManager primaryChannelManager
+        final ExchangeSerDe exchangeSerDe
     ) {
-        super(prefixConfiguration, controllerClusterManager, clusterManager, cacheManager);
+        super(identifyConfiguration, clusterManager, cacheManager);
         this.vertx = vertx;
-        this.serverConfiguration = new WebSocketControllerServerConfiguration(prefixConfiguration);
+        this.serverConfiguration = new WebSocketControllerServerConfiguration(identifyConfiguration);
         this.keyStoreLoaderFactoryRegistry = keyStoreLoaderFactoryRegistry;
         this.trustStoreLoaderFactoryRegistry = trustStoreLoaderFactoryRegistry;
         this.controllerAuthentication = controllerAuthentication;
         this.controllerCommandHandlersFactory = controllerCommandHandlersFactory;
         this.commandSerDe = exchangeSerDe;
-        this.primaryChannelManager = primaryChannelManager;
     }
 
     @Override
@@ -92,7 +87,7 @@ public class WebSocketExchangeController extends DefaultExchangeController imple
     }
 
     private void deployVerticle() {
-        int instances = prefixConfiguration.getProperty(VERTICLE_INSTANCE, Integer.class, 0);
+        int instances = identifyConfiguration.getProperty(VERTICLE_INSTANCE, Integer.class, 0);
         int verticleInstances = (instances < 1) ? VertxOptions.DEFAULT_EVENT_LOOP_POOL_SIZE : instances;
         log.info("Starting Exchange Controller Websocket [{} instance(s)]", verticleInstances);
 
@@ -108,8 +103,7 @@ public class WebSocketExchangeController extends DefaultExchangeController imple
             this,
             controllerAuthentication,
             controllerCommandHandlersFactory,
-            commandSerDe,
-            primaryChannelManager
+            commandSerDe
         );
         vertx
             .deployVerticle(
@@ -132,8 +126,8 @@ public class WebSocketExchangeController extends DefaultExchangeController imple
     private VertxHttpServerOptions createVertxHttpServerOptions() {
         VertxHttpServerOptions.VertxHttpServerOptionsBuilder<?, ?> builder = VertxHttpServerOptions
             .builder()
-            .prefix(prefixConfiguration.prefixKey(HTTP_PREFIX))
-            .environment(prefixConfiguration.environment())
+            .prefix(identifyConfiguration.identifyProperty(HTTP_PREFIX))
+            .environment(identifyConfiguration.environment())
             .defaultPort(serverConfiguration.port())
             .host(serverConfiguration.host())
             .alpn(serverConfiguration.alpn());

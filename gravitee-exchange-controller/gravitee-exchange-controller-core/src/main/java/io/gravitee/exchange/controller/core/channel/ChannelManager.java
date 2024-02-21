@@ -26,6 +26,7 @@ import io.gravitee.exchange.api.command.healtcheck.HealthCheckReplyPayload;
 import io.gravitee.exchange.api.command.primary.PrimaryCommand;
 import io.gravitee.exchange.api.command.primary.PrimaryCommandPayload;
 import io.gravitee.exchange.api.command.primary.PrimaryReply;
+import io.gravitee.exchange.api.configuration.IdentifyConfiguration;
 import io.gravitee.exchange.api.controller.ControllerChannel;
 import io.gravitee.exchange.api.controller.metrics.ChannelMetric;
 import io.gravitee.exchange.controller.core.channel.exception.NoChannelFoundException;
@@ -50,24 +51,29 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class ChannelManager extends AbstractService<ChannelManager> {
 
-    // TODO makes those constant configurable
     private static final int HEALTH_CHECK_DELAY = 30000;
     private static final TimeUnit HEALTH_CHECK_DELAY_UNIT = TimeUnit.MILLISECONDS;
     private final LocalChannelRegistry localChannelRegistry = new LocalChannelRegistry();
     private final PrimaryChannelManager primaryChannelManager;
+    private final IdentifyConfiguration identifyConfiguration;
     private final ClusterManager clusterManager;
     private Disposable healthCheckDisposable;
     private Topic<PrimaryChannelElectedEvent> primaryChannelElectedEventTopic;
     private String primaryChannelElectedSubscriptionId;
 
-    public ChannelManager(final ClusterManager clusterManager, final CacheManager cacheManager) {
+    public ChannelManager(
+        final IdentifyConfiguration identifyConfiguration,
+        final ClusterManager clusterManager,
+        final CacheManager cacheManager
+    ) {
+        this.identifyConfiguration = identifyConfiguration;
         this.clusterManager = clusterManager;
-        this.primaryChannelManager = new PrimaryChannelManager(clusterManager, cacheManager);
+        this.primaryChannelManager = new PrimaryChannelManager(identifyConfiguration, clusterManager, cacheManager);
     }
 
     @Override
     protected void doStart() throws Exception {
-        log.debug("Starting channel manager");
+        log.debug("[{}] Starting channel manager", this.identifyConfiguration.id());
         super.doStart();
         primaryChannelManager.start();
         primaryChannelElectedEventTopic = clusterManager.topic(PrimaryChannelManager.PRIMARY_CHANNEL_EVENTS_ELECTED_TOPIC);
@@ -82,9 +88,13 @@ public class ChannelManager extends AbstractService<ChannelManager> {
                         return state + 1;
                     }
                 )
-                .delay(HEALTH_CHECK_DELAY, HEALTH_CHECK_DELAY_UNIT)
+                .delay(
+                    identifyConfiguration.getProperty("controller.channel.healthcheck.delay", Integer.class, HEALTH_CHECK_DELAY),
+                    HEALTH_CHECK_DELAY_UNIT
+                )
                 .rebatchRequests(1)
-                .doOnNext(aLong -> log.debug("Sending healthcheck command to all registered channels"))
+                .doOnNext(aLong -> log.debug("[{}] Sending healthcheck command to all registered channels", this.identifyConfiguration.id())
+                )
                 .flatMapCompletable(interval -> sendHealthCheckCommand())
                 .onErrorComplete()
                 .subscribe();
@@ -95,14 +105,20 @@ public class ChannelManager extends AbstractService<ChannelManager> {
             .defer(() -> {
                 String channelId = event.channelId();
                 String targetId = event.targetId();
-                log.debug("Handling primary channel elected event for channel [{}] on target [{}].", channelId, targetId);
+                log.debug(
+                    "[{}] Handling primary channel elected event for channel '{}' on target '{}'.",
+                    this.identifyConfiguration.id(),
+                    channelId,
+                    targetId
+                );
 
                 return Maybe
                     .fromOptional(localChannelRegistry.getById(channelId))
                     .switchIfEmpty(
                         Maybe.fromRunnable(() ->
                             log.debug(
-                                "Primary elected channel [{}] on target [{}] was not found from the local registry, ignore it.",
+                                "[{}] Primary elected channel '{}' on target '{}' was not found from the local registry, ignore it.",
+                                this.identifyConfiguration.id(),
                                 channelId,
                                 targetId
                             )
@@ -116,26 +132,39 @@ public class ChannelManager extends AbstractService<ChannelManager> {
                     );
             })
             .subscribe(
-                () -> log.debug("Primary channel elected event properly handled"),
-                throwable -> log.error("Unable to send primary commands to local registered channels", throwable)
+                () -> log.debug("[{}] Primary channel elected event properly handled", this.identifyConfiguration.id()),
+                throwable ->
+                    log.error(
+                        "[{}] Unable to send primary commands to local registered channels",
+                        this.identifyConfiguration.id(),
+                        throwable
+                    )
             );
     }
 
-    private static Completable sendPrimaryCommand(final ControllerChannel channel, final boolean isPrimary) {
+    private Completable sendPrimaryCommand(final ControllerChannel channel, final boolean isPrimary) {
         String channelId = channel.id();
         String targetId = channel.targetId();
-        log.debug("Sending primary command to channel [{}] on target [{}] with primary [{}]", channelId, targetId, isPrimary);
+        log.debug(
+            "[{}] Sending primary command to channel '{}' on target '{}' with primary '{}'",
+            this.identifyConfiguration.id(),
+            channelId,
+            targetId,
+            isPrimary
+        );
         return channel
             .<PrimaryCommand, PrimaryReply>send(new PrimaryCommand(new PrimaryCommandPayload(isPrimary)))
             .doOnSuccess(primaryReply -> {
-                log.debug("Primary command successfully sent to channel [{}]", channelId);
+                log.debug("[{}] Primary command successfully sent to channel '{}'", this.identifyConfiguration.id(), channelId);
                 if (primaryReply.getCommandStatus() == CommandStatus.SUCCEEDED) {
-                    log.debug("Channel [{}] successfully replied from primary command", channelId);
+                    log.debug("[{}] Channel '{}' successfully replied from primary command", this.identifyConfiguration.id(), channelId);
                 } else if (primaryReply.getCommandStatus() == CommandStatus.ERROR) {
-                    log.warn("Channel [{}] replied in error from primary command", channelId);
+                    log.warn("[{}] Channel '{}' replied in error from primary command", this.identifyConfiguration.id(), channelId);
                 }
             })
-            .doOnError(throwable -> log.warn("Unable to send primary command to channel [{}]", channelId, throwable))
+            .doOnError(throwable ->
+                log.warn("[{}] Unable to send primary command to channel '{}'", this.identifyConfiguration.id(), channelId, throwable)
+            )
             .ignoreElement();
     }
 
@@ -149,7 +178,8 @@ public class ChannelManager extends AbstractService<ChannelManager> {
                     .cast(HealthCheckReply.class)
                     .doOnSuccess(reply -> {
                         log.debug(
-                            "Health check command successfully sent for channel [{}] on target [{}]",
+                            "[{}] Health check command successfully sent for channel '{}' on target '{}'",
+                            this.identifyConfiguration.id(),
                             controllerChannel.id(),
                             controllerChannel.targetId()
                         );
@@ -160,7 +190,8 @@ public class ChannelManager extends AbstractService<ChannelManager> {
                     .ignoreElement()
                     .onErrorResumeNext(throwable -> {
                         log.debug(
-                            "Unable to send health check command for channel [{}] on target [{}]",
+                            "[{}] Unable to send health check command for channel '{}' on target '{}'",
+                            this.identifyConfiguration.id(),
                             controllerChannel.id(),
                             controllerChannel.targetId()
                         );
@@ -173,7 +204,7 @@ public class ChannelManager extends AbstractService<ChannelManager> {
 
     @Override
     protected void doStop() throws Exception {
-        log.debug("Stopping channel manager");
+        log.debug("[{}] Stopping channel manager", this.identifyConfiguration.id());
         super.doStop();
         primaryChannelManager.stop();
         if (healthCheckDisposable != null) {
@@ -200,6 +231,20 @@ public class ChannelManager extends AbstractService<ChannelManager> {
             });
     }
 
+    public Flowable<ChannelMetric> channelMetrics(final String targetId) {
+        return this.primaryChannelManager.primaryChannelBy(targetId)
+            .flatMapPublisher(primaryChannel ->
+                this.primaryChannelManager.candidatesChannel(targetId)
+                    .flattenStreamAsFlowable(candidatesChannel ->
+                        candidatesChannel
+                            .stream()
+                            .map(channelId ->
+                                ChannelMetric.builder().id(channelId).targetId(targetId).primary(channelId.equals(primaryChannel)).build()
+                            )
+                    )
+            );
+    }
+
     public ControllerChannel getChannelById(final String id) {
         return localChannelRegistry.getById(id).filter(ControllerChannel::isActive).orElse(null);
     }
@@ -213,12 +258,18 @@ public class ChannelManager extends AbstractService<ChannelManager> {
             .fromRunnable(() -> localChannelRegistry.add(controllerChannel))
             .andThen(controllerChannel.initialize())
             .doOnComplete(() -> {
-                log.debug("Channel [{}] successfully register for target [{}]", controllerChannel.id(), controllerChannel.targetId());
+                log.debug(
+                    "[{}] Channel '{}' successfully register for target '{}'",
+                    this.identifyConfiguration.id(),
+                    controllerChannel.id(),
+                    controllerChannel.targetId()
+                );
                 signalChannelAlive(controllerChannel, true);
             })
             .onErrorResumeNext(throwable -> {
                 log.warn(
-                    "Unable to register channel [{}] for target [{}]",
+                    "[{}] Unable to register channel '{}' for target '{}'",
+                    this.identifyConfiguration.id(),
                     controllerChannel.id(),
                     controllerChannel.targetId(),
                     throwable
@@ -232,12 +283,18 @@ public class ChannelManager extends AbstractService<ChannelManager> {
             .fromRunnable(() -> localChannelRegistry.remove(controllerChannel))
             .andThen(controllerChannel.close())
             .doOnComplete(() -> {
-                log.debug("Channel [{}] successfully unregister for target [{}]", controllerChannel.id(), controllerChannel.targetId());
+                log.debug(
+                    "[{}] Channel '{}' successfully unregister for target '{}'",
+                    this.identifyConfiguration.id(),
+                    controllerChannel.id(),
+                    controllerChannel.targetId()
+                );
                 signalChannelAlive(controllerChannel, false);
             })
             .doOnError(throwable ->
                 log.warn(
-                    "Unable to unregister channel [{}] for target [{}]",
+                    "[{}] Unable to unregister channel '{}' for target '{}'",
+                    this.identifyConfiguration.id(),
                     controllerChannel.id(),
                     controllerChannel.targetId(),
                     throwable
@@ -248,14 +305,23 @@ public class ChannelManager extends AbstractService<ChannelManager> {
     public <C extends Command<?>, R extends Reply<?>> Single<R> send(C command, String targetId) {
         return Maybe
             .fromCallable(() -> getOneChannelByTargetId(targetId))
-            .doOnComplete(() -> log.debug("No channel found for target [{}] to handle command [{}]", targetId, command.getType()))
+            .doOnComplete(() ->
+                log.debug(
+                    "[{}] No channel found for target '{}' to handle command '{}'",
+                    this.identifyConfiguration.id(),
+                    targetId,
+                    command.getType()
+                )
+            )
             .switchIfEmpty(Single.error(new NoChannelFoundException()))
             .<R>flatMap(controllerChannel -> {
-                log.debug("Sending command [{}] to channel [{}]", command, controllerChannel);
+                log.debug("[{}] Sending command '{}' to channel '{}'", this.identifyConfiguration.id(), command, controllerChannel);
                 return controllerChannel.send(command);
             })
-            .doOnSuccess(reply -> log.debug("Command [{}] successfully sent", command.getId()))
-            .doOnError(throwable -> log.warn("Unable to send command [{}]", command.getId(), throwable));
+            .doOnSuccess(reply -> log.debug("[{}] Command '{}' successfully sent", this.identifyConfiguration.id(), command.getId()))
+            .doOnError(throwable ->
+                log.warn("[{}] Unable to send command '{}'", this.identifyConfiguration.id(), command.getId(), throwable)
+            );
     }
 
     public void signalChannelAlive(final ControllerChannel controllerChannel, final boolean isAlive) {
