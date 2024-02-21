@@ -114,7 +114,7 @@ public class DefaultExchangeController extends AbstractService<ExchangeControlle
                         log.debug("Batch scheduled tasks executed");
                     }
                 },
-                new CronTrigger(prefixConfiguration.getProperty("exchange.controller.batch.cron", String.class, "*/60 * * * * *"))
+                new CronTrigger(prefixConfiguration.getProperty("controller.batch.cron", String.class, "*/60 * * * * *"))
             );
     }
 
