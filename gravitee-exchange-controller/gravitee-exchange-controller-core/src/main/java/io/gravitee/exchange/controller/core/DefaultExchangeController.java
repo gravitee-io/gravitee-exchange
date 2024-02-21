@@ -37,7 +37,7 @@ import io.gravitee.node.api.cluster.ClusterManager;
 import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Flowable;
 import io.reactivex.rxjava3.core.Single;
-
+import io.reactivex.rxjava3.schedulers.Schedulers;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -45,8 +45,6 @@ import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledFuture;
-
-import io.reactivex.rxjava3.schedulers.Schedulers;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
@@ -178,7 +176,7 @@ public class DefaultExchangeController extends AbstractService<ExchangeControlle
                     v.add(keyBasedObserver);
                     return v;
                 }
-        );
+            );
     }
 
     @Override
@@ -189,15 +187,15 @@ public class DefaultExchangeController extends AbstractService<ExchangeControlle
                     v.remove(keyBasedObserver);
                     return v;
                 }
-        );
+            );
     }
 
     @Override
     public Single<Batch> executeBatch(final Batch batch) {
         if (isBatchFeatureEnabled()) {
             return this.batchStore.add(batch)
-                    .doOnSuccess(b -> log.info("Executing batch '%s' with key '%s'".formatted(b.id(), b.key())))
-                    .flatMap(this::sendBatchCommands);
+                .doOnSuccess(b -> log.info("Executing batch '%s' with key '%s'".formatted(b.id(), b.key())))
+                .flatMap(this::sendBatchCommands);
         } else {
             return Single.error(new BatchDisabledException());
         }
@@ -206,39 +204,39 @@ public class DefaultExchangeController extends AbstractService<ExchangeControlle
     @Override
     public Completable executeBatch(final Batch batch, final BatchObserver batchObserver) {
         return Completable
-                .fromRunnable(() -> this.idBasedBatchObservers.put(batch.id(), batchObserver))
-                .andThen(executeBatch(batch).ignoreElement())
-                .doOnError(throwable -> this.idBasedBatchObservers.remove(batch.id()));
+            .fromRunnable(() -> this.idBasedBatchObservers.put(batch.id(), batchObserver))
+            .andThen(executeBatch(batch).ignoreElement())
+            .doOnError(throwable -> this.idBasedBatchObservers.remove(batch.id()));
     }
 
     private Single<Batch> sendBatchCommands(final Batch batch) {
         return this.updateBatch(batch.start())
-                .filter(a -> a.status().equals(BatchStatus.IN_PROGRESS))
-                .doOnSuccess(b -> log.debug("Batch '%s' for target '%s' and key '%s' in progress".formatted(b.id(), b.targetId(), b.key())))
-                .flatMapSingle(updateBatch -> {
-                    List<BatchCommand> commands = updateBatch
-                            .batchCommands()
-                            .stream()
-                            .filter(command -> !Objects.equals(CommandStatus.SUCCEEDED, command.status()))
-                            .toList();
-                    return sendCommands(updateBatch, commands);
-                })
-                .doOnSuccess(b -> {
-                    switch (b.status()) {
-                        case PENDING -> log.info(
-                                "Batch '%s' for target id '%s' and key '%s' is scheduled for retry".formatted(b.id(), b.targetId(), b.key())
-                        );
-                        case SUCCEEDED -> {
-                            log.info("Batch '%s' for target id '%s' and key '%s' has succeed".formatted(b.id(), b.targetId(), b.key()));
-                            notifyObservers(b);
-                        }
-                        case ERROR -> {
-                            log.info("Batch '%s' for target id '%s' and key '%s' stopped in error".formatted(b.id(), b.targetId(), b.key()));
-                            notifyObservers(b);
-                        }
+            .filter(a -> a.status().equals(BatchStatus.IN_PROGRESS))
+            .doOnSuccess(b -> log.debug("Batch '%s' for target '%s' and key '%s' in progress".formatted(b.id(), b.targetId(), b.key())))
+            .flatMapSingle(updateBatch -> {
+                List<BatchCommand> commands = updateBatch
+                    .batchCommands()
+                    .stream()
+                    .filter(command -> !Objects.equals(CommandStatus.SUCCEEDED, command.status()))
+                    .toList();
+                return sendCommands(updateBatch, commands);
+            })
+            .doOnSuccess(b -> {
+                switch (b.status()) {
+                    case PENDING -> log.info(
+                        "Batch '%s' for target id '%s' and key '%s' is scheduled for retry".formatted(b.id(), b.targetId(), b.key())
+                    );
+                    case SUCCEEDED -> {
+                        log.info("Batch '%s' for target id '%s' and key '%s' has succeed".formatted(b.id(), b.targetId(), b.key()));
+                        notifyObservers(b);
                     }
-                })
-                .defaultIfEmpty(batch);
+                    case ERROR -> {
+                        log.info("Batch '%s' for target id '%s' and key '%s' stopped in error".formatted(b.id(), b.targetId(), b.key()));
+                        notifyObservers(b);
+                    }
+                }
+            })
+            .defaultIfEmpty(batch);
     }
 
     private void notifyObservers(final Batch batch) {
@@ -250,31 +248,31 @@ public class DefaultExchangeController extends AbstractService<ExchangeControlle
             batchObservers.addAll(keyBasedBatchObservers.get(batch.key()));
         }
         Flowable
-                .fromIterable(batchObservers)
-                .flatMapCompletable(batchObserver ->
-                        batchObserver
-                                .notify(batch)
-                                .subscribeOn(Schedulers.computation())
-                                .doOnError(throwable ->
-                                        log.warn(
-                                                "Unable to notify batch observer with batch '{}' for target id '{}' and key '{}' has succeed",
-                                                batch.id(),
-                                                batch.targetId(),
-                                                batch.key()
-                                        )
-                                )
-                                .doOnComplete(() ->
-                                        log.debug(
-                                                "Notify batch observer in success with batch '{}' for target id '{}' and key '{}' has succeed",
-                                                batch.id(),
-                                                batch.targetId(),
-                                                batch.key()
-                                        )
-                                )
-                                .onErrorComplete()
-                )
-                .doOnComplete(() -> this.idBasedBatchObservers.remove(batch.id()))
-                .subscribe();
+            .fromIterable(batchObservers)
+            .flatMapCompletable(batchObserver ->
+                batchObserver
+                    .notify(batch)
+                    .subscribeOn(Schedulers.computation())
+                    .doOnError(throwable ->
+                        log.warn(
+                            "Unable to notify batch observer with batch '{}' for target id '{}' and key '{}' has succeed",
+                            batch.id(),
+                            batch.targetId(),
+                            batch.key()
+                        )
+                    )
+                    .doOnComplete(() ->
+                        log.debug(
+                            "Notify batch observer in success with batch '{}' for target id '{}' and key '{}' has succeed",
+                            batch.id(),
+                            batch.targetId(),
+                            batch.key()
+                        )
+                    )
+                    .onErrorComplete()
+            )
+            .doOnComplete(() -> this.idBasedBatchObservers.remove(batch.id()))
+            .subscribe();
     }
 
     private Single<Batch> sendCommands(final Batch batch, final List<BatchCommand> batchCommands) {
@@ -283,22 +281,22 @@ public class DefaultExchangeController extends AbstractService<ExchangeControlle
         }
 
         return Flowable
-                .fromIterable(batchCommands)
-                .concatMapSingle(batchCommand ->
-                        Single
+            .fromIterable(batchCommands)
+            .concatMapSingle(batchCommand ->
+                Single
                     .just(batch.markCommandInProgress(batchCommand.command().getId()))
                     .flatMap(this::updateBatch)
-                                .flatMap(updatedBatch ->
-                                        sendCommand(batchCommand.command(), updatedBatch.targetId())
-                                                .map(reply -> updatedBatch.setCommandReply(batchCommand.command().getId(), reply))
-                                                .onErrorReturn(throwable ->
-                                                        updatedBatch.markCommandInError(batchCommand.command().getId(), throwable.getMessage())
-                                                )
-                                )
-                                .flatMap(this::updateBatch)
-                )
-                .takeWhile(updatedBatch -> updatedBatch.status() == BatchStatus.IN_PROGRESS)
-                .last(batch);
+                    .flatMap(updatedBatch ->
+                        sendCommand(batchCommand.command(), updatedBatch.targetId())
+                            .map(reply -> updatedBatch.setCommandReply(batchCommand.command().getId(), reply))
+                            .onErrorReturn(throwable ->
+                                updatedBatch.markCommandInError(batchCommand.command().getId(), throwable.getMessage())
+                            )
+                    )
+                    .flatMap(this::updateBatch)
+            )
+            .takeWhile(updatedBatch -> updatedBatch.status() == BatchStatus.IN_PROGRESS)
+            .last(batch);
     }
 
     private Single<Batch> updateBatch(final Batch batch) {

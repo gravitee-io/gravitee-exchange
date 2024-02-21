@@ -24,5 +24,4 @@ public class ControllerClusterTimeoutException extends ControllerClusterExceptio
     public ControllerClusterTimeoutException() {
         super();
     }
-
 }

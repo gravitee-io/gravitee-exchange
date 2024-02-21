@@ -53,6 +53,7 @@ public class PrimaryChannelManager extends AbstractService<PrimaryChannelManager
 
     @Override
     protected void doStart() throws Exception {
+        log.debug("Starting primary channel manager");
         super.doStart();
         cacheConfiguration = CacheConfiguration.builder().distributed(true).build();
         primaryChannelCandidateStore =
@@ -81,6 +82,7 @@ public class PrimaryChannelManager extends AbstractService<PrimaryChannelManager
 
     @Override
     protected void doStop() throws Exception {
+        log.debug("Stopping primary channel manager");
         super.doStop();
         if (primaryChannelEventTopic != null && subscriptionListenerId != null) {
             primaryChannelEventTopic.removeMessageListener(subscriptionListenerId);

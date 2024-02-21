@@ -51,8 +51,6 @@ import org.springframework.stereotype.Service;
 @Service
 public class ControllerClusterManager extends AbstractService<ControllerClusterManager> {
 
-    static final String COMMANDS_QUEUE_PREFIX = "commands-";
-
     private final ClusterManager clusterManager;
     private final ChannelManager channelManager;
     private final Map<String, SingleEmitter<Reply<?>>> resultEmittersByCommand = new ConcurrentHashMap<>();
@@ -64,6 +62,7 @@ public class ControllerClusterManager extends AbstractService<ControllerClusterM
 
     @Override
     protected void doStart() throws Exception {
+        log.debug("Starting controller cluster manager");
         super.doStart();
         channelManager.start();
 
@@ -87,6 +86,7 @@ public class ControllerClusterManager extends AbstractService<ControllerClusterM
 
     @Override
     protected void doStop() throws Exception {
+        log.debug("Stopping controller cluster manager");
         super.doStop();
         // Stop channel manager
         channelManager.stop();
@@ -127,10 +127,14 @@ public class ControllerClusterManager extends AbstractService<ControllerClusterM
     private void channelConnected(final ControllerChannel channel) {
         final String targetId = channel.targetId();
         final String channelId = channel.id();
-        final String queueName = COMMANDS_QUEUE_PREFIX + targetId;
+        final String queueName = getTargetQueueName(targetId);
         final Queue<ClusteredCommand<?>> queue = clusterManager.queue(queueName);
         String subscriptionId = queue.addMessageListener(this::onClusterCommand);
         subscriptionsListenersByChannel.put(channelId, subscriptionId);
+    }
+
+    private static String getTargetQueueName(final String targetId) {
+        return "command-" + targetId;
     }
 
     private void onClusterCommand(final Message<ClusteredCommand<?>> clusteredCommandMessage) {
@@ -161,7 +165,7 @@ public class ControllerClusterManager extends AbstractService<ControllerClusterM
         final String listenerSubscriptionId = subscriptionsListenersByChannel.remove(channelId);
 
         if (listenerSubscriptionId != null) {
-            final String queueName = COMMANDS_QUEUE_PREFIX + targetId;
+            final String queueName = getTargetQueueName(targetId);
             final Queue<ClusteredCommand<?>> queue = clusterManager.queue(queueName);
             queue.removeMessageListener(listenerSubscriptionId);
         }
@@ -186,7 +190,7 @@ public class ControllerClusterManager extends AbstractService<ControllerClusterM
 
     private void sendClusteredCommand(final ClusteredCommand<?> clusteredCommand, final SingleEmitter<Reply<?>> emitter) {
         String targetId = clusteredCommand.targetId();
-        final String queueName = COMMANDS_QUEUE_PREFIX + targetId;
+        final String queueName = getTargetQueueName(targetId);
 
         log.debug(
             "Trying to send a command [{} ({})] to the target [{}] through the cluster.",

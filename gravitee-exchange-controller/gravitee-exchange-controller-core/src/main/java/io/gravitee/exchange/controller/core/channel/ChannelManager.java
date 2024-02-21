@@ -31,6 +31,7 @@ import io.gravitee.exchange.api.controller.metrics.ChannelMetric;
 import io.gravitee.exchange.controller.core.channel.exception.NoChannelFoundException;
 import io.gravitee.exchange.controller.core.channel.primary.PrimaryChannelElectedEvent;
 import io.gravitee.exchange.controller.core.channel.primary.PrimaryChannelManager;
+import io.gravitee.node.api.cache.CacheManager;
 import io.gravitee.node.api.cluster.ClusterManager;
 import io.gravitee.node.api.cluster.messaging.Topic;
 import io.reactivex.rxjava3.core.Completable;
@@ -48,21 +49,26 @@ import lombok.extern.slf4j.Slf4j;
  * @author GraviteeSource Team
  */
 @Slf4j
-@RequiredArgsConstructor
 public class ChannelManager extends AbstractService<ChannelManager> {
 
     // TODO makes those constant configurable
     private static final int HEALTH_CHECK_DELAY = 30000;
     private static final TimeUnit HEALTH_CHECK_DELAY_UNIT = TimeUnit.MILLISECONDS;
-    private final LocalChannelRegistry localChannelRegistry;
+    private final LocalChannelRegistry localChannelRegistry = new LocalChannelRegistry();
     private final PrimaryChannelManager primaryChannelManager;
     private final ClusterManager clusterManager;
     private Disposable healthCheckDisposable;
     private Topic<PrimaryChannelElectedEvent> primaryChannelElectedEventTopic;
     private String primaryChannelElectedSubscriptionId;
 
+    public ChannelManager(final ClusterManager clusterManager, final CacheManager cacheManager) {
+        this.clusterManager = clusterManager;
+        this.primaryChannelManager = new PrimaryChannelManager(clusterManager, cacheManager);
+    }
+
     @Override
     protected void doStart() throws Exception {
+        log.debug("Starting channel manager");
         super.doStart();
         primaryChannelManager.start();
         primaryChannelElectedEventTopic = clusterManager.topic(PrimaryChannelManager.PRIMARY_CHANNEL_EVENTS_ELECTED_TOPIC);
@@ -168,6 +174,7 @@ public class ChannelManager extends AbstractService<ChannelManager> {
 
     @Override
     protected void doStop() throws Exception {
+        log.debug("Stopping channel manager");
         super.doStop();
         primaryChannelManager.stop();
         if (healthCheckDisposable != null) {
