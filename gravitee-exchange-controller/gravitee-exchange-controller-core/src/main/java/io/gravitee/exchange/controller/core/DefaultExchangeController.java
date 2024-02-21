@@ -41,7 +41,6 @@ import io.reactivex.rxjava3.schedulers.Schedulers;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledFuture;
@@ -66,6 +65,17 @@ public class DefaultExchangeController extends AbstractService<ExchangeControlle
     protected final CacheManager cacheManager;
     private BatchStore batchStore;
     private ScheduledFuture<?> scheduledFuture;
+
+    public DefaultExchangeController(
+        final PrefixConfiguration prefixConfiguration,
+        final ClusterManager clusterManager,
+        final CacheManager cacheManager
+    ) {
+        this.prefixConfiguration = prefixConfiguration;
+        this.clusterManager = clusterManager;
+        this.cacheManager = cacheManager;
+        this.controllerClusterManager = new ControllerClusterManager(clusterManager, cacheManager);
+    }
 
     @Override
     protected void doStart() throws Exception {
@@ -152,17 +162,29 @@ public class DefaultExchangeController extends AbstractService<ExchangeControlle
 
     @Override
     public Completable register(final ControllerChannel channel) {
-        return controllerClusterManager.register(channel);
+        return controllerClusterManager
+            .register(channel)
+            .doOnComplete(() -> log.debug("Channel '{}' for target '{}' has been registered", channel.id(), channel.targetId()))
+            .doOnError(throwable -> log.warn("Unable to register channel '{}' for target '{}'", channel.id(), channel.targetId(), throwable)
+            );
     }
 
     @Override
     public Completable unregister(final ControllerChannel channel) {
-        return controllerClusterManager.unregister(channel);
+        return controllerClusterManager
+            .unregister(channel)
+            .doOnComplete(() -> log.debug("Channel '{}' for target '{}' has been unregistered", channel.id(), channel.targetId()))
+            .doOnError(throwable ->
+                log.warn("Unable to unregister channel '{}' for target '{}'", channel.id(), channel.targetId(), throwable)
+            );
     }
 
     @Override
     public Single<Reply<?>> sendCommand(final Command<?> command, final String targetId) {
-        return controllerClusterManager.sendCommand(command, targetId);
+        return controllerClusterManager
+            .sendCommand(command, targetId)
+            .doOnSuccess(reply -> log.debug("Command '{}' has been successfully sent to  target '{}'", command.getId(), targetId))
+            .doOnError(throwable -> log.warn("Unable to send command '{}' to  target '{}'", command.getId(), targetId, throwable));
     }
 
     @Override
@@ -194,7 +216,7 @@ public class DefaultExchangeController extends AbstractService<ExchangeControlle
     public Single<Batch> executeBatch(final Batch batch) {
         if (isBatchFeatureEnabled()) {
             return this.batchStore.add(batch)
-                .doOnSuccess(b -> log.info("Executing batch '%s' with key '%s'".formatted(b.id(), b.key())))
+                .doOnSuccess(b -> log.debug("Executing batch '%s' with key '%s'".formatted(b.id(), b.key())))
                 .flatMap(this::sendBatchCommands);
         } else {
             return Single.error(new BatchDisabledException());
