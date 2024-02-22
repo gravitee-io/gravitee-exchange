@@ -25,13 +25,14 @@ import io.gravitee.exchange.api.websocket.command.ExchangeSerDe;
 import io.gravitee.exchange.api.websocket.protocol.ProtocolAdapter;
 import io.gravitee.exchange.api.websocket.protocol.ProtocolExchange;
 import io.gravitee.exchange.api.websocket.protocol.ProtocolVersion;
+import io.gravitee.exchange.api.websocket.protocol.legacy.goodbye.GoodyeCommandAdapter;
 import io.gravitee.exchange.api.websocket.protocol.legacy.goodbye.LegacyGoodByeReplyAdapter;
-import io.gravitee.exchange.api.websocket.protocol.legacy.goodbye.LegacyGoodyeCommandAdapter;
-import io.gravitee.exchange.api.websocket.protocol.legacy.healthcheck.LegacyHealthCheckCommandAdapter;
-import io.gravitee.exchange.api.websocket.protocol.legacy.hello.LegacyHelloCommandAdapter;
+import io.gravitee.exchange.api.websocket.protocol.legacy.healthcheck.HealthCheckCommandAdapter;
+import io.gravitee.exchange.api.websocket.protocol.legacy.hello.HelloCommandAdapter;
+import io.gravitee.exchange.api.websocket.protocol.legacy.hello.HelloReplyAdapter;
 import io.gravitee.exchange.api.websocket.protocol.legacy.hello.LegacyHelloReplyAdapter;
-import io.gravitee.exchange.api.websocket.protocol.legacy.ignored.LegacyNoReplyAdapter;
-import io.gravitee.exchange.api.websocket.protocol.legacy.primary.LegacyPrimaryCommandAdapter;
+import io.gravitee.exchange.api.websocket.protocol.legacy.ignored.NoReplyAdapter;
+import io.gravitee.exchange.api.websocket.protocol.legacy.primary.PrimaryCommandAdapter;
 import io.vertx.rxjava3.core.buffer.Buffer;
 import java.util.List;
 import java.util.Objects;
@@ -53,17 +54,12 @@ public class LegacyProtocolAdapter implements ProtocolAdapter {
 
     @Override
     public List<CommandAdapter<? extends Command<?>, ? extends Command<?>, ? extends Reply<?>>> commandAdapters() {
-        return List.of(
-            new LegacyHelloCommandAdapter(),
-            new LegacyGoodyeCommandAdapter(),
-            new LegacyHealthCheckCommandAdapter(),
-            new LegacyPrimaryCommandAdapter()
-        );
+        return List.of(new HelloCommandAdapter(), new GoodyeCommandAdapter(), new HealthCheckCommandAdapter(), new PrimaryCommandAdapter());
     }
 
     @Override
     public List<ReplyAdapter<? extends Reply<?>, ? extends Reply<?>>> replyAdapters() {
-        return List.of(new LegacyHelloReplyAdapter(), new LegacyGoodByeReplyAdapter(), new LegacyNoReplyAdapter());
+        return List.of(new HelloReplyAdapter(), new LegacyHelloReplyAdapter(), new LegacyGoodByeReplyAdapter(), new NoReplyAdapter());
     }
 
     @Override

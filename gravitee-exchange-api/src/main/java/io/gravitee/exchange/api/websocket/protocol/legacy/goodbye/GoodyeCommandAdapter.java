@@ -13,25 +13,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.gravitee.exchange.api.websocket.protocol.legacy.ignored;
+package io.gravitee.exchange.api.websocket.protocol.legacy.goodbye;
 
-import io.gravitee.exchange.api.command.ReplyAdapter;
-import io.gravitee.exchange.api.command.noreply.NoReply;
+import io.gravitee.exchange.api.command.CommandAdapter;
+import io.gravitee.exchange.api.command.goodbye.GoodByeReply;
 import io.reactivex.rxjava3.core.Single;
 
 /**
  * @author Guillaume LAMIRAND (guillaume.lamirand at graviteesource.com)
  * @author GraviteeSource Team
  */
-public class LegacyNoReplyAdapter implements ReplyAdapter<NoReply, IgnoredReply> {
+public class GoodyeCommandAdapter
+    implements CommandAdapter<io.gravitee.exchange.api.command.goodbye.GoodByeCommand, GoodByeCommand, GoodByeReply> {
 
     @Override
     public String supportType() {
-        return NoReply.COMMAND_TYPE;
+        return io.gravitee.exchange.api.command.goodbye.GoodByeCommand.COMMAND_TYPE;
     }
 
     @Override
-    public Single<IgnoredReply> adapt(final NoReply noReply) {
-        return Single.just(new IgnoredReply(noReply.getCommandId()));
+    public Single<GoodByeCommand> adapt(final io.gravitee.exchange.api.command.goodbye.GoodByeCommand command) {
+        return Single.just(new GoodByeCommand(command.getId()));
     }
 }

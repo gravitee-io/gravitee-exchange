@@ -17,6 +17,8 @@ package io.gravitee.exchange.api.websocket.protocol.legacy.hello;
 
 import io.gravitee.exchange.api.command.CommandStatus;
 import io.gravitee.exchange.api.command.Reply;
+import lombok.Getter;
+import lombok.Setter;
 
 /**
  * @author Guillaume LAMIRAND (guillaume.lamirand at graviteesource.com)
@@ -26,12 +28,23 @@ public class HelloReply extends Reply<HelloReplyPayload> {
 
     public static final String COMMAND_TYPE = "HELLO_REPLY";
 
+    @Getter
+    @Setter
+    protected String message;
+
     public HelloReply() {
-        this(null, null);
+        super(COMMAND_TYPE);
     }
 
-    public HelloReply(String commandId, CommandStatus commandStatus) {
-        super(COMMAND_TYPE, commandId, commandStatus);
+    public HelloReply(String commandId, String errorDetails) {
+        super(COMMAND_TYPE, commandId, CommandStatus.ERROR);
+        this.message = errorDetails;
+        this.errorDetails = errorDetails;
+    }
+
+    public HelloReply(String commandId, HelloReplyPayload helloReplyPayload) {
+        super(COMMAND_TYPE, commandId, CommandStatus.SUCCEEDED);
+        this.payload = helloReplyPayload;
     }
 
     @Override

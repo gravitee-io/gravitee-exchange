@@ -13,29 +13,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.gravitee.exchange.api.websocket.protocol.legacy.primary;
+package io.gravitee.exchange.api.websocket.protocol.legacy.healthcheck;
 
 import io.gravitee.exchange.api.channel.exception.ChannelTimeoutException;
 import io.gravitee.exchange.api.command.Command;
 import io.gravitee.exchange.api.command.CommandAdapter;
-import io.gravitee.exchange.api.command.primary.PrimaryCommand;
-import io.gravitee.exchange.api.command.primary.PrimaryReply;
-import io.gravitee.exchange.api.command.primary.PrimaryReplyPayload;
+import io.gravitee.exchange.api.command.healtcheck.HealthCheckCommand;
+import io.gravitee.exchange.api.command.healtcheck.HealthCheckReply;
+import io.gravitee.exchange.api.command.healtcheck.HealthCheckReplyPayload;
 import io.reactivex.rxjava3.core.Single;
 
 /**
  * @author Guillaume LAMIRAND (guillaume.lamirand at graviteesource.com)
  * @author GraviteeSource Team
  */
-public class LegacyPrimaryCommandAdapter implements CommandAdapter<PrimaryCommand, PrimaryCommand, PrimaryReply> {
+public class HealthCheckCommandAdapter implements CommandAdapter<HealthCheckCommand, HealthCheckCommand, HealthCheckReply> {
 
     @Override
     public String supportType() {
-        return PrimaryCommand.COMMAND_TYPE;
+        return HealthCheckCommand.COMMAND_TYPE;
     }
 
     @Override
-    public Single<PrimaryCommand> adapt(final PrimaryCommand command) {
+    public Single<HealthCheckCommand> adapt(final HealthCheckCommand command) {
         return Single.fromCallable(() -> {
             command.setReplyTimeoutMs(0);
             return command;
@@ -43,10 +43,10 @@ public class LegacyPrimaryCommandAdapter implements CommandAdapter<PrimaryComman
     }
 
     @Override
-    public Single<PrimaryReply> onError(final Command<?> command, final Throwable throwable) {
+    public Single<HealthCheckReply> onError(final Command<?> command, final Throwable throwable) {
         return Single.defer(() -> {
             if (throwable instanceof ChannelTimeoutException) {
-                return Single.just(new PrimaryReply(command.getId(), new PrimaryReplyPayload()));
+                return Single.just(new HealthCheckReply(command.getId(), new HealthCheckReplyPayload(true, null)));
             }
             return Single.error(throwable);
         });

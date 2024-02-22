@@ -18,6 +18,8 @@ package io.gravitee.exchange.api.websocket.protocol.legacy.ignored;
 import io.gravitee.exchange.api.command.CommandStatus;
 import io.gravitee.exchange.api.command.Reply;
 import io.gravitee.exchange.api.command.noreply.NoReplyPayload;
+import lombok.Getter;
+import lombok.Setter;
 
 /**
  * Only used with legacy protocol version
@@ -29,6 +31,10 @@ import io.gravitee.exchange.api.command.noreply.NoReplyPayload;
 public class IgnoredReply extends Reply<NoReplyPayload> {
 
     public static final String COMMAND_TYPE = "IGNORED_REPLY";
+
+    @Getter
+    @Setter
+    protected String message;
 
     public IgnoredReply() {
         super(COMMAND_TYPE);
