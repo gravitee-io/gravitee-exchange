@@ -29,6 +29,7 @@ import io.gravitee.exchange.api.command.primary.PrimaryReply;
 import io.gravitee.exchange.api.configuration.IdentifyConfiguration;
 import io.gravitee.exchange.api.controller.ControllerChannel;
 import io.gravitee.exchange.api.controller.metrics.ChannelMetric;
+import io.gravitee.exchange.api.controller.metrics.TargetMetric;
 import io.gravitee.exchange.controller.core.channel.exception.NoChannelFoundException;
 import io.gravitee.exchange.controller.core.channel.primary.PrimaryChannelElectedEvent;
 import io.gravitee.exchange.controller.core.channel.primary.PrimaryChannelManager;
@@ -215,32 +216,32 @@ public class ChannelManager extends AbstractService<ChannelManager> {
         }
     }
 
-    public Flowable<ChannelMetric> channelMetrics() {
+    public Flowable<TargetMetric> targetsMetric() {
         return this.primaryChannelManager.candidatesChannel()
-            .flatMap(candidatesChannelEntries -> {
+            .flatMapSingle(candidatesChannelEntries -> {
                 String targetId = candidatesChannelEntries.getKey();
                 List<String> channelIds = candidatesChannelEntries.getValue();
                 return this.primaryChannelManager.primaryChannelBy(targetId)
+                    .defaultIfEmpty("unknown")
                     .flattenStreamAsFlowable(primaryChannel ->
                         channelIds
                             .stream()
-                            .map(channelId ->
-                                ChannelMetric.builder().id(channelId).targetId(targetId).primary(channelId.equals(primaryChannel)).build()
-                            )
-                    );
+                            .map(channelId -> ChannelMetric.builder().id(channelId).primary(channelId.equals(primaryChannel)).build())
+                    )
+                    .toList()
+                    .map(channelMetrics -> TargetMetric.builder().id(targetId).channelMetrics(channelMetrics).build());
             });
     }
 
-    public Flowable<ChannelMetric> channelMetrics(final String targetId) {
+    public Flowable<ChannelMetric> channelsMetric(final String targetId) {
         return this.primaryChannelManager.primaryChannelBy(targetId)
+            .defaultIfEmpty("unknown")
             .flatMapPublisher(primaryChannel ->
                 this.primaryChannelManager.candidatesChannel(targetId)
                     .flattenStreamAsFlowable(candidatesChannel ->
                         candidatesChannel
                             .stream()
-                            .map(channelId ->
-                                ChannelMetric.builder().id(channelId).targetId(targetId).primary(channelId.equals(primaryChannel)).build()
-                            )
+                            .map(channelId -> ChannelMetric.builder().id(channelId).primary(channelId.equals(primaryChannel)).build())
                     )
             );
     }

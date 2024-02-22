@@ -15,6 +15,7 @@
  */
 package io.gravitee.exchange.api.controller.metrics;
 
+import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -28,8 +29,8 @@ import lombok.experimental.Accessors;
 @AllArgsConstructor
 @Getter
 @Accessors(fluent = true, chain = true)
-public class ChannelMetric {
+public class TargetMetric {
 
     String id;
-    boolean primary;
+    List<ChannelMetric> channelMetrics;
 }
