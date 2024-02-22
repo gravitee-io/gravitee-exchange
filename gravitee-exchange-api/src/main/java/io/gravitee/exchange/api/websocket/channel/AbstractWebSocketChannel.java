@@ -120,7 +120,7 @@ public abstract class AbstractWebSocketChannel implements Channel {
                 cleanChannel();
             });
 
-            webSocket.pongHandler(buffer -> log.warn("Receiving pong frame from channel '{}' for target '{}'", id, targetId));
+            webSocket.pongHandler(buffer -> log.debug("Receiving pong frame from channel '{}' for target '{}'", id, targetId));
 
             webSocket.textMessageHandler(buffer -> webSocket.close((short) 1003, "Unsupported text frame").subscribe());
 
@@ -211,14 +211,14 @@ public abstract class AbstractWebSocketChannel implements Channel {
             }
             replyObs
                 .doOnSuccess(adaptedReply -> {
-                    if (reply instanceof UnknownReply) {
-                        replyEmitter.onError(new ChannelUnknownCommandException(reply.getErrorDetails()));
-                    } else if (reply instanceof NoReply || reply instanceof IgnoredReply) {
-                        replyEmitter.onError(new ChannelNoReplyException(reply.getErrorDetails()));
+                    if (adaptedReply instanceof UnknownReply) {
+                        replyEmitter.onError(new ChannelUnknownCommandException(adaptedReply.getErrorDetails()));
+                    } else if (adaptedReply instanceof NoReply || adaptedReply instanceof IgnoredReply) {
+                        replyEmitter.onError(new ChannelNoReplyException(adaptedReply.getErrorDetails()));
                     } else {
-                        ((SingleEmitter<Reply<?>>) replyEmitter).onSuccess(reply);
+                        ((SingleEmitter<Reply<?>>) replyEmitter).onSuccess(adaptedReply);
                     }
-                    if (reply.stopOnErrorStatus() && reply.getCommandStatus() == ERROR) {
+                    if (adaptedReply.stopOnErrorStatus() && adaptedReply.getCommandStatus() == ERROR) {
                         webSocket.close().subscribe();
                     }
                 })
@@ -367,7 +367,11 @@ public abstract class AbstractWebSocketChannel implements Channel {
                         decoratedCommand.getReplyTimeoutMs(),
                         TimeUnit.MILLISECONDS,
                         Single.error(() -> {
-                            log.warn("No reply received in time for command [{}, {}]", command.getType(), command.getId());
+                            log.warn(
+                                "No reply received in time for command [{}, {}]",
+                                decoratedCommand.getType(),
+                                decoratedCommand.getId()
+                            );
                             throw new ChannelTimeoutException();
                         })
                     )
