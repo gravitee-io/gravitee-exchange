@@ -16,10 +16,9 @@
 package io.gravitee.exchange.api.websocket.protocol.legacy.hello;
 
 import io.gravitee.exchange.api.command.Payload;
-import lombok.NoArgsConstructor;
 
 /**
  * @author Guillaume LAMIRAND (guillaume.lamirand at graviteesource.com)
  * @author GraviteeSource Team
  */
-public record HelloReplyPayload() implements Payload {}
+public record HelloReplyPayload(String installationId) implements Payload {}

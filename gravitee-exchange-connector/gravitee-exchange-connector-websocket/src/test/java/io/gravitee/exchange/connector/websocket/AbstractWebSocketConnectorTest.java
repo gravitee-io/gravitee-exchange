@@ -24,8 +24,9 @@ import io.gravitee.exchange.api.websocket.protocol.ProtocolAdapter;
 import io.gravitee.exchange.api.websocket.protocol.ProtocolExchange;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.rxjava3.core.http.ServerWebSocket;
-import java.util.function.Consumer;
 import org.junit.jupiter.api.extension.ExtendWith;
+
+import java.util.function.Consumer;
 
 /**
  * @author Guillaume LAMIRAND (guillaume.lamirand at graviteesource.com)
@@ -49,17 +50,34 @@ public abstract class AbstractWebSocketConnectorTest extends AbstractWebSocketTe
             if (command.getType().equals(HelloCommand.COMMAND_TYPE)) {
                 HelloReply helloReply = new HelloReply(command.getId(), new HelloReplyPayload("targetId"));
                 serverWebSocket
-                    .writeBinaryMessage(
-                        protocolAdapter.write(
-                            ProtocolExchange
-                                .builder()
-                                .type(ProtocolExchange.Type.REPLY)
-                                .exchangeType(helloReply.getType())
-                                .exchange(helloReply)
-                                .build()
+                        .writeBinaryMessage(
+                                protocolAdapter.write(
+                                        ProtocolExchange
+                                                .builder()
+                                                .type(ProtocolExchange.Type.REPLY)
+                                                .exchangeType(helloReply.getType())
+                                                .exchange(helloReply)
+                                                .build()
+                                )
                         )
-                    )
-                    .subscribe();
+                        .subscribe();
+            } else if (command.getType().equals(io.gravitee.exchange.api.websocket.protocol.legacy.hello.HelloCommand.COMMAND_TYPE)) {
+                io.gravitee.exchange.api.websocket.protocol.legacy.hello.HelloReply helloReply = new io.gravitee.exchange.api.websocket.protocol.legacy.hello.HelloReply(
+                        command.getId(),
+                        new io.gravitee.exchange.api.websocket.protocol.legacy.hello.HelloReplyPayload("targetId")
+                );
+                serverWebSocket
+                        .writeBinaryMessage(
+                                protocolAdapter.write(
+                                        ProtocolExchange
+                                                .builder()
+                                                .type(ProtocolExchange.Type.REPLY)
+                                                .exchangeType(helloReply.getType())
+                                                .exchange(helloReply)
+                                                .build()
+                                )
+                        )
+                        .subscribe();
             } else {
                 commandHandler.accept(command);
             }

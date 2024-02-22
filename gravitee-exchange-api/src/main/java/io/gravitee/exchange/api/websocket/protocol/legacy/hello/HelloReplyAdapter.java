@@ -15,17 +15,16 @@
  */
 package io.gravitee.exchange.api.websocket.protocol.legacy.hello;
 
-import io.gravitee.exchange.api.command.CommandAdapter;
-import io.gravitee.exchange.api.command.hello.HelloCommandPayload;
-import io.gravitee.exchange.api.command.hello.HelloReply;
+import io.gravitee.exchange.api.command.CommandStatus;
+import io.gravitee.exchange.api.command.ReplyAdapter;
+import io.gravitee.exchange.api.command.hello.HelloCommand;
 import io.reactivex.rxjava3.core.Single;
 
 /**
  * @author Guillaume LAMIRAND (guillaume.lamirand at graviteesource.com)
  * @author GraviteeSource Team
  */
-public class LegacyHelloCommandAdapter
-    implements CommandAdapter<HelloCommand, io.gravitee.exchange.api.command.hello.HelloCommand, HelloReply> {
+public class HelloReplyAdapter implements ReplyAdapter<io.gravitee.exchange.api.command.hello.HelloReply, HelloReply> {
 
     @Override
     public String supportType() {
@@ -33,12 +32,13 @@ public class LegacyHelloCommandAdapter
     }
 
     @Override
-    public Single<io.gravitee.exchange.api.command.hello.HelloCommand> adapt(final HelloCommand command) {
-        return Single.just(
-            new io.gravitee.exchange.api.command.hello.HelloCommand(
-                command.getId(),
-                new HelloCommandPayload(command.getPayload().node().installationId())
-            )
-        );
+    public Single<HelloReply> adapt(final io.gravitee.exchange.api.command.hello.HelloReply helloReply) {
+        return Single.fromCallable(() -> {
+            if (helloReply.getCommandStatus() == CommandStatus.SUCCEEDED) {
+                return new HelloReply(helloReply.getCommandId(), new HelloReplyPayload(helloReply.getPayload().getTargetId()));
+            } else {
+                return new HelloReply(helloReply.getCommandId(), helloReply.getErrorDetails());
+            }
+        });
     }
 }

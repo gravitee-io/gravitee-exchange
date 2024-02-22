@@ -15,8 +15,11 @@
  */
 package io.gravitee.exchange.api.websocket.protocol.legacy.goodbye;
 
+import io.gravitee.exchange.api.command.CommandStatus;
 import io.gravitee.exchange.api.command.ReplyAdapter;
 import io.gravitee.exchange.api.command.goodbye.GoodByeReplyPayload;
+import io.gravitee.exchange.api.websocket.protocol.legacy.hello.HelloReply;
+import io.gravitee.exchange.api.websocket.protocol.legacy.hello.HelloReplyPayload;
 import io.reactivex.rxjava3.core.Single;
 
 /**
@@ -32,11 +35,15 @@ public class LegacyGoodByeReplyAdapter implements ReplyAdapter<GoodByeReply, io.
 
     @Override
     public Single<io.gravitee.exchange.api.command.goodbye.GoodByeReply> adapt(final GoodByeReply reply) {
-        return Single.just(
-            new io.gravitee.exchange.api.command.goodbye.GoodByeReply(
-                reply.getCommandId(),
-                new GoodByeReplyPayload(reply.getInstallationId())
-            )
-        );
+        return Single.fromCallable(() -> {
+            if (reply.getCommandStatus() == CommandStatus.SUCCEEDED) {
+                return new io.gravitee.exchange.api.command.goodbye.GoodByeReply(
+                    reply.getCommandId(),
+                    new GoodByeReplyPayload(reply.getInstallationId())
+                );
+            } else {
+                return new io.gravitee.exchange.api.command.goodbye.GoodByeReply(reply.getCommandId(), reply.getErrorDetails());
+            }
+        });
     }
 }
