@@ -106,8 +106,8 @@ public class PrimaryChannelManager extends AbstractService<PrimaryChannelManager
         return primaryChannelCandidateStore.rxGet(targetId);
     }
 
-    public Single<String> primaryChannelBy(final String targetId) {
-        return primaryChannelCache.rxGet(targetId).defaultIfEmpty("unknown");
+    public Maybe<String> primaryChannelBy(final String targetId) {
+        return primaryChannelCache.rxGet(targetId);
     }
 
     public void sendChannelEvent(final ControllerChannel controllerChannel, final boolean alive) {

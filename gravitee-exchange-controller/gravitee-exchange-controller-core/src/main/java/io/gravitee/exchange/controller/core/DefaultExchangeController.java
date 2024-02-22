@@ -28,6 +28,7 @@ import io.gravitee.exchange.api.configuration.IdentifyConfiguration;
 import io.gravitee.exchange.api.controller.ControllerChannel;
 import io.gravitee.exchange.api.controller.ExchangeController;
 import io.gravitee.exchange.api.controller.metrics.ChannelMetric;
+import io.gravitee.exchange.api.controller.metrics.TargetMetric;
 import io.gravitee.exchange.controller.core.batch.BatchStore;
 import io.gravitee.exchange.controller.core.batch.exception.BatchDisabledException;
 import io.gravitee.exchange.controller.core.cluster.ControllerClusterManager;
@@ -160,13 +161,13 @@ public class DefaultExchangeController extends AbstractService<ExchangeControlle
     }
 
     @Override
-    public Flowable<ChannelMetric> metrics() {
-        return controllerClusterManager.channelMetrics();
+    public Flowable<TargetMetric> targetsMetric() {
+        return controllerClusterManager.targetsMetric();
     }
 
     @Override
-    public Flowable<ChannelMetric> metrics(final String targetId) {
-        return controllerClusterManager.channelMetrics(targetId);
+    public Flowable<ChannelMetric> channelsMetric(final String targetId) {
+        return controllerClusterManager.channelsMetric(targetId);
     }
 
     @Override

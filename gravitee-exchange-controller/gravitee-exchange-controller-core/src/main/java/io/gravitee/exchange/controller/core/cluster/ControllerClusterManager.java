@@ -21,6 +21,7 @@ import io.gravitee.exchange.api.command.Reply;
 import io.gravitee.exchange.api.configuration.IdentifyConfiguration;
 import io.gravitee.exchange.api.controller.ControllerChannel;
 import io.gravitee.exchange.api.controller.metrics.ChannelMetric;
+import io.gravitee.exchange.api.controller.metrics.TargetMetric;
 import io.gravitee.exchange.controller.core.channel.ChannelManager;
 import io.gravitee.exchange.controller.core.cluster.command.ClusteredCommand;
 import io.gravitee.exchange.controller.core.cluster.command.ClusteredReply;
@@ -122,12 +123,12 @@ public class ControllerClusterManager extends AbstractService<ControllerClusterM
         resultEmittersByCommand.clear();
     }
 
-    public Flowable<ChannelMetric> channelMetrics() {
-        return channelManager.channelMetrics();
+    public Flowable<TargetMetric> targetsMetric() {
+        return channelManager.targetsMetric();
     }
 
-    public Flowable<ChannelMetric> channelMetrics(final String targetId) {
-        return channelManager.channelMetrics(targetId);
+    public Flowable<ChannelMetric> channelsMetric(final String targetId) {
+        return channelManager.channelsMetric(targetId);
     }
 
     /**
@@ -150,7 +151,7 @@ public class ControllerClusterManager extends AbstractService<ControllerClusterM
     }
 
     private String getTargetQueueName(final String targetId) {
-        return this.identifyConfiguration.identifyName("command-" + targetId);
+        return this.identifyConfiguration.identifyName("cluster-command-" + targetId);
     }
 
     private void onClusterCommand(final Message<ClusteredCommand<?>> clusteredCommandMessage) {
