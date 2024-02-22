@@ -35,13 +35,14 @@ public class WebSocketControllerServerConfiguration {
     public static final boolean ALPN_DEFAULT = false;
     public static final String SECURED_KEY = "controller.ws.secured";
     public static final boolean SECURED_DEFAULT = false;
-    public static final String CLIENT_AUTH_KEY = "controller.ws.clientAuth";
-    public static final String KEYSTORE_TYPE_KEY = "controller.ws.keystore.type";
-    public static final String KEYSTORE_PATH_KEY = "controller.ws.keystore.path";
-    public static final String KEYSTORE_PASSWORD_KEY = "controller.ws.keystore.password";
-    public static final String TRUSTSTORE_TYPE_KEY = "controller.ws.truststore.type";
-    public static final String TRUSTSTORE_PATH_KEY = "controller.ws.truststore.path";
-    public static final String TRUSTSTORE_PASSWORD_KEY = "controller.ws.truststore.password";
+    public static final String CLIENT_AUTH_KEY = "controller.ws.ssl.clientAuth";
+    public static final String CLIENT_AUTH_DEFAULT = "NONE";
+    public static final String KEYSTORE_TYPE_KEY = "controller.ws.ssl.keystore.type";
+    public static final String KEYSTORE_PATH_KEY = "controller.ws.ssl.keystore.path";
+    public static final String KEYSTORE_PASSWORD_KEY = "controller.ws.ssl.keystore.password";
+    public static final String TRUSTSTORE_TYPE_KEY = "controller.ws.ssl.truststore.type";
+    public static final String TRUSTSTORE_PATH_KEY = "controller.ws.ssl.truststore.path";
+    public static final String TRUSTSTORE_PASSWORD_KEY = "controller.ws.ssl.truststore.password";
     public static final String COMPRESSION_SUPPORTED_KEY = "controller.ws.compressionSupported";
     public static final boolean COMPRESSION_SUPPORTED_DEFAULT = HttpServerOptions.DEFAULT_COMPRESSION_SUPPORTED;
     public static final String IDLE_TIMEOUT_KEY = "controller.ws.idleTimeout";
@@ -99,7 +100,7 @@ public class WebSocketControllerServerConfiguration {
     }
 
     public String clientAuth() {
-        return identifyConfiguration.getProperty(CLIENT_AUTH_KEY);
+        return identifyConfiguration.getProperty(CLIENT_AUTH_KEY, String.class, CLIENT_AUTH_DEFAULT);
     }
 
     public boolean compressionSupported() {
