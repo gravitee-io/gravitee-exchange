@@ -119,7 +119,7 @@ public class WebSocketExchangeController extends DefaultExchangeController imple
             })
             .subscribe(
                 () -> log.info("Exchange Controller Websocket deployed successfully"),
-                error -> log.error("Unable to deploy Exchange Controller Websocket", error.getCause())
+                error -> log.error("Unable to deploy Exchange Controller Websocket", error)
             );
     }
 
@@ -179,7 +179,7 @@ public class WebSocketExchangeController extends DefaultExchangeController imple
                 .undeploy(websocketServerVerticleId)
                 .subscribe(
                     () -> log.info("Exchange Controller Websocket undeployed successfully"),
-                    throwable -> log.error("Unable to undeploy Exchange Controller Websocket", throwable.getCause())
+                    throwable -> log.error("Unable to undeploy Exchange Controller Websocket", throwable)
                 );
         }
     }
