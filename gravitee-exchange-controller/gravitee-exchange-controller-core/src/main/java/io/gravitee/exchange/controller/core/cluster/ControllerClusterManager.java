@@ -38,6 +38,7 @@ import io.reactivex.rxjava3.core.Single;
 import io.reactivex.rxjava3.core.SingleEmitter;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
@@ -109,6 +110,7 @@ public class ControllerClusterManager extends AbstractService<ControllerClusterM
             .values()
             .stream()
             .map(channelManager::getChannelById)
+            .filter(Objects::nonNull)
             .toList();
 
         channels.forEach(this::channelDisconnected);
