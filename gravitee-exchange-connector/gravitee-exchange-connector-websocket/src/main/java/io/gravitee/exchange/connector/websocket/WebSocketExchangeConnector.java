@@ -61,11 +61,11 @@ public class WebSocketExchangeConnector extends EmbeddedExchangeConnector {
     private final WebSocketConnectorClientFactory webSocketConnectorClientFactory;
     private final ExchangeSerDe exchangeSerDe;
 
-    private boolean primary = false;
-
     @Override
     public Completable initialize() {
-        return this.connect()
+        return Completable
+            .fromRunnable(() -> setPrimary(false))
+            .andThen(this.connect())
             .flatMapCompletable(webSocket -> {
                 connectorChannel =
                     new WebSocketConnectorChannel(
