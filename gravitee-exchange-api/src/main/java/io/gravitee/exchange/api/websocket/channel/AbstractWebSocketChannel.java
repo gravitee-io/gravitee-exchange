@@ -32,6 +32,7 @@ import io.gravitee.exchange.api.command.Payload;
 import io.gravitee.exchange.api.command.Reply;
 import io.gravitee.exchange.api.command.ReplyAdapter;
 import io.gravitee.exchange.api.command.goodbye.GoodByeCommand;
+import io.gravitee.exchange.api.command.goodbye.GoodByeCommandPayload;
 import io.gravitee.exchange.api.command.hello.HelloCommand;
 import io.gravitee.exchange.api.command.hello.HelloReply;
 import io.gravitee.exchange.api.command.hello.HelloReplyPayload;
@@ -229,7 +230,10 @@ public abstract class AbstractWebSocketChannel implements Channel {
 
     @Override
     public Completable close() {
-        return Completable.fromRunnable(this::cleanChannel);
+        return Completable.fromRunnable(() -> {
+            webSocket.close((short) 1000).subscribe();
+            this.cleanChannel();
+        });
     }
 
     protected void cleanChannel() {
@@ -246,7 +250,7 @@ public abstract class AbstractWebSocketChannel implements Channel {
             this.pingTaskId = -1;
         }
         if (webSocket != null && !webSocket.isClosed()) {
-            this.webSocket.close((short) 1000).subscribe();
+            this.webSocket.close((short) 1011).subscribe();
         }
     }
 
@@ -299,9 +303,26 @@ public abstract class AbstractWebSocketChannel implements Channel {
      */
     protected Completable handleGoodByeCommand(final Command<?> command, final CommandHandler<Command<?>, Reply<?>> commandHandler) {
         if (commandHandler != null) {
-            return handleCommand(command, commandHandler, true).doFinally(this::cleanChannel).ignoreElement();
+            return handleCommand(command, commandHandler, true)
+                .doOnSuccess(reply -> {
+                    if (reply.getCommandStatus() == CommandStatus.SUCCEEDED) {
+                        Payload payload = reply.getPayload();
+                        if (payload instanceof GoodByeCommandPayload goodByeCommandPayload) {
+                            short statusCode = 1000;
+                            if (goodByeCommandPayload.isReconnect()) {
+                                statusCode = 1013;
+                            }
+                            webSocket.close(statusCode, "GoodBye Command with reconnection requested.").subscribe();
+                        }
+                    }
+                })
+                .doFinally(this::cleanChannel)
+                .ignoreElement();
         } else {
-            return Completable.fromRunnable(this::cleanChannel);
+            return Completable.fromRunnable(() -> {
+                webSocket.close((short) 1013).subscribe();
+                this.cleanChannel();
+            });
         }
     }
 
