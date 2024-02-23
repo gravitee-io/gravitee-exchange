@@ -26,5 +26,6 @@ import lombok.NoArgsConstructor;
 public class WebsocketControllerConstants {
 
     public static final String EXCHANGE_CONTROLLER_PATH = "/exchange/controller";
+    public static final String LEGACY_CONTROLLER_PATH = "/ws/controller/*";
     public static final String EXCHANGE_PROTOCOL_HEADER = "X-Gravitee-Exchange-Protocol";
 }

@@ -16,7 +16,10 @@
 package io.gravitee.exchange.controller.websocket.server;
 
 import static io.gravitee.exchange.api.controller.ws.WebsocketControllerConstants.EXCHANGE_CONTROLLER_PATH;
+import static io.gravitee.exchange.api.controller.ws.WebsocketControllerConstants.EXCHANGE_PROTOCOL_HEADER;
+import static io.gravitee.exchange.api.controller.ws.WebsocketControllerConstants.LEGACY_CONTROLLER_PATH;
 
+import io.gravitee.exchange.api.websocket.protocol.ProtocolVersion;
 import io.gravitee.exchange.controller.websocket.WebSocketRequestHandler;
 import io.reactivex.rxjava3.core.Completable;
 import io.vertx.rxjava3.core.AbstractVerticle;
@@ -40,6 +43,12 @@ public class WebSocketControllerServerVerticle extends AbstractVerticle {
     public Completable rxStart() {
         Router router = Router.router(vertx);
         router.route(EXCHANGE_CONTROLLER_PATH).handler(webSocketRequestHandler);
+        router
+            .route(LEGACY_CONTROLLER_PATH)
+            .handler(ctx -> {
+                ctx.request().headers().add(EXCHANGE_PROTOCOL_HEADER, ProtocolVersion.LEGACY.version());
+                webSocketRequestHandler.handle(ctx);
+            });
         // Default non-handled requests:
         router.route().handler(ctx -> ctx.fail(404));
 
