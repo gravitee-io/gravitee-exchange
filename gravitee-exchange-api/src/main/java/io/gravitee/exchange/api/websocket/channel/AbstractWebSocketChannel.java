@@ -358,7 +358,7 @@ public abstract class AbstractWebSocketChannel implements Channel {
         return send(helloCommand, true);
     }
 
-    private <C extends Command<?>, R extends Reply<?>> Single<R> send(final C command, final boolean ignoreActiveStatus) {
+    protected <C extends Command<?>, R extends Reply<?>> Single<R> send(final C command, final boolean ignoreActiveStatus) {
         return Single
             .defer(() -> {
                 if (!ignoreActiveStatus && !active) {
@@ -377,13 +377,6 @@ public abstract class AbstractWebSocketChannel implements Channel {
                         resultEmitters.put(decoratedCommand.getId(), emitter);
                         writeCommand(decoratedCommand).doOnError(emitter::onError).onErrorComplete().subscribe();
                     })
-                    .doOnError(throwable ->
-                        log.warn(
-                            "Unable to send command or receive reply for command [{}, {}].",
-                            decoratedCommand.getType(),
-                            decoratedCommand.getId()
-                        )
-                    )
                     .timeout(
                         decoratedCommand.getReplyTimeoutMs(),
                         TimeUnit.MILLISECONDS,

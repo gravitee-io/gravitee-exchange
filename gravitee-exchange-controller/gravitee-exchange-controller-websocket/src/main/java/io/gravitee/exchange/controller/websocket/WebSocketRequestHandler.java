@@ -47,8 +47,6 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class WebSocketRequestHandler implements io.vertx.core.Handler<io.vertx.rxjava3.ext.web.RoutingContext> {
 
-    public static final String CTX_PROTOCOL_VERSION = "X-Gravitee-Exchange-Protocol";
-
     private final Vertx vertx;
     private final ExchangeController exchangeController;
     private final WebSocketControllerAuthentication<?> controllerAuthentication;

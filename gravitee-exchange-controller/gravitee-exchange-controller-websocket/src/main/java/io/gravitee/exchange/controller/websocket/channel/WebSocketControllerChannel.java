@@ -15,6 +15,7 @@
  */
 package io.gravitee.exchange.controller.websocket.channel;
 
+import io.gravitee.exchange.api.channel.exception.ChannelClosedException;
 import io.gravitee.exchange.api.command.Command;
 import io.gravitee.exchange.api.command.CommandAdapter;
 import io.gravitee.exchange.api.command.CommandHandler;
@@ -25,7 +26,6 @@ import io.gravitee.exchange.api.command.goodbye.GoodByeCommandPayload;
 import io.gravitee.exchange.api.controller.ControllerChannel;
 import io.gravitee.exchange.api.websocket.channel.AbstractWebSocketChannel;
 import io.gravitee.exchange.api.websocket.protocol.ProtocolAdapter;
-import io.gravitee.exchange.controller.core.channel.primary.PrimaryChannelManager;
 import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.CompletableEmitter;
 import io.vertx.rxjava3.core.Vertx;
@@ -66,7 +66,21 @@ public class WebSocketControllerChannel extends AbstractWebSocketChannel impleme
         return Completable
             .defer(() -> {
                 if (!webSocket.isClosed()) {
-                    return send(new GoodByeCommand(new GoodByeCommandPayload(targetId, true))).ignoreElement();
+                    return send(new GoodByeCommand(new GoodByeCommandPayload(targetId, true)), true)
+                        .ignoreElement()
+                        .onErrorResumeNext(throwable -> {
+                            if (throwable instanceof ChannelClosedException) {
+                                log.debug(
+                                    "GoodBye command successfully sent for channel '{}' for target '{}' got closed normally",
+                                    id,
+                                    targetId
+                                );
+                                return Completable.complete();
+                            } else {
+                                log.debug("Unable to send GoodBye command for channel '{}' for target '{}'", id, targetId);
+                                return Completable.error(throwable);
+                            }
+                        });
                 }
                 return Completable.complete();
             })
