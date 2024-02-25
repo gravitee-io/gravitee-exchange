@@ -102,8 +102,6 @@ public class ControllerClusterManager extends AbstractService<ControllerClusterM
     protected void doStop() throws Exception {
         log.debug("[{}] Stopping controller cluster manager", identifyConfiguration.id());
         super.doStop();
-        // Stop channel manager
-        channelManager.stop();
 
         // Stop all command listeners.
         final List<ControllerChannel> channels = subscriptionsListenersByChannel
@@ -114,6 +112,9 @@ public class ControllerClusterManager extends AbstractService<ControllerClusterM
             .toList();
 
         channels.forEach(this::channelDisconnected);
+
+        // Stop channel manager
+        channelManager.stop();
 
         // Stop listening the reply queue.
         if (clusteredReplyQueue != null && clusteredReplySubscriptionId != null) {

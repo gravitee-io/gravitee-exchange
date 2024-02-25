@@ -92,10 +92,10 @@ public class PrimaryChannelManager extends AbstractService<PrimaryChannelManager
     @Override
     protected void doStop() throws Exception {
         log.debug("[{}] Stopping primary channel manager", this.identifyConfiguration.id());
-        super.doStop();
         if (primaryChannelEventTopic != null && subscriptionListenerId != null) {
             primaryChannelEventTopic.removeMessageListener(subscriptionListenerId);
         }
+        super.doStop();
     }
 
     public Flowable<Map.Entry<String, List<String>>> candidatesChannel() {

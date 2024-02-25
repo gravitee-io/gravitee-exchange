@@ -206,7 +206,14 @@ public class ChannelManager extends AbstractService<ChannelManager> {
     @Override
     protected void doStop() throws Exception {
         log.debug("[{}] Stopping channel manager", this.identifyConfiguration.id());
-        super.doStop();
+
+        // Unregister all local channel
+        Flowable
+            .fromIterable(this.localChannelRegistry.getAll())
+            .flatMapCompletable(controllerChannel -> unregister(controllerChannel).onErrorComplete())
+            .doOnComplete(() -> log.debug("[{}] All local channel unregistered.", this.identifyConfiguration.id()))
+            .blockingAwait();
+
         primaryChannelManager.stop();
         if (healthCheckDisposable != null) {
             healthCheckDisposable.dispose();
@@ -214,6 +221,7 @@ public class ChannelManager extends AbstractService<ChannelManager> {
         if (primaryChannelElectedEventTopic != null && primaryChannelElectedSubscriptionId != null) {
             primaryChannelElectedEventTopic.removeMessageListener(primaryChannelElectedSubscriptionId);
         }
+        super.doStop();
     }
 
     public Flowable<TargetMetric> targetsMetric() {
@@ -316,12 +324,31 @@ public class ChannelManager extends AbstractService<ChannelManager> {
             )
             .switchIfEmpty(Single.error(new NoChannelFoundException()))
             .<R>flatMap(controllerChannel -> {
-                log.debug("[{}] Sending command '{}' to channel '{}'", this.identifyConfiguration.id(), command, controllerChannel);
+                log.debug(
+                    "[{}] Sending command '{}' with id '{}' to channel '{}'",
+                    this.identifyConfiguration.id(),
+                    command.getType(),
+                    command.getId(),
+                    controllerChannel
+                );
                 return controllerChannel.send(command);
             })
-            .doOnSuccess(reply -> log.debug("[{}] Command '{}' successfully sent", this.identifyConfiguration.id(), command.getId()))
+            .doOnSuccess(reply ->
+                log.debug(
+                    "[{}] Command '{}' with id  '{}' successfully sent",
+                    this.identifyConfiguration.id(),
+                    command.getType(),
+                    command.getId()
+                )
+            )
             .doOnError(throwable ->
-                log.warn("[{}] Unable to send command '{}'", this.identifyConfiguration.id(), command.getId(), throwable)
+                log.warn(
+                    "[{}] Unable to send command or receive reply for command '{}' with id '{}'",
+                    this.identifyConfiguration.id(),
+                    command.getType(),
+                    command.getId(),
+                    throwable
+                )
             );
     }
 
