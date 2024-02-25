@@ -114,47 +114,50 @@ public abstract class AbstractWebSocketChannel implements Channel {
 
     @Override
     public Completable initialize() {
-        return Completable.create(emitter -> {
-            webSocket.closeHandler(v -> {
-                log.warn("Channel '{}' for target '{}' is closing", id, targetId);
-                active = false;
-                cleanChannel();
-            });
+        return Completable
+            .create(emitter -> {
+                webSocket.closeHandler(v -> {
+                    log.warn("Channel '{}' for target '{}' is closing", id, targetId);
+                    active = false;
+                    cleanChannel();
+                });
 
-            webSocket.pongHandler(buffer -> log.debug("Receiving pong frame from channel '{}' for target '{}'", id, targetId));
+                webSocket.pongHandler(buffer -> log.debug("Receiving pong frame from channel '{}' for target '{}'", id, targetId));
 
-            webSocket.textMessageHandler(buffer -> webSocket.close((short) 1003, "Unsupported text frame").subscribe());
+                webSocket.textMessageHandler(buffer -> webSocket.close((short) 1003, "Unsupported text frame").subscribe());
 
-            webSocket.binaryMessageHandler(buffer -> {
-                if (buffer.length() > 0) {
-                    ProtocolExchange websocketExchange = protocolAdapter.read(buffer);
+                webSocket.binaryMessageHandler(buffer -> {
+                    if (buffer.length() > 0) {
+                        ProtocolExchange websocketExchange = protocolAdapter.read(buffer);
 
-                    try {
-                        if (ProtocolExchange.Type.COMMAND == websocketExchange.type()) {
-                            receiveCommand(emitter, websocketExchange.asCommand());
-                        } else if (ProtocolExchange.Type.REPLY == websocketExchange.type()) {
-                            receiveReply(websocketExchange.asReply());
-                        } else {
-                            webSocket.close((short) 1002, "Exchange message unknown").subscribe();
+                        try {
+                            if (ProtocolExchange.Type.COMMAND == websocketExchange.type()) {
+                                receiveCommand(emitter, websocketExchange.asCommand());
+                            } else if (ProtocolExchange.Type.REPLY == websocketExchange.type()) {
+                                receiveReply(websocketExchange.asReply());
+                            } else {
+                                webSocket.close((short) 1002, "Exchange message unknown").subscribe();
+                            }
+                        } catch (Exception e) {
+                            log.warn(
+                                String.format(
+                                    "An error occurred when trying to decode incoming websocket exchange [%s]. Closing Socket.",
+                                    websocketExchange
+                                ),
+                                e
+                            );
+                            webSocket.close((short) 1011, "Unexpected error while handling incoming websocket exchange").subscribe();
                         }
-                    } catch (Exception e) {
-                        log.warn(
-                            String.format(
-                                "An error occurred when trying to decode incoming websocket exchange [%s]. Closing Socket.",
-                                websocketExchange
-                            ),
-                            e
-                        );
-                        webSocket.close((short) 1011, "Unexpected error while handling incoming websocket exchange").subscribe();
                     }
-                }
-            });
+                });
 
-            if (!expectHelloCommand()) {
-                this.active = true;
-                emitter.onComplete();
-            }
-        });
+                if (!expectHelloCommand()) {
+                    this.active = true;
+                    emitter.onComplete();
+                }
+            })
+            .doOnComplete(() -> log.debug("Channel '{}' for target '{}' has been successfully initialized", id, targetId))
+            .doOnError(throwable -> log.error("Unable to initialize channel '{}' for target '{}'", id, targetId));
     }
 
     private <C extends Command<?>> void receiveCommand(final CompletableEmitter emitter, final C command) {

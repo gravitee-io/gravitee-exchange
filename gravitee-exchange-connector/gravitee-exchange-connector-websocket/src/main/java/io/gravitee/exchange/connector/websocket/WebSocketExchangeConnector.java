@@ -103,8 +103,10 @@ public class WebSocketExchangeConnector extends EmbeddedExchangeConnector {
             .fromCallable(webSocketConnectorClientFactory::nextEndpoint)
             .switchIfEmpty(
                 Maybe.fromRunnable(() -> {
-                    log.warn("No Exchange Controller Endpoint is defined. Please check your configuration");
-                    throw new WebSocketConnectorException("No Exchange Connector endpoint defined", false);
+                    throw new WebSocketConnectorException(
+                        "No Exchange Controller Endpoint is defined or available. Please check your configuration",
+                        false
+                    );
                 })
             )
             .toSingle()
@@ -122,7 +124,7 @@ public class WebSocketExchangeConnector extends EmbeddedExchangeConnector {
                     .rxWebSocket(webSocketConnectOptions)
                     .doOnSuccess(webSocket -> {
                         webSocketEndpoint.resetRetryCount();
-                        log.debug(
+                        log.info(
                             "Connector is now connected to Exchange Controller through websocket via [{}]",
                             webSocketEndpoint.getUri().toString()
                         );
