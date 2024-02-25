@@ -18,6 +18,7 @@ package io.gravitee.exchange.api.command;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import io.gravitee.exchange.api.command.unknown.UnknownReply;
+import java.io.Serializable;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.ToString;
@@ -31,7 +32,7 @@ import lombok.ToString;
 @EqualsAndHashCode(callSuper = true)
 @ToString(callSuper = true)
 @JsonPropertyOrder({ "commandId", "type", "commandStatus", "errorDetails", "payload" })
-public abstract class Reply<P extends Payload> extends Exchange<P> {
+public abstract class Reply<P extends Payload> extends Exchange<P> implements Serializable {
 
     /**
      * The command id the reply is related to.

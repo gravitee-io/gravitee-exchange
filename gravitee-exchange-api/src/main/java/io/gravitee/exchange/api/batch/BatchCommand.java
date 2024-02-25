@@ -18,6 +18,7 @@ package io.gravitee.exchange.api.batch;
 import io.gravitee.exchange.api.command.Command;
 import io.gravitee.exchange.api.command.CommandStatus;
 import io.gravitee.exchange.api.command.Reply;
+import java.io.Serializable;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -34,7 +35,7 @@ import lombok.experimental.Accessors;
 @Builder
 @Getter
 @Accessors(fluent = true, chain = true)
-public class BatchCommand {
+public class BatchCommand implements Serializable {
 
     /**
      * The status of the command
