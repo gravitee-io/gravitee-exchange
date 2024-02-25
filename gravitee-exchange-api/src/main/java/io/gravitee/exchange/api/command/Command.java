@@ -20,6 +20,7 @@ import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import io.gravitee.common.utils.UUID;
 import io.gravitee.exchange.api.command.unknown.UnknownCommand;
+import java.io.Serializable;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -41,7 +42,7 @@ import lombok.ToString;
 @EqualsAndHashCode(callSuper = true)
 @ToString(callSuper = true)
 @JsonPropertyOrder({ "id", "type", "payload" })
-public abstract class Command<P extends Payload> extends Exchange<P> {
+public abstract class Command<P extends Payload> extends Exchange<P> implements Serializable {
 
     public static final int COMMAND_REPLY_TIMEOUT_MS = 60_000;
 

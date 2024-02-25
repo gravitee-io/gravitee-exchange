@@ -15,8 +15,6 @@
  */
 package io.gravitee.exchange.api.command;
 
-import java.util.List;
-
 /**
  * @author Guillaume LAMIRAND (guillaume.lamirand at graviteesource.com)
  * @author GraviteeSource Team
@@ -40,23 +38,5 @@ public enum CommandStatus {
     /**
      * The command got an unexpected error.
      */
-    ERROR;
-
-    public static CommandStatus merge(List<CommandStatus> commandStatuses) {
-        boolean pending = false;
-
-        for (CommandStatus commandStatus : commandStatuses) {
-            if (commandStatus == ERROR) {
-                return ERROR;
-            } else if (commandStatus == PENDING) {
-                pending = true;
-            }
-        }
-
-        if (pending) {
-            return PENDING;
-        }
-
-        return SUCCEEDED;
-    }
+    ERROR,
 }

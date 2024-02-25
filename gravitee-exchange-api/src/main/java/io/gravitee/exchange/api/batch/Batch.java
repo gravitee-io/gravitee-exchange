@@ -18,7 +18,9 @@ package io.gravitee.exchange.api.batch;
 import io.gravitee.common.utils.UUID;
 import io.gravitee.exchange.api.command.CommandStatus;
 import io.gravitee.exchange.api.command.Reply;
-import java.time.ZonedDateTime;
+import java.io.Serializable;
+import java.time.Instant;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -39,7 +41,7 @@ import lombok.experimental.Accessors;
 @Getter
 @Setter
 @Accessors(fluent = true, chain = true)
-public class Batch {
+public class Batch implements Serializable {
 
     public static final int DEFAULT_MAX_RETRY = 5;
     public static final long DEFAULT_SCHEDULER_PERIOD_IN_SECONDS = 60;
@@ -81,14 +83,13 @@ public class Batch {
 
     private Integer retry;
 
-    private ZonedDateTime lastRetryAt;
+    private Instant lastRetryAt;
 
     public Batch start() {
-        ZonedDateTime now = ZonedDateTime.now();
+        Instant now = Instant.now();
         boolean shouldRetry = Optional
             .ofNullable(this.lastRetryAt)
-            .map(ZonedDateTime::toInstant)
-            .map(t -> now.toInstant().compareTo(t.plusSeconds(this.retry * DEFAULT_SCHEDULER_PERIOD_IN_SECONDS)))
+            .map(t -> now.compareTo(t.plusSeconds(this.retry * DEFAULT_SCHEDULER_PERIOD_IN_SECONDS)))
             .map(compare -> compare >= 0)
             .orElse(true);
 
