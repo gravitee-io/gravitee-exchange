@@ -27,15 +27,19 @@ import lombok.Getter;
 @Getter
 public class ClusteredReply<R extends Reply<?>> implements Serializable {
 
+    private final String commandId;
+
     private R reply;
 
     private ControllerClusterException controllerClusterException;
 
-    public ClusteredReply(final R reply) {
+    public ClusteredReply(final String commandId, final R reply) {
+        this.commandId = commandId;
         this.reply = reply;
     }
 
-    public ClusteredReply(final ControllerClusterException controllerClusterException) {
+    public ClusteredReply(final String commandId, final ControllerClusterException controllerClusterException) {
+        this.commandId = commandId;
         this.controllerClusterException = controllerClusterException;
     }
 

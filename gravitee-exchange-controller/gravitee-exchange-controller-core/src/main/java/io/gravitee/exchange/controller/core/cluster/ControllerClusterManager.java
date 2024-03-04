@@ -87,7 +87,7 @@ public class ControllerClusterManager extends AbstractService<ControllerClusterM
 
     private void handleClusteredReply(Message<ClusteredReply<?>> clusteredReplyMessage) {
         ClusteredReply<?> clusteredReply = clusteredReplyMessage.content();
-        SingleEmitter<Reply<?>> emitter = resultEmittersByCommand.remove(clusteredReply.getReply().getCommandId());
+        SingleEmitter<Reply<?>> emitter = resultEmittersByCommand.remove(clusteredReply.getCommandId());
 
         if (emitter != null) {
             if (clusteredReply.isError()) {
@@ -163,8 +163,8 @@ public class ControllerClusterManager extends AbstractService<ControllerClusterM
 
         channelManager
             .send(clusteredCommand.command(), clusteredCommand.targetId())
-            .map(ClusteredReply::new)
-            .onErrorReturn(throwable -> new ClusteredReply<>(new ControllerClusterException(throwable)))
+            .map(reply -> new ClusteredReply<>(clusteredCommand.command().getId(), reply))
+            .onErrorReturn(throwable -> new ClusteredReply<>(clusteredCommand.command().getId(), new ControllerClusterException(throwable)))
             .doOnSuccess(replyToQueue::add)
             .subscribe();
     }
