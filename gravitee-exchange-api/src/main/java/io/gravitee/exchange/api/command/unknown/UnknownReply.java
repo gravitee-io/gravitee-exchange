@@ -39,9 +39,4 @@ public class UnknownReply extends Reply<UnknownPayload> {
         this.errorDetails = errorDetails;
         this.payload = new UnknownPayload();
     }
-
-    @Override
-    public boolean stopOnErrorStatus() {
-        return true;
-    }
 }

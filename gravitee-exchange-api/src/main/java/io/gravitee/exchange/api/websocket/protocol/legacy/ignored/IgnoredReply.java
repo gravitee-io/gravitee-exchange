@@ -43,9 +43,4 @@ public class IgnoredReply extends Reply<NoReplyPayload> {
     public IgnoredReply(final String commandId) {
         super(COMMAND_TYPE, commandId, CommandStatus.ERROR);
     }
-
-    @Override
-    public boolean stopOnErrorStatus() {
-        return true;
-    }
 }
