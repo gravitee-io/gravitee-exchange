@@ -41,9 +41,4 @@ public class NoReply extends Reply<NoReplyPayload> {
         this.errorDetails = errorDetails;
         this.payload = new NoReplyPayload();
     }
-
-    @Override
-    public boolean stopOnErrorStatus() {
-        return true;
-    }
 }
