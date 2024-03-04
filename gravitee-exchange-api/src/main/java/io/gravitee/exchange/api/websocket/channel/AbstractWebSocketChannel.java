@@ -22,6 +22,7 @@ import io.gravitee.exchange.api.channel.exception.ChannelClosedException;
 import io.gravitee.exchange.api.channel.exception.ChannelInactiveException;
 import io.gravitee.exchange.api.channel.exception.ChannelInitializationException;
 import io.gravitee.exchange.api.channel.exception.ChannelNoReplyException;
+import io.gravitee.exchange.api.channel.exception.ChannelReplyException;
 import io.gravitee.exchange.api.channel.exception.ChannelTimeoutException;
 import io.gravitee.exchange.api.channel.exception.ChannelUnknownCommandException;
 import io.gravitee.exchange.api.command.Command;
@@ -177,23 +178,26 @@ public abstract class AbstractWebSocketChannel implements Channel {
             commandObs = Single.just(command);
         }
         commandObs
-            .flatMapCompletable(cmd -> {
+            .flatMapCompletable(adaptedCommand -> {
                 CommandHandler<Command<?>, Reply<?>> commandHandler = (CommandHandler<Command<?>, Reply<?>>) commandHandlers.get(
-                    command.getType()
+                    adaptedCommand.getType()
                 );
-                if (expectHelloCommand() && !active && !Objects.equals(command.getType(), HelloCommand.COMMAND_TYPE)) {
+                if (expectHelloCommand() && !active && !Objects.equals(adaptedCommand.getType(), HelloCommand.COMMAND_TYPE)) {
                     webSocket.close((short) 1002, "Hello Command is first expected to initialize the exchange channel").subscribe();
                     emitter.onError(new ChannelInitializationException("Hello Command is first expected to initialize the channel"));
-                } else if (Objects.equals(command.getType(), HelloCommand.COMMAND_TYPE)) {
-                    return handleHelloCommand(emitter, command, commandHandler);
-                } else if (Objects.equals(command.getType(), GoodByeCommand.COMMAND_TYPE)) {
-                    return handleGoodByeCommand(command, commandHandler);
+                } else if (Objects.equals(adaptedCommand.getType(), HelloCommand.COMMAND_TYPE)) {
+                    return handleHelloCommand(emitter, adaptedCommand, commandHandler);
+                } else if (Objects.equals(adaptedCommand.getType(), GoodByeCommand.COMMAND_TYPE)) {
+                    return handleGoodByeCommand(adaptedCommand, commandHandler);
                 } else if (commandHandler != null) {
-                    return handleCommandAsync(command, commandHandler);
+                    return handleCommandAsync(adaptedCommand, commandHandler);
                 } else {
-                    log.info("No handler found for command type {}. Ignoring", command.getType());
+                    log.info("No handler found for command type {}. Ignoring", adaptedCommand.getType());
                     return writeReply(
-                        new NoReply(command.getId(), "No handler found for command type %s. Ignoring".formatted(command.getType()))
+                        new NoReply(
+                            adaptedCommand.getId(),
+                            "No handler found for command type %s. Ignoring".formatted(adaptedCommand.getType())
+                        )
                     );
                 }
                 return Completable.complete();
@@ -226,7 +230,10 @@ public abstract class AbstractWebSocketChannel implements Channel {
                         webSocket.close().subscribe();
                     }
                 })
-                .doOnError(throwable -> log.warn("Unable to handle reply [{}, {}]", reply.getType(), reply.getCommandId()))
+                .doOnError(throwable -> {
+                    log.warn("Unable to handle reply [{}, {}]", reply.getType(), reply.getCommandId());
+                    replyEmitter.onError(new ChannelReplyException(throwable));
+                })
                 .subscribe();
         }
     }
@@ -372,35 +379,29 @@ public abstract class AbstractWebSocketChannel implements Channel {
                     return Single.just(command);
                 }
             })
-            .flatMap(decoratedCommand ->
+            .flatMap(adaptedCommand ->
                 Single
                     .<R>create(emitter -> {
-                        resultEmitters.put(decoratedCommand.getId(), emitter);
-                        writeCommand(decoratedCommand).doOnError(emitter::onError).onErrorComplete().subscribe();
+                        resultEmitters.put(adaptedCommand.getId(), emitter);
+                        writeCommand(adaptedCommand).doOnError(emitter::onError).onErrorComplete().subscribe();
                     })
                     .timeout(
-                        decoratedCommand.getReplyTimeoutMs(),
+                        adaptedCommand.getReplyTimeoutMs(),
                         TimeUnit.MILLISECONDS,
                         Single.error(() -> {
-                            log.warn(
-                                "No reply received in time for command [{}, {}]",
-                                decoratedCommand.getType(),
-                                decoratedCommand.getId()
-                            );
+                            log.warn("No reply received in time for command [{}, {}]", adaptedCommand.getType(), adaptedCommand.getId());
                             throw new ChannelTimeoutException();
                         })
                     )
-                    .onErrorResumeNext(throwable -> {
-                        CommandAdapter<C, Command<?>, R> commandAdapter = (CommandAdapter<C, Command<?>, R>) commandAdapters.get(
-                            command.getType()
-                        );
-                        if (commandAdapter != null) {
-                            return commandAdapter.onError(command, throwable);
-                        } else {
-                            return Single.error(throwable);
-                        }
-                    })
             )
+            .onErrorResumeNext(throwable -> {
+                CommandAdapter<C, Command<?>, R> commandAdapter = (CommandAdapter<C, Command<?>, R>) commandAdapters.get(command.getType());
+                if (commandAdapter != null) {
+                    return commandAdapter.onError(command, throwable);
+                } else {
+                    return Single.error(throwable);
+                }
+            })
             // Cleanup result emitters list if cancelled by the upstream.
             .doOnDispose(() -> resultEmitters.remove(command.getId()));
     }
@@ -412,7 +413,7 @@ public abstract class AbstractWebSocketChannel implements Channel {
             .exchangeType(command.getType())
             .exchange(command)
             .build();
-        return writeToSocket(command.getId(), command.getType(), protocolExchange);
+        return writeToSocket(command.getId(), protocolExchange);
     }
 
     protected <R extends Reply<?>> Completable writeReply(R reply) {
@@ -432,17 +433,19 @@ public abstract class AbstractWebSocketChannel implements Channel {
                     .exchangeType(adaptedReply.getType())
                     .exchange(adaptedReply)
                     .build();
-                return writeToSocket(reply.getCommandId(), reply.getType(), protocolExchange);
+                return writeToSocket(adaptedReply.getCommandId(), protocolExchange);
             });
     }
 
-    private Completable writeToSocket(final String commandId, final String commandType, final ProtocolExchange websocketExchange) {
+    private Completable writeToSocket(final String commandId, final ProtocolExchange websocketExchange) {
         if (!webSocket.isClosed()) {
             return webSocket
                 .writeBinaryMessage(protocolAdapter.write(websocketExchange))
-                .doOnComplete(() -> log.debug("Write command/reply [{}, {}] to websocket successfully", commandType, commandId))
+                .doOnComplete(() ->
+                    log.debug("Write command/reply [{}, {}] to websocket successfully", websocketExchange.exchangeType(), commandId)
+                )
                 .onErrorResumeNext(throwable -> {
-                    log.error("An error occurred when trying to send command/reply [{}, {}]", commandType, commandId);
+                    log.error("An error occurred when trying to send command/reply [{}, {}]", websocketExchange.exchangeType(), commandId);
                     return Completable.error(new Exception("Write to socket failed"));
                 });
         } else {
