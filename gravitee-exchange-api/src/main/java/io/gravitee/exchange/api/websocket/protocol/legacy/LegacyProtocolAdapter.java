@@ -46,8 +46,8 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class LegacyProtocolAdapter implements ProtocolAdapter {
 
-    private static final String COMMAND_PREFIX = "command:";
-    private static final String REPLY_PREFIX = "reply:";
+    private static final String COMMAND_PREFIX = "command: ";
+    private static final String REPLY_PREFIX = "reply: ";
     private static final String PRIMARY_MESSAGE = "primary: true";
     private static final String REPLICA_MESSAGE = "replica: true";
     private final ExchangeSerDe exchangeSerDe;
