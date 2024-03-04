@@ -20,15 +20,16 @@ import io.gravitee.exchange.api.command.goodbye.GoodByeCommand;
 import io.gravitee.exchange.api.command.goodbye.GoodByeReply;
 import io.gravitee.exchange.api.command.goodbye.GoodByeReplyPayload;
 import io.gravitee.exchange.api.connector.ExchangeConnector;
-import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Single;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * @author Guillaume LAMIRAND (guillaume.lamirand at graviteesource.com)
  * @author GraviteeSource Team
  */
 @RequiredArgsConstructor
+@Slf4j
 public class GoodByeCommandHandler implements CommandHandler<GoodByeCommand, GoodByeReply> {
 
     private final ExchangeConnector exchangeConnector;
@@ -40,18 +41,9 @@ public class GoodByeCommandHandler implements CommandHandler<GoodByeCommand, Goo
 
     @Override
     public Single<GoodByeReply> handle(GoodByeCommand command) {
-        return Completable
-            .defer(() -> {
-                if (command.getPayload().isReconnect()) {
-                    return exchangeConnector.initialize();
-                } else {
-                    return exchangeConnector.close();
-                }
-            })
-            .andThen(
-                Single.just(
-                    new GoodByeReply(command.getId(), GoodByeReplyPayload.builder().targetId(command.getPayload().getTargetId()).build())
-                )
-            );
+        return Single.fromCallable(() -> {
+            log.debug("Goodbye command received for target id [{}]", exchangeConnector.targetId());
+            return new GoodByeReply(command.getId(), GoodByeReplyPayload.builder().targetId(command.getPayload().getTargetId()).build());
+        });
     }
 }
