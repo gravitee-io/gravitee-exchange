@@ -25,10 +25,6 @@ public class ControllerClusterException extends Exception {
         super();
     }
 
-    public ControllerClusterException(final String message) {
-        super(message);
-    }
-
     public ControllerClusterException(final Throwable cause) {
         super(cause);
     }
