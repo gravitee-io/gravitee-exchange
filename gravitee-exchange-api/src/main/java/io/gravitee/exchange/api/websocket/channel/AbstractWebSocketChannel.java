@@ -309,13 +309,11 @@ public abstract class AbstractWebSocketChannel implements Channel {
             return handleCommand(command, commandHandler, true)
                 .doOnSuccess(reply -> {
                     if (reply.getCommandStatus() == CommandStatus.SUCCEEDED) {
-                        Payload payload = reply.getPayload();
-                        if (payload instanceof GoodByeCommandPayload goodByeCommandPayload) {
-                            short statusCode = 1000;
-                            if (goodByeCommandPayload.isReconnect()) {
-                                statusCode = 1013;
-                            }
-                            webSocket.close(statusCode, "GoodBye Command with reconnection requested.").subscribe();
+                        Payload payload = command.getPayload();
+                        if (payload instanceof GoodByeCommandPayload goodByeCommandPayload && goodByeCommandPayload.isReconnect()) {
+                            webSocket.close((short) 1013, "GoodBye Command with reconnection requested.").subscribe();
+                        } else {
+                            webSocket.close((short) 1000, "GoodBye Command without reconnection.").subscribe();
                         }
                     }
                 })
