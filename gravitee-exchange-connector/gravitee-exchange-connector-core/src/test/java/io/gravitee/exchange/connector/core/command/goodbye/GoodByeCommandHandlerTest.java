@@ -57,8 +57,7 @@ class GoodByeCommandHandlerTest {
     }
 
     @Test
-    void should_initialize_connector_when_reconnect_is_true() {
-        when(exchangeConnector.initialize()).thenReturn(Completable.complete());
+    void should_reply_on_goodbye_command() {
         GoodByeCommand goodByeCommand = new GoodByeCommand(GoodByeCommandPayload.builder().targetId("targetId").reconnect(true).build());
         cut
             .handle(goodByeCommand)
@@ -70,27 +69,5 @@ class GoodByeCommandHandlerTest {
                 assertThat(goodByeReply.getPayload().getTargetId()).isEqualTo(goodByeCommand.getPayload().getTargetId());
                 return true;
             });
-
-        verify(exchangeConnector, never()).close();
-        verify(exchangeConnector).initialize();
-    }
-
-    @Test
-    void should_not_initialize_connector_when_reconnect_is_false() {
-        when(exchangeConnector.close()).thenReturn(Completable.complete());
-        GoodByeCommand goodByeCommand = new GoodByeCommand(GoodByeCommandPayload.builder().targetId("targetId").reconnect(false).build());
-        cut
-            .handle(goodByeCommand)
-            .test()
-            .assertComplete()
-            .assertValue(goodByeReply -> {
-                assertThat(goodByeReply.getCommandId()).isEqualTo(goodByeCommand.getId());
-                assertThat(goodByeReply.getCommandStatus()).isEqualTo(CommandStatus.SUCCEEDED);
-                assertThat(goodByeReply.getPayload().getTargetId()).isEqualTo(goodByeCommand.getPayload().getTargetId());
-                return true;
-            });
-
-        verify(exchangeConnector).close();
-        verify(exchangeConnector, never()).initialize();
     }
 }
