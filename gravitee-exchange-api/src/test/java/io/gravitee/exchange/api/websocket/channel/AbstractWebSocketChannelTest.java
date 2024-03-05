@@ -355,7 +355,7 @@ class AbstractWebSocketChannelTest extends AbstractWebSocketTest {
             .assertComplete();
 
         if (ProtocolVersion.LEGACY == protocolVersion) {
-            webSocketAtomicReference.get().writeBinaryMessage(Buffer.buffer("command:{\"type\":\"WRONG\",\"payload\":{}}"));
+            webSocketAtomicReference.get().writeBinaryMessage(Buffer.buffer("command: {\"type\":\"WRONG\",\"payload\":{}}"));
         } else {
             webSocketAtomicReference.get().writeBinaryMessage(Buffer.buffer("t:COMMAND;;et:WRONG;;e:{\"type\":\"WRONG\",\"payload\":{}}"));
         }
