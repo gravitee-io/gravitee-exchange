@@ -15,9 +15,13 @@
  */
 package io.gravitee.exchange.api.configuration;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.Accessors;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.env.Environment;
 
 /**
@@ -27,38 +31,95 @@ import org.springframework.core.env.Environment;
 @RequiredArgsConstructor
 @Getter
 @Accessors(fluent = true)
+@Slf4j
 public class IdentifyConfiguration {
 
-    private static final String DEFAULT_EXCHANGE_ID = "exchange";
+    public static final String DEFAULT_EXCHANGE_ID = "exchange";
     private final Environment environment;
     private final String id;
+    private final Map<String, String> fallbackKeys;
 
     public IdentifyConfiguration(final Environment environment) {
         this(environment, DEFAULT_EXCHANGE_ID);
     }
 
-    public boolean containsProperty(final String key) {
-        return environment.containsProperty(identifyProperty(key));
+    public IdentifyConfiguration(final Environment environment, final Map<String, String> fallbackKeys) {
+        this(environment, DEFAULT_EXCHANGE_ID, fallbackKeys);
+    }
+
+    public IdentifyConfiguration(final Environment environment, final String identifier) {
+        this(environment, identifier, Map.of());
     }
 
     public String id() {
         return id;
     }
 
+    public boolean containsProperty(final String key) {
+        boolean containsProperty = environment.containsProperty(identifyProperty(key));
+        if (!containsProperty && fallbackKeys.containsKey(key)) {
+            String fallbackKey = fallbackKeys.get(key);
+            containsProperty = environment.containsProperty(fallbackKey);
+            if (containsProperty) {
+                log.warn("[{}] Using deprecated configuration '{}', replace it by '{}' as it will be removed.", id, fallbackKey, key);
+            }
+        }
+        return containsProperty;
+    }
+
     public String getProperty(final String key) {
-        return environment.getProperty(identifyProperty(key));
+        return this.getProperty(key, String.class, null);
     }
 
     public <T> T getProperty(final String key, final Class<T> clazz, final T defaultValue) {
-        return environment.getProperty(identifyProperty(key), clazz, defaultValue);
+        T value = environment.getProperty(identifyProperty(key), clazz);
+        if (value == null && fallbackKeys.containsKey(key)) {
+            String fallbackKey = fallbackKeys.get(key);
+            value = environment.getProperty(fallbackKeys.get(key), clazz);
+            if (value != null) {
+                log.warn("[{}] Using deprecated configuration '{}', replace it by '{}' as it will be removed.", id, fallbackKey, key);
+            }
+        }
+        return value != null ? value : defaultValue;
+    }
+
+    public List<String> getPropertyList(final String key) {
+        List<String> values = new ArrayList<>();
+        int index = 0;
+        String indexKey = ("%s[%s]").formatted(key, index);
+        while (containsProperty(indexKey)) {
+            String value = getProperty(indexKey);
+            if (value != null && !value.isBlank()) {
+                values.add(value);
+            }
+            index++;
+            indexKey = ("%s[%s]").formatted(key, index);
+        }
+
+        // Fallback
+        if (fallbackKeys.containsKey(key)) {
+            String fallbackKey = fallbackKeys.get(key);
+            int fallbackIndex = 0;
+            String fallbackIndexKey = ("%s[%s]").formatted(fallbackKey, fallbackIndex);
+            while (environment.containsProperty(fallbackIndexKey)) {
+                String value = environment.getProperty(fallbackIndexKey);
+                if (value != null && !value.isBlank()) {
+                    values.add(value);
+                }
+                fallbackIndex++;
+                fallbackIndexKey = ("%s[%s]").formatted(fallbackKey, fallbackIndex);
+            }
+        }
+
+        return values;
     }
 
     public String identifyProperty(final String key) {
         return identify("%s.%s", key);
     }
 
-    public String identifyName(final String key) {
-        return identify("%s-%s", key);
+    public String identifyName(final String name) {
+        return identify("%s-%s", name);
     }
 
     private String identify(final String format, final String key) {

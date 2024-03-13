@@ -153,19 +153,12 @@ public class WebSocketClientConfiguration {
     }
 
     private List<WebSocketEndpoint> readEndpoints() {
-        int endpointIndex = 0;
-        String key = ("%s[%s]").formatted(ENDPOINTS_KEY, endpointIndex);
         List<WebSocketEndpoint> endpointsConfiguration = new ArrayList<>();
-
-        while (identifyConfiguration.containsProperty(key)) {
-            String url = identifyConfiguration.getProperty(key);
-            if (url != null && !url.isBlank()) {
-                endpointsConfiguration.add(new WebSocketEndpoint(url, maxRetry()));
-            }
-            endpointIndex++;
-            key = ("%s[%s]").formatted(ENDPOINTS_KEY, endpointIndex);
+        List<String> propertyList = identifyConfiguration.getPropertyList(ENDPOINTS_KEY);
+        if (propertyList != null) {
+            int maxRetryCount = maxRetry();
+            endpointsConfiguration.addAll(propertyList.stream().map(url -> new WebSocketEndpoint(url, maxRetryCount)).toList());
         }
-
         return endpointsConfiguration;
     }
 }

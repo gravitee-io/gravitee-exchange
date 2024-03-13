@@ -17,6 +17,7 @@ package io.gravitee.exchange.api.configuration;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayNameGeneration;
 import org.junit.jupiter.api.DisplayNameGenerator;
@@ -63,6 +64,12 @@ class IdentifyConfigurationTest {
         void should_get_property() {
             environment.withProperty("exchange.key", "value");
             assertThat(cut.getProperty("key")).isEqualTo("value");
+        }
+
+        @Test
+        void should_get_property_list() {
+            environment.withProperty("exchange.key[0]", "value");
+            assertThat(cut.getPropertyList("key")).containsOnly("value");
         }
 
         @Test
@@ -120,6 +127,12 @@ class IdentifyConfigurationTest {
         }
 
         @Test
+        void should_get_property_list() {
+            environment.withProperty("custom.key[0]", "value");
+            assertThat(cut.getPropertyList("key")).containsOnly("value");
+        }
+
+        @Test
         void should_not_get_property_with_wrong_prefix() {
             environment.withProperty("wrong.key", "value");
             assertThat(cut.getProperty("key")).isNull();
@@ -144,6 +157,45 @@ class IdentifyConfigurationTest {
         @Test
         void should_return_identify_name() {
             assertThat(cut.identifyName("name")).isEqualTo("custom-name");
+        }
+    }
+
+    @Nested
+    class FallbackKeys {
+
+        @BeforeEach
+        public void beforeEach() {
+            cut = new IdentifyConfiguration(environment, Map.of("key", "fallbackKey", "collectionKey", "fallbackCollectionKey"));
+        }
+
+        @Test
+        void should_contain_property() {
+            environment.withProperty("fallbackKey", "value");
+            assertThat(cut.containsProperty("key")).isTrue();
+        }
+
+        @Test
+        void should_get_property() {
+            environment.withProperty("fallbackKey", "value");
+            assertThat(cut.getProperty("key")).isEqualTo("value");
+        }
+
+        @Test
+        void should_get_property_list() {
+            environment.withProperty("fallbackCollectionKey[0]", "value");
+            assertThat(cut.getPropertyList("collectionKey")).containsOnly("value");
+        }
+
+        @Test
+        void should_not_get_property_with_wrong_prefix() {
+            environment.withProperty("wrong.fallbackKey", "value");
+            assertThat(cut.getProperty("key")).isNull();
+        }
+
+        @Test
+        void should_get_custom_property() {
+            environment.withProperty("fallbackKey", "123");
+            assertThat(cut.getProperty("key", Integer.class, 0)).isEqualTo(123);
         }
     }
 }
