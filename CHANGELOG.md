@@ -1,3 +1,10 @@
+# [1.0.0-alpha.6](https://github.com/gravitee-io/gravitee-exchange/compare/1.0.0-alpha.5...1.0.0-alpha.6) (2024-03-14)
+
+
+### Features
+
+* allow defining fallback configuration key ([4bed7a3](https://github.com/gravitee-io/gravitee-exchange/commit/4bed7a38d9c15a8191841a00b7d6aaaffe9cb7d3))
+
 # [1.0.0-alpha.5](https://github.com/gravitee-io/gravitee-exchange/compare/1.0.0-alpha.4...1.0.0-alpha.5) (2024-03-05)
 
 
