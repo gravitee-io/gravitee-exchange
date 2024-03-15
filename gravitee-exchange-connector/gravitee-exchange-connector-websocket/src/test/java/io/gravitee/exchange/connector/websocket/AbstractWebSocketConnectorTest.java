@@ -45,40 +45,42 @@ public abstract class AbstractWebSocketConnectorTest extends AbstractWebSocketTe
     ) {
         serverWebSocket.binaryMessageHandler(buffer -> {
             ProtocolExchange websocketExchange = protocolAdapter.read(buffer);
-            Command<?> command = websocketExchange.asCommand();
-            if (command.getType().equals(HelloCommand.COMMAND_TYPE)) {
-                HelloReply helloReply = new HelloReply(command.getId(), new HelloReplyPayload("targetId"));
-                serverWebSocket
-                    .writeBinaryMessage(
-                        protocolAdapter.write(
-                            ProtocolExchange
-                                .builder()
-                                .type(ProtocolExchange.Type.REPLY)
-                                .exchangeType(helloReply.getType())
-                                .exchange(helloReply)
-                                .build()
+            if (websocketExchange.type() == ProtocolExchange.Type.COMMAND) {
+                Command<?> command = websocketExchange.asCommand();
+                if (command.getType().equals(HelloCommand.COMMAND_TYPE)) {
+                    HelloReply helloReply = new HelloReply(command.getId(), new HelloReplyPayload("targetId"));
+                    serverWebSocket
+                        .writeBinaryMessage(
+                            protocolAdapter.write(
+                                ProtocolExchange
+                                    .builder()
+                                    .type(ProtocolExchange.Type.REPLY)
+                                    .exchangeType(helloReply.getType())
+                                    .exchange(helloReply)
+                                    .build()
+                            )
                         )
-                    )
-                    .subscribe();
-            } else if (command.getType().equals(io.gravitee.exchange.api.websocket.protocol.legacy.hello.HelloCommand.COMMAND_TYPE)) {
-                io.gravitee.exchange.api.websocket.protocol.legacy.hello.HelloReply helloReply = new io.gravitee.exchange.api.websocket.protocol.legacy.hello.HelloReply(
-                    command.getId(),
-                    new io.gravitee.exchange.api.websocket.protocol.legacy.hello.HelloReplyPayload("targetId")
-                );
-                serverWebSocket
-                    .writeBinaryMessage(
-                        protocolAdapter.write(
-                            ProtocolExchange
-                                .builder()
-                                .type(ProtocolExchange.Type.REPLY)
-                                .exchangeType(helloReply.getType())
-                                .exchange(helloReply)
-                                .build()
+                        .subscribe();
+                } else if (command.getType().equals(io.gravitee.exchange.api.websocket.protocol.legacy.hello.HelloCommand.COMMAND_TYPE)) {
+                    io.gravitee.exchange.api.websocket.protocol.legacy.hello.HelloReply helloReply = new io.gravitee.exchange.api.websocket.protocol.legacy.hello.HelloReply(
+                        command.getId(),
+                        new io.gravitee.exchange.api.websocket.protocol.legacy.hello.HelloReplyPayload("targetId")
+                    );
+                    serverWebSocket
+                        .writeBinaryMessage(
+                            protocolAdapter.write(
+                                ProtocolExchange
+                                    .builder()
+                                    .type(ProtocolExchange.Type.REPLY)
+                                    .exchangeType(helloReply.getType())
+                                    .exchange(helloReply)
+                                    .build()
+                            )
                         )
-                    )
-                    .subscribe();
-            } else {
-                commandHandler.accept(command);
+                        .subscribe();
+                } else {
+                    commandHandler.accept(command);
+                }
             }
         });
     }
