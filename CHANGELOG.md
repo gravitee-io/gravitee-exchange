@@ -1,3 +1,11 @@
+# [1.0.0-alpha.7](https://github.com/gravitee-io/gravitee-exchange/compare/1.0.0-alpha.6...1.0.0-alpha.7) (2024-03-15)
+
+
+### Bug Fixes
+
+* add missing provided scope ([832a90c](https://github.com/gravitee-io/gravitee-exchange/commit/832a90ca17a7233030b9e62047a80e26b5081ea6))
+* fix some edge case issue on unit test ([f21cd3c](https://github.com/gravitee-io/gravitee-exchange/commit/f21cd3cca77ff612846a2090e2941c4bc302ba41))
+
 # [1.0.0-alpha.6](https://github.com/gravitee-io/gravitee-exchange/compare/1.0.0-alpha.5...1.0.0-alpha.6) (2024-03-14)
 
 
