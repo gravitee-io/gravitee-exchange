@@ -28,6 +28,7 @@ import io.vertx.rxjava3.core.http.ServerWebSocket;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.env.MockEnvironment;
@@ -59,6 +60,11 @@ class WebSocketExchangeConnectorTest extends AbstractWebSocketConnectorTest {
                 webSocketConnectorClientFactory,
                 exchangeSerDe
             );
+    }
+
+    @AfterEach
+    public void afterEach() {
+        websocketServerHandler = null;
     }
 
     @Test
