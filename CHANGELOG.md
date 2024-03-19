@@ -1,3 +1,10 @@
+# 1.0.0 (2024-03-19)
+
+
+### Features
+
+* first version of framework ([189937c](https://github.com/gravitee-io/gravitee-exchange/commit/189937c4e9fa71c35a44af21e429a84d1d3d4ec3))
+
 # [1.0.0-alpha.7](https://github.com/gravitee-io/gravitee-exchange/compare/1.0.0-alpha.6...1.0.0-alpha.7) (2024-03-15)
 
 
