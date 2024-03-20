@@ -21,7 +21,7 @@ package io.gravitee.exchange.controller.core.cluster.exception;
  */
 public class ControllerClusterTimeoutException extends ControllerClusterException {
 
-    public ControllerClusterTimeoutException() {
-        super();
+    public ControllerClusterTimeoutException(final String message) {
+        super(message);
     }
 }

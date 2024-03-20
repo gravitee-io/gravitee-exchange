@@ -100,7 +100,8 @@ public class ControllerClusterManager extends AbstractService<ControllerClusterM
 
     @Override
     protected void doStop() throws Exception {
-        log.debug("[{}] Stopping controller cluster manager", identifyConfiguration.id());
+        String message = "[%s] Stopping controller cluster manager".formatted(identifyConfiguration.id());
+        log.debug(message);
         super.doStop();
 
         // Stop all command listeners.
@@ -122,7 +123,7 @@ public class ControllerClusterManager extends AbstractService<ControllerClusterM
         }
 
         // Finally, notify all pending Rx emitters with an error.
-        resultEmittersByCommand.forEach((type, emitter) -> emitter.onError(new ControllerClusterShutdownException()));
+        resultEmittersByCommand.forEach((type, emitter) -> emitter.onError(new ControllerClusterShutdownException(message)));
         resultEmittersByCommand.clear();
     }
 
@@ -200,13 +201,14 @@ public class ControllerClusterManager extends AbstractService<ControllerClusterM
                 command.getReplyTimeoutMs(),
                 TimeUnit.MILLISECONDS,
                 Single.error(() -> {
-                    log.warn(
-                        "[{}] No reply received in time from cluster manager for command [{}, {}]",
-                        this.identifyConfiguration.id(),
-                        command.getType(),
-                        command.getId()
-                    );
-                    return new ControllerClusterTimeoutException();
+                    String errorMsg =
+                        "[%s] No reply received in time from cluster manager for command [%s, %s]".formatted(
+                                this.identifyConfiguration.id(),
+                                command.getType(),
+                                command.getId()
+                            );
+                    log.warn(errorMsg);
+                    return new ControllerClusterTimeoutException(errorMsg);
                 })
             )
             // Cleanup result emitters list if cancelled by the upstream or an error occurred.

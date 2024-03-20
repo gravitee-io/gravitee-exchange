@@ -21,7 +21,7 @@ package io.gravitee.exchange.controller.core.cluster.exception;
  */
 public class ControllerClusterShutdownException extends ControllerClusterException {
 
-    public ControllerClusterShutdownException() {
-        super();
+    public ControllerClusterShutdownException(String message) {
+        super(message);
     }
 }
