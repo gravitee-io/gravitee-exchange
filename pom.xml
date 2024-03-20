@@ -40,7 +40,7 @@
 
         <commons-lang3.version>3.14.0</commons-lang3.version>
         <jakarta.annotation-api.version>2.1.1</jakarta.annotation-api.version>
-        <wiremock.version>3.0.4</wiremock.version>
+        <wiremock.version>3.4.2</wiremock.version>
 
         <jdk.version>17</jdk.version>
     </properties>
