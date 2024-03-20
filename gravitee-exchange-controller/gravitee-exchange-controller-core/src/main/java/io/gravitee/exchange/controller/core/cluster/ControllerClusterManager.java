@@ -26,6 +26,7 @@ import io.gravitee.exchange.controller.core.channel.ChannelManager;
 import io.gravitee.exchange.controller.core.cluster.command.ClusteredCommand;
 import io.gravitee.exchange.controller.core.cluster.command.ClusteredReply;
 import io.gravitee.exchange.controller.core.cluster.exception.ControllerClusterException;
+import io.gravitee.exchange.controller.core.cluster.exception.ControllerClusterNoChannelException;
 import io.gravitee.exchange.controller.core.cluster.exception.ControllerClusterShutdownException;
 import io.gravitee.exchange.controller.core.cluster.exception.ControllerClusterTimeoutException;
 import io.gravitee.node.api.cache.CacheManager;
@@ -195,8 +196,23 @@ public class ControllerClusterManager extends AbstractService<ControllerClusterM
     public Single<Reply<?>> sendCommand(final Command<?> command, final String targetId) {
         final ClusteredCommand<?> clusteredCommand = new ClusteredCommand<>(command, targetId, replyQueueName);
 
-        return Single
-            .<Reply<?>>create(emitter -> sendClusteredCommand(clusteredCommand, emitter))
+        return channelManager
+            .channelsMetric(targetId)
+            .isEmpty()
+            .flatMap(isEmpty -> {
+                if (Boolean.TRUE.equals(isEmpty)) {
+                    String errorMsg =
+                        "[%s] No channel available for the target [%s] to send command [%s, %s]".formatted(
+                                this.identifyConfiguration.id(),
+                                targetId,
+                                command.getType(),
+                                command.getId()
+                            );
+                    return Single.error(new ControllerClusterNoChannelException(errorMsg));
+                } else {
+                    return Single.<Reply<?>>create(emitter -> sendClusteredCommand(clusteredCommand, emitter));
+                }
+            })
             .timeout(
                 command.getReplyTimeoutMs(),
                 TimeUnit.MILLISECONDS,
