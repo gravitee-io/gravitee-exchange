@@ -1,3 +1,11 @@
+## [1.0.1](https://github.com/gravitee-io/gravitee-exchange/compare/1.0.0...1.0.1) (2024-03-20)
+
+
+### Bug Fixes
+
+* add message to the cluster exception ([8193984](https://github.com/gravitee-io/gravitee-exchange/commit/81939842abf46e86c9d9168b8b28b5eeb16842bb))
+* verify any existing channel to avoid waiting cluster timeout ([486d562](https://github.com/gravitee-io/gravitee-exchange/commit/486d562cb476e611c32ce4a6023e403a0bc5b150))
+
 # 1.0.0 (2024-03-19)
 
 
