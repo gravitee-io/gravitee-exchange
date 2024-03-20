@@ -21,8 +21,8 @@ package io.gravitee.exchange.controller.core.cluster.exception;
  */
 public class ControllerClusterException extends Exception {
 
-    public ControllerClusterException() {
-        super();
+    public ControllerClusterException(String message) {
+        super(message);
     }
 
     public ControllerClusterException(final Throwable cause) {
