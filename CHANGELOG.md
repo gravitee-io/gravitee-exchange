@@ -1,3 +1,10 @@
+## [1.0.2](https://github.com/gravitee-io/gravitee-exchange/compare/1.0.1...1.0.2) (2024-03-22)
+
+
+### Bug Fixes
+
+* adapt GoodByeCommand for legacy protocol ([46a66c2](https://github.com/gravitee-io/gravitee-exchange/commit/46a66c286c1892a6501c0ab1b800a3a1f3867b84))
+
 ## [1.0.1](https://github.com/gravitee-io/gravitee-exchange/compare/1.0.0...1.0.1) (2024-03-22)
 
 
