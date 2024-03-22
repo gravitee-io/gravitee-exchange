@@ -15,9 +15,6 @@
  */
 package io.gravitee.exchange.connector.core;
 
-import io.gravitee.exchange.api.command.goodbye.GoodByeCommand;
-import io.gravitee.exchange.api.command.healtcheck.HealthCheckCommand;
-import io.gravitee.exchange.api.command.primary.PrimaryCommand;
 import io.gravitee.exchange.api.connector.ExchangeConnector;
 import io.gravitee.exchange.api.connector.ExchangeConnectorManager;
 import io.gravitee.exchange.connector.core.command.goodbye.GoodByeCommandHandler;
