@@ -15,6 +15,7 @@
  */
 package io.gravitee.exchange.api.websocket.protocol.legacy.goodbye;
 
+import io.gravitee.exchange.api.channel.exception.ChannelClosedException;
 import io.gravitee.exchange.api.command.CommandAdapter;
 import io.gravitee.exchange.api.command.goodbye.GoodByeReply;
 import io.reactivex.rxjava3.core.Single;
@@ -33,6 +34,13 @@ public class GoodyeCommandAdapter
 
     @Override
     public Single<GoodByeCommand> adapt(final io.gravitee.exchange.api.command.goodbye.GoodByeCommand command) {
-        return Single.just(new GoodByeCommand(command.getId()));
+        return Single.fromCallable(() -> {
+            // The legacy protocol doesn't support reconnect option, we ignore the command to generate a websocket.close()
+            // from the controller instead of doing it on controller.
+            if (command.getPayload().isReconnect()) {
+                throw new ChannelClosedException();
+            }
+            return new GoodByeCommand(command.getId());
+        });
     }
 }
