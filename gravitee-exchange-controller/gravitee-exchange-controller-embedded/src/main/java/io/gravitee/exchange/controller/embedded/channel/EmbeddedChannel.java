@@ -45,7 +45,8 @@ public class EmbeddedChannel implements ControllerChannel, ConnectorChannel {
     private final String id = UUID.randomUUID().toString();
     private final String targetId;
     private final Map<String, CommandHandler<? extends Command<?>, ? extends Reply<?>>> commandHandlers = new ConcurrentHashMap<>();
-    protected final Map<String, CommandAdapter<? extends Command<?>, ? extends Command<?>, ? extends Reply<?>>> commandAdapters = new ConcurrentHashMap<>();
+    protected final Map<String, CommandAdapter<? extends Command<?>, ? extends Command<?>, ? extends Reply<?>>> commandAdapters =
+        new ConcurrentHashMap<>();
     protected final Map<String, ReplyAdapter<? extends Reply<?>, ? extends Reply<?>>> replyAdapters = new ConcurrentHashMap<>();
     private boolean active = false;
 

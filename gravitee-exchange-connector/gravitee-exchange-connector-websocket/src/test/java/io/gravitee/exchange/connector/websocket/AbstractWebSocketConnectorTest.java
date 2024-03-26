@@ -62,10 +62,11 @@ public abstract class AbstractWebSocketConnectorTest extends AbstractWebSocketTe
                         )
                         .subscribe();
                 } else if (command.getType().equals(io.gravitee.exchange.api.websocket.protocol.legacy.hello.HelloCommand.COMMAND_TYPE)) {
-                    io.gravitee.exchange.api.websocket.protocol.legacy.hello.HelloReply helloReply = new io.gravitee.exchange.api.websocket.protocol.legacy.hello.HelloReply(
-                        command.getId(),
-                        new io.gravitee.exchange.api.websocket.protocol.legacy.hello.HelloReplyPayload("targetId")
-                    );
+                    io.gravitee.exchange.api.websocket.protocol.legacy.hello.HelloReply helloReply =
+                        new io.gravitee.exchange.api.websocket.protocol.legacy.hello.HelloReply(
+                            command.getId(),
+                            new io.gravitee.exchange.api.websocket.protocol.legacy.hello.HelloReplyPayload("targetId")
+                        );
                     serverWebSocket
                         .writeBinaryMessage(
                             protocolAdapter.write(
