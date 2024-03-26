@@ -68,7 +68,8 @@ public abstract class AbstractWebSocketChannel implements Channel {
     private static final int PING_DELAY = 5_000;
     protected final String id = UUID.randomUUID().toString();
     protected final Map<String, CommandHandler<? extends Command<?>, ? extends Reply<?>>> commandHandlers = new ConcurrentHashMap<>();
-    protected final Map<String, CommandAdapter<? extends Command<?>, ? extends Command<?>, ? extends Reply<?>>> commandAdapters = new ConcurrentHashMap<>();
+    protected final Map<String, CommandAdapter<? extends Command<?>, ? extends Command<?>, ? extends Reply<?>>> commandAdapters =
+        new ConcurrentHashMap<>();
     protected final Map<String, ReplyAdapter<? extends Reply<?>, ? extends Reply<?>>> replyAdapters = new ConcurrentHashMap<>();
     protected final Vertx vertx;
     protected final WebSocketBase webSocket;
@@ -169,9 +170,8 @@ public abstract class AbstractWebSocketChannel implements Channel {
         }
 
         Single<? extends Command<?>> commandObs;
-        CommandAdapter<Command<?>, Command<?>, Reply<?>> commandAdapter = (CommandAdapter<Command<?>, Command<?>, Reply<?>>) commandAdapters.get(
-            command.getType()
-        );
+        CommandAdapter<Command<?>, Command<?>, Reply<?>> commandAdapter =
+            (CommandAdapter<Command<?>, Command<?>, Reply<?>>) commandAdapters.get(command.getType());
         if (commandAdapter != null) {
             commandObs = commandAdapter.adapt(command);
         } else {

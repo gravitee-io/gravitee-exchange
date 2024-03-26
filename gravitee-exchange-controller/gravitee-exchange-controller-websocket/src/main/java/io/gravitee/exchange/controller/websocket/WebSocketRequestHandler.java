@@ -29,7 +29,6 @@ import io.gravitee.exchange.api.controller.ControllerCommandHandlersFactory;
 import io.gravitee.exchange.api.controller.ExchangeController;
 import io.gravitee.exchange.api.websocket.command.ExchangeSerDe;
 import io.gravitee.exchange.api.websocket.protocol.ProtocolVersion;
-import io.gravitee.exchange.controller.core.channel.primary.PrimaryChannelManager;
 import io.gravitee.exchange.controller.websocket.auth.WebSocketControllerAuthentication;
 import io.gravitee.exchange.controller.websocket.channel.WebSocketControllerChannel;
 import io.vertx.rxjava3.core.Vertx;
@@ -66,17 +65,12 @@ public class WebSocketRequestHandler implements io.vertx.core.Handler<io.vertx.r
             request
                 .toWebSocket()
                 .flatMapCompletable(webSocket -> {
-                    List<CommandHandler<? extends Command<?>, ? extends Reply<?>>> commandHandlers = controllerCommandHandlersFactory.buildCommandHandlers(
-                        controllerContext
-                    );
-                    List<CommandAdapter<? extends Command<?>, ? extends Command<?>, ? extends Reply<?>>> commandAdapters = controllerCommandHandlersFactory.buildCommandAdapters(
-                        controllerContext,
-                        protocolVersion
-                    );
-                    List<ReplyAdapter<? extends Reply<?>, ? extends Reply<?>>> replyAdapters = controllerCommandHandlersFactory.buildReplyAdapters(
-                        controllerContext,
-                        protocolVersion
-                    );
+                    List<CommandHandler<? extends Command<?>, ? extends Reply<?>>> commandHandlers =
+                        controllerCommandHandlersFactory.buildCommandHandlers(controllerContext);
+                    List<CommandAdapter<? extends Command<?>, ? extends Command<?>, ? extends Reply<?>>> commandAdapters =
+                        controllerCommandHandlersFactory.buildCommandAdapters(controllerContext, protocolVersion);
+                    List<ReplyAdapter<? extends Reply<?>, ? extends Reply<?>>> replyAdapters =
+                        controllerCommandHandlersFactory.buildReplyAdapters(controllerContext, protocolVersion);
 
                     ControllerChannel websocketControllerChannel = new WebSocketControllerChannel(
                         commandHandlers,
