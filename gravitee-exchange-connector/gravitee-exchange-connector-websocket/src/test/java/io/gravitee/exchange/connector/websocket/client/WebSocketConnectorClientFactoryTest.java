@@ -78,13 +78,15 @@ class WebSocketConnectorClientFactoryTest {
         }
 
         @Test
-        void should_return_null_when_max_retry_reach() {
+        void should_loop_over_endpoint_on_each_next_endpoint() {
             environment.setProperty("exchange.connector.ws.endpoints[0]", "http://endpoint:1234");
-            for (int i = 0; i < WebSocketEndpoint.DEFAULT_MAX_RETRY_COUNT; i++) {
-                cut.nextEndpoint();
-            }
-            WebSocketEndpoint webSocketEndpoint = cut.nextEndpoint();
-            assertThat(webSocketEndpoint).isNull();
+            environment.setProperty("exchange.connector.ws.endpoints[1]", "http://endpoint:5678");
+            WebSocketEndpoint webSocketEndpoint1 = cut.nextEndpoint();
+            WebSocketEndpoint webSocketEndpoint2 = cut.nextEndpoint();
+            WebSocketEndpoint webSocketEndpoint3 = cut.nextEndpoint();
+            assertThat(webSocketEndpoint1.getPort()).isEqualTo(1234);
+            assertThat(webSocketEndpoint2.getPort()).isEqualTo(5678);
+            assertThat(webSocketEndpoint3.getPort()).isEqualTo(1234);
         }
 
         @Test

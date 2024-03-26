@@ -17,7 +17,11 @@ package io.gravitee.exchange.connector.websocket;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import io.gravitee.exchange.api.command.Command;
+import io.gravitee.exchange.api.command.hello.HelloReply;
 import io.gravitee.exchange.api.configuration.IdentifyConfiguration;
+import io.gravitee.exchange.api.websocket.protocol.ProtocolAdapter;
+import io.gravitee.exchange.api.websocket.protocol.ProtocolExchange;
 import io.gravitee.exchange.api.websocket.protocol.ProtocolVersion;
 import io.gravitee.exchange.connector.websocket.client.WebSocketClientConfiguration;
 import io.gravitee.exchange.connector.websocket.client.WebSocketConnectorClientFactory;
@@ -85,7 +89,40 @@ class WebSocketExchangeConnectorTest extends AbstractWebSocketConnectorTest {
     }
 
     @Test
-    void should_reconnect_after_unexpected_close(VertxTestContext testContext) throws InterruptedException {
+    void should_not_reconnect_after_hello_handshake_failure(VertxTestContext testContext) throws InterruptedException {
+        AtomicReference<ServerWebSocket> ws = new AtomicReference<>();
+        Checkpoint checkpoint = testContext.checkpoint(1);
+        websocketServerHandler =
+            serverWebSocket -> {
+                ProtocolAdapter protocolAdapter = protocolAdapter(ProtocolVersion.V1);
+                serverWebSocket.binaryMessageHandler(buffer -> {
+                    ProtocolExchange websocketExchange = protocolAdapter.read(buffer);
+                    Command<?> command = websocketExchange.asCommand();
+                    HelloReply helloReply = new HelloReply(command.getId(), "onError");
+                    serverWebSocket
+                        .writeBinaryMessage(
+                            protocolAdapter.write(
+                                ProtocolExchange
+                                    .builder()
+                                    .type(ProtocolExchange.Type.REPLY)
+                                    .exchangeType(helloReply.getType())
+                                    .exchange(helloReply)
+                                    .build()
+                            )
+                        )
+                        .subscribe();
+                });
+                ws.set(serverWebSocket);
+                checkpoint.flag();
+            };
+        // Initialize first
+        websocketExchangeConnector.initialize().test().awaitDone(10, TimeUnit.SECONDS).assertError(WebSocketConnectorException.class);
+
+        assertThat(testContext.awaitCompletion(10, TimeUnit.SECONDS)).isTrue();
+    }
+
+    @Test
+    void should_retry_initialize_on_retryable_exception(VertxTestContext testContext) throws InterruptedException {
         AtomicReference<ServerWebSocket> ws = new AtomicReference<>();
         Checkpoint checkpoint = testContext.checkpoint(2);
         websocketServerHandler =

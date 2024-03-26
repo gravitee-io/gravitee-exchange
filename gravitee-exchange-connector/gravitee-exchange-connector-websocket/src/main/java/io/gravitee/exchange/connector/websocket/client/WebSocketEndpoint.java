@@ -29,25 +29,12 @@ public class WebSocketEndpoint {
     private static final String HTTPS_SCHEME = "https";
     private static final int DEFAULT_HTTP_PORT = 80;
     private static final int DEFAULT_HTTPS_PORT = 443;
-    public static final int DEFAULT_MAX_RETRY_COUNT = 5;
 
     private final URI uri;
-    private final int maxRetryCount;
-    private int retryCount;
 
     @Builder
-    public WebSocketEndpoint(final String url, final int maxRetryCount) {
+    public WebSocketEndpoint(final String url) {
         this.uri = URI.create(url);
-        this.maxRetryCount = maxRetryCount > 0 ? maxRetryCount : DEFAULT_MAX_RETRY_COUNT;
-        this.retryCount = 0;
-    }
-
-    public void incrementRetryCount() {
-        this.retryCount++;
-    }
-
-    public void resetRetryCount() {
-        this.retryCount = 0;
     }
 
     public int getPort() {
@@ -66,9 +53,5 @@ public class WebSocketEndpoint {
 
     public String resolvePath(String path) {
         return uri.resolve(path).getRawPath();
-    }
-
-    public boolean isRemovable() {
-        return this.retryCount > maxRetryCount;
     }
 }

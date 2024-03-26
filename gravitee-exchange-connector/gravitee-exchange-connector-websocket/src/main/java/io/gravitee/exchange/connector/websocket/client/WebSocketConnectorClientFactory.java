@@ -53,21 +53,15 @@ public class WebSocketConnectorClientFactory {
         if (endpoints.isEmpty()) {
             return null;
         }
+        return endpoints.get(Math.abs(counter.getAndIncrement() % endpoints.size()));
+    }
 
-        WebSocketEndpoint endpoint = endpoints.get(Math.abs(counter.getAndIncrement() % endpoints.size()));
+    public void resetEndpointRetries() {
+        counter.set(0);
+    }
 
-        endpoint.incrementRetryCount();
-        if (endpoint.isRemovable()) {
-            log.info(
-                "Websocket Exchange Connector connects to endpoint at {} more than {} times. Removing instance...",
-                endpoint.getUri().toString(),
-                endpoint.getMaxRetryCount()
-            );
-            configuration.endpoints().remove(endpoint);
-            return nextEndpoint();
-        }
-
-        return endpoint;
+    public int endpointRetries() {
+        return counter.get();
     }
 
     public HttpClient createHttpClient(WebSocketEndpoint websocketEndpoint) {

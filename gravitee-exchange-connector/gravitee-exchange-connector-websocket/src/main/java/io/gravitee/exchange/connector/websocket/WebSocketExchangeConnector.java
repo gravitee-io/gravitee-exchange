@@ -17,6 +17,7 @@ package io.gravitee.exchange.connector.websocket;
 
 import static io.gravitee.exchange.api.controller.ws.WebsocketControllerConstants.EXCHANGE_PROTOCOL_HEADER;
 
+import io.gravitee.common.utils.RxHelper;
 import io.gravitee.exchange.api.command.Command;
 import io.gravitee.exchange.api.command.CommandAdapter;
 import io.gravitee.exchange.api.command.CommandHandler;
@@ -30,7 +31,6 @@ import io.gravitee.exchange.connector.websocket.channel.WebSocketConnectorChanne
 import io.gravitee.exchange.connector.websocket.client.WebSocketConnectorClientFactory;
 import io.gravitee.exchange.connector.websocket.exception.WebSocketConnectorException;
 import io.reactivex.rxjava3.core.Completable;
-import io.reactivex.rxjava3.core.Flowable;
 import io.reactivex.rxjava3.core.Maybe;
 import io.reactivex.rxjava3.core.Single;
 import io.vertx.core.http.WebSocketConnectOptions;
@@ -87,15 +87,16 @@ public class WebSocketExchangeConnector extends EmbeddedExchangeConnector {
                         })
                     );
             })
-            .retryWhen(errors ->
-                errors.flatMap(err -> {
-                    if (err instanceof WebSocketConnectorException connectorException && connectorException.isRetryable()) {
-                        return Flowable.timer(5000, TimeUnit.MILLISECONDS);
-                    }
-                    log.error("Unable to connect to Exchange Connect Endpoint, stop retrying.");
-                    return Flowable.error(err);
-                })
-            );
+            .retryWhen(
+                RxHelper.retryExponentialBackoff(
+                    1,
+                    300,
+                    TimeUnit.SECONDS,
+                    0.5,
+                    throwable -> throwable instanceof WebSocketConnectorException connectorException && connectorException.isRetryable()
+                )
+            )
+            .doOnError(throwable -> log.error("Unable to connect to Exchange Connect Endpoint."));
     }
 
     private Single<WebSocket> connect() {
@@ -104,7 +105,7 @@ public class WebSocketExchangeConnector extends EmbeddedExchangeConnector {
             .switchIfEmpty(
                 Maybe.fromRunnable(() -> {
                     throw new WebSocketConnectorException(
-                        "No Exchange Controller Endpoint is defined or available. Please check your configuration",
+                        "No Exchange Controller Endpoint is defined. Please check your configuration",
                         false
                     );
                 })
@@ -123,28 +124,18 @@ public class WebSocketExchangeConnector extends EmbeddedExchangeConnector {
                 return httpClient
                     .rxWebSocket(webSocketConnectOptions)
                     .doOnSuccess(webSocket -> {
-                        webSocketEndpoint.resetRetryCount();
+                        webSocketConnectorClientFactory.resetEndpointRetries();
                         log.info(
                             "Connector is now connected to Exchange Controller through websocket via [{}]",
                             webSocketEndpoint.getUri().toString()
                         );
                     })
                     .onErrorResumeNext(throwable -> {
-                        int retryCount = webSocketEndpoint.getRetryCount();
-                        int maxRetryCount = webSocketEndpoint.getMaxRetryCount();
-                        if (retryCount < maxRetryCount) {
-                            log.error(
-                                "Unable to connect to Exchange Connect Endpoint: {}/{} time, retrying...",
-                                retryCount,
-                                maxRetryCount,
-                                throwable
-                            );
-                        } else {
-                            log.error(
-                                "Unable to connect to Exchange Connect Endpoint. Max retries attempt reached, changing endpoint.",
-                                throwable
-                            );
-                        }
+                        log.error(
+                            "Unable to connect to Exchange Connect Endpoint {} times, retrying...",
+                            webSocketConnectorClientFactory.endpointRetries(),
+                            throwable
+                        );
                         // Force the HTTP client to close after a defect.
                         return httpClient
                             .close()
