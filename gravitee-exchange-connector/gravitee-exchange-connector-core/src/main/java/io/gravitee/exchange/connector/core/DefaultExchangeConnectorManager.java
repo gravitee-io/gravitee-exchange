@@ -68,7 +68,9 @@ public class DefaultExchangeConnectorManager implements ExchangeConnectorManager
     public Completable unregister(final ExchangeConnector exchangeConnector) {
         return Completable
             .defer(() -> {
-                exchangeConnectors.remove(exchangeConnector.targetId(), exchangeConnector);
+                if (exchangeConnector.targetId() != null) {
+                    exchangeConnectors.remove(exchangeConnector.targetId(), exchangeConnector);
+                }
                 return exchangeConnector.close();
             })
             .doOnComplete(() -> log.debug("Connector successfully unregister for target [{}]", exchangeConnector.targetId()))
