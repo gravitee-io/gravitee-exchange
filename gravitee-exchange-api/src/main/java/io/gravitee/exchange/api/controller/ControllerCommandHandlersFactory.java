@@ -40,19 +40,23 @@ public interface ControllerCommandHandlersFactory {
      * @param controllerCommandContext the command context
      * @return a list of command decorators
      */
-    List<CommandAdapter<? extends Command<?>, ? extends Command<?>, ? extends Reply<?>>> buildCommandAdapters(
+    default List<CommandAdapter<? extends Command<?>, ? extends Command<?>, ? extends Reply<?>>> buildCommandAdapters(
         final ControllerCommandContext controllerCommandContext,
         final ProtocolVersion protocolVersion
-    );
+    ) {
+        return List.of();
+    }
 
     /**
-     * Build a list of command decorators dedicated to the specified context.
+     * Build a list of reply decorators dedicated to the specified context.
      *
      * @param controllerCommandContext the command context
-     * @return a list of command decorators
+     * @return a list of reply decorators
      */
-    List<ReplyAdapter<? extends Reply<?>, ? extends Reply<?>>> buildReplyAdapters(
+    default List<ReplyAdapter<? extends Reply<?>, ? extends Reply<?>>> buildReplyAdapters(
         final ControllerCommandContext controllerCommandContext,
         final ProtocolVersion protocolVersion
-    );
+    ) {
+        return List.of();
+    }
 }
