@@ -92,7 +92,7 @@ public class WebSocketExchangeConnector extends EmbeddedExchangeConnector {
                     if (err instanceof WebSocketConnectorException connectorException && connectorException.isRetryable()) {
                         return Flowable.timer(5000, TimeUnit.MILLISECONDS);
                     }
-                    log.error("Unable to connect to Exchange Connect Endpoint, stop retrying.", err);
+                    log.error("Unable to connect to Exchange Connect Endpoint, stop retrying.");
                     return Flowable.error(err);
                 })
             );
