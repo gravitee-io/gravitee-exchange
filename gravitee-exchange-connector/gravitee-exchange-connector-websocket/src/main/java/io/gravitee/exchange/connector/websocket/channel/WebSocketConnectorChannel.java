@@ -16,7 +16,6 @@
 package io.gravitee.exchange.connector.websocket.channel;
 
 import io.gravitee.exchange.api.channel.exception.ChannelException;
-import io.gravitee.exchange.api.channel.exception.ChannelInitializationException;
 import io.gravitee.exchange.api.command.Command;
 import io.gravitee.exchange.api.command.CommandAdapter;
 import io.gravitee.exchange.api.command.CommandHandler;
@@ -75,7 +74,10 @@ public class WebSocketConnectorChannel extends AbstractWebSocketChannel implemen
                                 this.targetId = reply.getPayload().getTargetId();
                                 this.active = true;
                             } else {
-                                throw new ChannelInitializationException("Unable to parse hello reply payload");
+                                throw new WebSocketConnectorException(
+                                    String.format("Hello handshake failed: %s", reply.getErrorDetails()),
+                                    false
+                                );
                             }
                         });
                 })
