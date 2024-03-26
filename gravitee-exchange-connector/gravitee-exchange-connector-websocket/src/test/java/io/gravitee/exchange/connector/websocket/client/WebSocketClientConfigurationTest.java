@@ -73,17 +73,6 @@ class WebSocketClientConfigurationTest {
         }
 
         @Test
-        void should_return_max_retry() {
-            environment.withProperty("%s.connector.ws.maxRetry".formatted(prefix), "123456");
-            assertThat(cut.maxRetry()).isEqualTo(123456);
-        }
-
-        @Test
-        void should_return_default_max_retry_without_configuration() {
-            assertThat(cut.maxRetry()).isEqualTo(5);
-        }
-
-        @Test
         void should_return_trust_all() {
             environment.withProperty("%s.connector.ws.ssl.trustAll".formatted(prefix), "true");
             assertThat(cut.trustAll()).isTrue();

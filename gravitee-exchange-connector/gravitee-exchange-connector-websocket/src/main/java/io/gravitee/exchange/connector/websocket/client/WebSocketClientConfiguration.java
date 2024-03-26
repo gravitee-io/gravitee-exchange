@@ -31,8 +31,6 @@ import lombok.RequiredArgsConstructor;
 public class WebSocketClientConfiguration {
 
     public static final String HEADERS_KEY = "connector.ws.headers";
-    public static final String MAX_RETRY_KEY = "connector.ws.maxRetry";
-    public static final int MAX_RETRY_DEFAULT = 5;
     public static final String TRUST_ALL_KEY = "connector.ws.ssl.trustAll";
     public static final boolean TRUST_ALL_DEFAULT = false;
     public static final String VERIFY_HOST_KEY = "connector.ws.ssl.verifyHost";
@@ -74,10 +72,6 @@ public class WebSocketClientConfiguration {
             key = ("%s[%s]").formatted(HEADERS_KEY, endpointIndex);
         }
         return computedHeaders;
-    }
-
-    public int maxRetry() {
-        return identifyConfiguration.getProperty(MAX_RETRY_KEY, Integer.class, MAX_RETRY_DEFAULT);
     }
 
     public boolean trustAll() {
@@ -156,8 +150,7 @@ public class WebSocketClientConfiguration {
         List<WebSocketEndpoint> endpointsConfiguration = new ArrayList<>();
         List<String> propertyList = identifyConfiguration.getPropertyList(ENDPOINTS_KEY);
         if (propertyList != null) {
-            int maxRetryCount = maxRetry();
-            endpointsConfiguration.addAll(propertyList.stream().map(url -> new WebSocketEndpoint(url, maxRetryCount)).toList());
+            endpointsConfiguration.addAll(propertyList.stream().map(WebSocketEndpoint::new).toList());
         }
         return endpointsConfiguration;
     }
