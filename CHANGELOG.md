@@ -1,3 +1,17 @@
+# [1.1.0](https://github.com/gravitee-io/gravitee-exchange/compare/1.0.2...1.1.0) (2024-03-26)
+
+
+### Bug Fixes
+
+* check targetId before unregistering the connector ([86d2829](https://github.com/gravitee-io/gravitee-exchange/commit/86d28299c5c9ab14759f4924c30aa5cef43c5141))
+* do not log the error in the log informing retries have stop ([7c8a146](https://github.com/gravitee-io/gravitee-exchange/commit/7c8a14654d55b6b33f6ab284a8eb899f35820ccb))
+* use default implementation for Command/Reply adapters declaration ([6b56b3a](https://github.com/gravitee-io/gravitee-exchange/commit/6b56b3a790e972d30577cbb441ebb9ffc5a13e80))
+
+
+### Features
+
+* improve handshake error handling ([90ecdf2](https://github.com/gravitee-io/gravitee-exchange/commit/90ecdf25bc2d73de8a19928cde8b662213104870))
+
 ## [1.0.2](https://github.com/gravitee-io/gravitee-exchange/compare/1.0.1...1.0.2) (2024-03-22)
 
 
