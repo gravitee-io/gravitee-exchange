@@ -1,3 +1,10 @@
+# [1.2.0](https://github.com/gravitee-io/gravitee-exchange/compare/1.1.0...1.2.0) (2024-03-27)
+
+
+### Features
+
+* use exponential backoff strategy for reconnection ([acfa74f](https://github.com/gravitee-io/gravitee-exchange/commit/acfa74f8288a47da97f65bdd6e16b5c4db825de5))
+
 # [1.1.0](https://github.com/gravitee-io/gravitee-exchange/compare/1.0.2...1.1.0) (2024-03-26)
 
 
