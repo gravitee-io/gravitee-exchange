@@ -1,3 +1,10 @@
+## [1.2.1](https://github.com/gravitee-io/gravitee-exchange/compare/1.2.0...1.2.1) (2024-03-29)
+
+
+### Bug Fixes
+
+* rework primary channel election ([c3c0a27](https://github.com/gravitee-io/gravitee-exchange/commit/c3c0a270dab774b6b744105c450024c8f552a56c))
+
 # [1.2.0](https://github.com/gravitee-io/gravitee-exchange/compare/1.1.0...1.2.0) (2024-03-27)
 
 
