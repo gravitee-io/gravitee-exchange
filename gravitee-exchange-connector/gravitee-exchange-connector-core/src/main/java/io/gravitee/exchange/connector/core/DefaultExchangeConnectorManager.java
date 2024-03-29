@@ -43,10 +43,8 @@ public class DefaultExchangeConnectorManager implements ExchangeConnectorManager
 
     @Override
     public Completable register(final ExchangeConnector exchangeConnector) {
-        return exchangeConnector
-            .initialize()
-            .doOnComplete(() -> {
-                log.debug("New connector successfully register for target [{}]", exchangeConnector.targetId());
+        return Completable
+            .fromRunnable(() ->
                 // Add custom handlers to deal with healthcheck and primary commands
                 exchangeConnector.addCommandHandlers(
                     List.of(
@@ -54,8 +52,11 @@ public class DefaultExchangeConnectorManager implements ExchangeConnectorManager
                         new HealthCheckCommandHandler(exchangeConnector),
                         new PrimaryCommandHandler(exchangeConnector)
                     )
-                );
-
+                )
+            )
+            .andThen(exchangeConnector.initialize())
+            .doOnComplete(() -> {
+                log.debug("New connector successfully register for target [{}]", exchangeConnector.targetId());
                 exchangeConnectors.put(exchangeConnector.targetId(), exchangeConnector);
             })
             .onErrorResumeNext(throwable -> {

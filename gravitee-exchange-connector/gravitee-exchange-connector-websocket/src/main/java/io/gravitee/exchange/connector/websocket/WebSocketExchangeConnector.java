@@ -37,10 +37,10 @@ import io.vertx.core.http.WebSocketConnectOptions;
 import io.vertx.rxjava3.core.Vertx;
 import io.vertx.rxjava3.core.http.HttpClient;
 import io.vertx.rxjava3.core.http.WebSocket;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
-import lombok.RequiredArgsConstructor;
 import lombok.experimental.SuperBuilder;
 import lombok.extern.slf4j.Slf4j;
 
@@ -48,7 +48,6 @@ import lombok.extern.slf4j.Slf4j;
  * @author Guillaume LAMIRAND (guillaume.lamirand at graviteesource.com)
  * @author GraviteeSource Team
  */
-@RequiredArgsConstructor
 @SuperBuilder
 @Slf4j
 public class WebSocketExchangeConnector extends EmbeddedExchangeConnector {
@@ -60,6 +59,24 @@ public class WebSocketExchangeConnector extends EmbeddedExchangeConnector {
     private final Vertx vertx;
     private final WebSocketConnectorClientFactory webSocketConnectorClientFactory;
     private final ExchangeSerDe exchangeSerDe;
+
+    public WebSocketExchangeConnector(
+        final ProtocolVersion protocolVersion,
+        final List<CommandHandler<? extends Command<?>, ? extends Reply<?>>> commandHandlers,
+        final List<CommandAdapter<? extends Command<?>, ? extends Command<?>, ? extends Reply<?>>> commandAdapters,
+        final List<ReplyAdapter<? extends Reply<?>, ? extends Reply<?>>> replyAdapters,
+        final Vertx vertx,
+        final WebSocketConnectorClientFactory webSocketConnectorClientFactory,
+        final ExchangeSerDe exchangeSerDe
+    ) {
+        this.protocolVersion = protocolVersion;
+        this.commandHandlers = commandHandlers != null ? new ArrayList<>(commandHandlers) : new ArrayList<>();
+        this.commandAdapters = commandHandlers != null ? new ArrayList<>(commandAdapters) : new ArrayList<>();
+        this.replyAdapters = commandHandlers != null ? new ArrayList<>(replyAdapters) : new ArrayList<>();
+        this.vertx = vertx;
+        this.webSocketConnectorClientFactory = webSocketConnectorClientFactory;
+        this.exchangeSerDe = exchangeSerDe;
+    }
 
     @Override
     public Completable initialize() {
@@ -146,5 +163,20 @@ public class WebSocketExchangeConnector extends EmbeddedExchangeConnector {
                             );
                     });
             });
+    }
+
+    @Override
+    public void addCommandHandlers(final List<CommandHandler<? extends Command<?>, ? extends Reply<?>>> commandHandlers) {
+        if (commandHandlers != null) {
+            commandHandlers.forEach(commandHandler -> {
+                if (
+                    this.commandHandlers.stream()
+                        .noneMatch(newCommandHandler -> newCommandHandler.supportType().equals(commandHandler.supportType()))
+                ) {
+                    this.commandHandlers.add(commandHandler);
+                }
+            });
+        }
+        super.addCommandHandlers(commandHandlers);
     }
 }

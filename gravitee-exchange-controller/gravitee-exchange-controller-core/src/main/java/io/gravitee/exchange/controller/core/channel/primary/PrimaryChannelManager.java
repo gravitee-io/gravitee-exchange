@@ -25,12 +25,12 @@ import io.gravitee.node.api.cluster.ClusterManager;
 import io.gravitee.node.api.cluster.messaging.Topic;
 import io.reactivex.rxjava3.core.Flowable;
 import io.reactivex.rxjava3.core.Maybe;
-import io.reactivex.rxjava3.core.Single;
-import java.util.List;
+import java.util.Iterator;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ThreadLocalRandom;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.RandomUtils;
 
 /**
  * @author Guillaume LAMIRAND (guillaume.lamirand at graviteesource.com)
@@ -98,11 +98,11 @@ public class PrimaryChannelManager extends AbstractService<PrimaryChannelManager
         super.doStop();
     }
 
-    public Flowable<Map.Entry<String, List<String>>> candidatesChannel() {
+    public Flowable<Map.Entry<String, Set<String>>> candidatesChannel() {
         return primaryChannelCandidateStore.rxEntries();
     }
 
-    public Maybe<List<String>> candidatesChannel(final String targetId) {
+    public Maybe<Set<String>> candidatesChannel(final String targetId) {
         return primaryChannelCandidateStore.rxGet(targetId);
     }
 
@@ -129,7 +129,7 @@ public class PrimaryChannelManager extends AbstractService<PrimaryChannelManager
 
     private void electPrimaryChannel(final String targetId) {
         String previousPrimaryChannelId = primaryChannelCache.get(targetId);
-        List<String> channelIds = primaryChannelCandidateStore.get(targetId);
+        Set<String> channelIds = primaryChannelCandidateStore.get(targetId);
 
         if (null == channelIds || channelIds.isEmpty()) {
             log.warn(
@@ -141,13 +141,31 @@ public class PrimaryChannelManager extends AbstractService<PrimaryChannelManager
             return;
         }
         if (!channelIds.contains(previousPrimaryChannelId)) {
-            //noinspection deprecation
-            @SuppressWarnings("java:S1874")
-            String newPrimaryChannelId = channelIds.get(RandomUtils.nextInt(0, channelIds.size()));
-            primaryChannelCache.put(targetId, newPrimaryChannelId);
-            primaryChannelElectedEventTopic.publish(
-                PrimaryChannelElectedEvent.builder().targetId(targetId).channelId(newPrimaryChannelId).build()
-            );
+            String newPrimaryChannelId = getRandomChannel(channelIds);
+            if (newPrimaryChannelId != null) {
+                primaryChannelCache.put(targetId, newPrimaryChannelId);
+                primaryChannelElectedEventTopic.publish(
+                    PrimaryChannelElectedEvent.builder().targetId(targetId).channelId(newPrimaryChannelId).build()
+                );
+            }
         }
+    }
+
+    private String getRandomChannel(Set<String> channelIds) {
+        int randomIndex = ThreadLocalRandom.current().nextInt(channelIds.size());
+        int i = 0;
+        for (String channelId : channelIds) {
+            if (i == randomIndex) {
+                return channelId;
+            }
+            i++;
+        }
+        // Send first one in case random loop didn't find any match
+        Iterator<String> iterator = channelIds.iterator();
+        if (iterator.hasNext()) {
+            return channelIds.iterator().next();
+        }
+        // Shouldn't happen in any case
+        return null;
     }
 }

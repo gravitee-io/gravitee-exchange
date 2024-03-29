@@ -18,29 +18,28 @@ package io.gravitee.exchange.controller.core.channel.primary;
 import io.gravitee.node.api.cache.Cache;
 import io.reactivex.rxjava3.core.Flowable;
 import io.reactivex.rxjava3.core.Maybe;
-import io.reactivex.rxjava3.core.Single;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
 public class PrimaryChannelCandidateStore {
 
-    private final Cache<String, List<String>> store;
+    private final Cache<String, Set<String>> store;
 
-    public Flowable<Map.Entry<String, List<String>>> rxEntries() {
+    public Flowable<Map.Entry<String, Set<String>>> rxEntries() {
         return store.rxEntrySet();
     }
 
-    public Maybe<List<String>> rxGet(final String targetId) {
+    public Maybe<Set<String>> rxGet(final String targetId) {
         if (targetId == null) {
             return Maybe.error(new IllegalArgumentException("Target id cannot be null"));
         }
         return store.rxGet(targetId);
     }
 
-    public List<String> get(final String targetId) {
+    public Set<String> get(final String targetId) {
         if (targetId == null) {
             throw new IllegalArgumentException("Target id cannot be null");
         }
@@ -58,7 +57,7 @@ public class PrimaryChannelCandidateStore {
             targetId,
             (key, channels) -> {
                 if (channels == null) {
-                    return new ArrayList<>(List.of(channelId));
+                    channels = new HashSet<>();
                 }
                 channels.add(channelId);
                 return channels;

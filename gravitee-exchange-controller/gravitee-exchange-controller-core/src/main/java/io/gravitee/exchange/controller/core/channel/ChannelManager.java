@@ -41,7 +41,7 @@ import io.reactivex.rxjava3.core.Flowable;
 import io.reactivex.rxjava3.core.Maybe;
 import io.reactivex.rxjava3.core.Single;
 import io.reactivex.rxjava3.disposables.Disposable;
-import java.util.List;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import lombok.extern.slf4j.Slf4j;
 
@@ -77,7 +77,8 @@ public class ChannelManager extends AbstractService<ChannelManager> {
         log.debug("[{}] Starting channel manager", this.identifyConfiguration.id());
         super.doStart();
         primaryChannelManager.start();
-        primaryChannelElectedEventTopic = clusterManager.topic(PrimaryChannelManager.PRIMARY_CHANNEL_EVENTS_ELECTED_TOPIC);
+        primaryChannelElectedEventTopic =
+            clusterManager.topic(identifyConfiguration.identifyName(PrimaryChannelManager.PRIMARY_CHANNEL_EVENTS_ELECTED_TOPIC));
         primaryChannelElectedSubscriptionId =
             primaryChannelElectedEventTopic.addMessageListener(message -> handlePrimaryChannelElectedEvent(message.content()));
         healthCheckDisposable =
@@ -129,6 +130,7 @@ public class ChannelManager extends AbstractService<ChannelManager> {
                     .andThen(
                         Flowable
                             .fromIterable(localChannelRegistry.getAllByTargetId(targetId))
+                            .filter(controllerChannel -> !controllerChannel.id().equals(channelId))
                             .flatMapCompletable(controllerChannel -> sendPrimaryCommand(controllerChannel, false))
                     );
             })
@@ -228,7 +230,7 @@ public class ChannelManager extends AbstractService<ChannelManager> {
         return this.primaryChannelManager.candidatesChannel()
             .flatMapSingle(candidatesChannelEntries -> {
                 String targetId = candidatesChannelEntries.getKey();
-                List<String> channelIds = candidatesChannelEntries.getValue();
+                Set<String> channelIds = candidatesChannelEntries.getValue();
                 return this.primaryChannelManager.primaryChannelBy(targetId)
                     .defaultIfEmpty("unknown")
                     .flattenStreamAsFlowable(primaryChannel ->
