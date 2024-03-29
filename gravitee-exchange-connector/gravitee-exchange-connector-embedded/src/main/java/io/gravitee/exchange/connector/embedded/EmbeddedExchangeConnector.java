@@ -23,10 +23,10 @@ import io.gravitee.exchange.api.connector.ExchangeConnector;
 import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Single;
 import java.util.List;
-import java.util.Map;
 import lombok.Builder;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * @author Guillaume LAMIRAND (guillaume.lamirand at graviteesource.com)
@@ -34,6 +34,7 @@ import lombok.experimental.SuperBuilder;
  */
 @SuperBuilder
 @NoArgsConstructor
+@Slf4j
 public class EmbeddedExchangeConnector implements ExchangeConnector {
 
     protected ConnectorChannel connectorChannel;
@@ -68,6 +69,7 @@ public class EmbeddedExchangeConnector implements ExchangeConnector {
 
     @Override
     public void setPrimary(final boolean isPrimary) {
+        log.debug("Setting primary status '{}' on connector", isPrimary);
         this.primary = isPrimary;
     }
 
@@ -78,6 +80,8 @@ public class EmbeddedExchangeConnector implements ExchangeConnector {
 
     @Override
     public void addCommandHandlers(final List<CommandHandler<? extends Command<?>, ? extends Reply<?>>> commandHandlers) {
-        this.connectorChannel.addCommandHandlers(commandHandlers);
+        if (this.connectorChannel != null) {
+            this.connectorChannel.addCommandHandlers(commandHandlers);
+        }
     }
 }

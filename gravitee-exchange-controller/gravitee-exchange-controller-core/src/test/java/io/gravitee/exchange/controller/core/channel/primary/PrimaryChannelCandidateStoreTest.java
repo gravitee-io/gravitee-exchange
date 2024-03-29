@@ -22,7 +22,9 @@ import io.gravitee.node.api.cache.Cache;
 import io.gravitee.node.api.cache.CacheConfiguration;
 import io.gravitee.node.plugin.cache.common.InMemoryCache;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -33,7 +35,7 @@ import org.junit.jupiter.api.Test;
  */
 class PrimaryChannelCandidateStoreTest {
 
-    private Cache<String, List<String>> store;
+    private Cache<String, Set<String>> store;
     private PrimaryChannelCandidateStore cut;
 
     @BeforeEach
@@ -44,7 +46,7 @@ class PrimaryChannelCandidateStoreTest {
 
     @Test
     void should_get_from_store() {
-        store.put("targetId", List.of("channelId", "channelId2"));
+        store.put("targetId", Set.of("channelId", "channelId2"));
         assertThat(cut.get("targetId")).containsOnly("channelId", "channelId2");
     }
 
@@ -76,14 +78,14 @@ class PrimaryChannelCandidateStoreTest {
 
     @Test
     void should_remove_from_store() {
-        store.put("targetId", new ArrayList<>(List.of("channelId")));
+        store.put("targetId", new HashSet<>(List.of("channelId")));
         cut.remove("targetId", "channelId");
         assertThat(store.containsKey("targetId")).isFalse();
     }
 
     @Test
     void should_remove_only_one_channel_from_store() {
-        store.put("targetId", new ArrayList<>(List.of("channelId", "channelId2")));
+        store.put("targetId", new HashSet<>(List.of("channelId", "channelId2")));
         cut.remove("targetId", "channelId");
         assertThat(store.containsKey("targetId")).isTrue();
         assertThat(store.get("targetId")).containsOnly("channelId2");
