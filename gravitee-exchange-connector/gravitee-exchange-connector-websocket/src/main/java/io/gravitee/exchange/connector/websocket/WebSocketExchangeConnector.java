@@ -109,7 +109,7 @@ public class WebSocketExchangeConnector extends EmbeddedExchangeConnector {
                     1,
                     300,
                     TimeUnit.SECONDS,
-                    0.5,
+                    1.5,
                     throwable -> throwable instanceof WebSocketConnectorException connectorException && connectorException.isRetryable()
                 )
             )
