@@ -71,20 +71,28 @@ public class PrimaryChannelManager extends AbstractService<PrimaryChannelManager
         subscriptionListenerId =
             primaryChannelEventTopic.addMessageListener(message -> {
                 ChannelEvent channelEvent = message.content();
-                log.debug(
-                    "[{}] New PrimaryChannelEvent received for channel '{}' on target '{}'",
-                    this.identifyConfiguration.id(),
-                    channelEvent.channelId(),
-                    channelEvent.targetId()
-                );
-                if (clusterManager.self().primary()) {
+                if (channelEvent.targetId() == null) {
+                    log.warn(
+                        "[{}] New PrimaryChannelEvent received for channel '{}' without any target",
+                        this.identifyConfiguration.id(),
+                        channelEvent.channelId()
+                    );
+                } else {
                     log.debug(
-                        "[{}] Handling PrimaryChannelEvent for channel '{}' on target '{}'",
+                        "[{}] New PrimaryChannelEvent received for channel '{}' on target '{}'",
                         this.identifyConfiguration.id(),
                         channelEvent.channelId(),
                         channelEvent.targetId()
                     );
-                    handleChannelEvent(channelEvent);
+                    if (clusterManager.self().primary()) {
+                        log.debug(
+                            "[{}] Handling PrimaryChannelEvent for channel '{}' on target '{}'",
+                            this.identifyConfiguration.id(),
+                            channelEvent.channelId(),
+                            channelEvent.targetId()
+                        );
+                        handleChannelEvent(channelEvent);
+                    }
                 }
             });
     }
