@@ -32,7 +32,7 @@ public class HelloReplyAdapter implements ReplyAdapter<io.gravitee.exchange.api.
     }
 
     @Override
-    public Single<HelloReply> adapt(final io.gravitee.exchange.api.command.hello.HelloReply helloReply) {
+    public Single<HelloReply> adapt(final String targetId, final io.gravitee.exchange.api.command.hello.HelloReply helloReply) {
         return Single.fromCallable(() -> {
             if (helloReply.getCommandStatus() == CommandStatus.SUCCEEDED) {
                 return new HelloReply(helloReply.getCommandId(), new HelloReplyPayload(helloReply.getPayload().getTargetId()));

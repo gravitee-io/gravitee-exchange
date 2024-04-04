@@ -173,7 +173,7 @@ public abstract class AbstractWebSocketChannel implements Channel {
         CommandAdapter<Command<?>, Command<?>, Reply<?>> commandAdapter =
             (CommandAdapter<Command<?>, Command<?>, Reply<?>>) commandAdapters.get(command.getType());
         if (commandAdapter != null) {
-            commandObs = commandAdapter.adapt(command);
+            commandObs = commandAdapter.adapt(targetId, command);
         } else {
             commandObs = Single.just(command);
         }
@@ -213,7 +213,7 @@ public abstract class AbstractWebSocketChannel implements Channel {
             Single<? extends Reply<?>> replyObs;
             ReplyAdapter<Reply<?>, Reply<?>> replyAdapter = (ReplyAdapter<Reply<?>, Reply<?>>) replyAdapters.get(reply.getType());
             if (replyAdapter != null) {
-                replyObs = replyAdapter.adapt(reply);
+                replyObs = replyAdapter.adapt(targetId, reply);
             } else {
                 replyObs = Single.just(reply);
             }
@@ -374,7 +374,7 @@ public abstract class AbstractWebSocketChannel implements Channel {
                 }
                 CommandAdapter<C, Command<?>, R> commandAdapter = (CommandAdapter<C, Command<?>, R>) commandAdapters.get(command.getType());
                 if (commandAdapter != null) {
-                    return commandAdapter.adapt(command);
+                    return commandAdapter.adapt(targetId, command);
                 } else {
                     return Single.just(command);
                 }
@@ -421,7 +421,7 @@ public abstract class AbstractWebSocketChannel implements Channel {
             .defer(() -> {
                 ReplyAdapter<R, Reply<?>> replyAdapter = (ReplyAdapter<R, Reply<?>>) replyAdapters.get(reply.getType());
                 if (replyAdapter != null) {
-                    return replyAdapter.adapt(reply);
+                    return replyAdapter.adapt(targetId, reply);
                 } else {
                     return Single.just(reply);
                 }

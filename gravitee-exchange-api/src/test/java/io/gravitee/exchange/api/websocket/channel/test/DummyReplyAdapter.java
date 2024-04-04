@@ -31,7 +31,7 @@ public class DummyReplyAdapter implements ReplyAdapter<AdaptedDummyReply, DummyR
     }
 
     @Override
-    public Single<DummyReply> adapt(final AdaptedDummyReply reply) {
+    public Single<DummyReply> adapt(final String targetId, final AdaptedDummyReply reply) {
         checkpoint.flag();
         return Single.just(new DummyReply(reply.getCommandId(), reply.getPayload()));
     }

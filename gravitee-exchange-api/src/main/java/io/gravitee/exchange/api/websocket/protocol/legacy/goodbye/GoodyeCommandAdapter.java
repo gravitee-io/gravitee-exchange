@@ -33,7 +33,7 @@ public class GoodyeCommandAdapter
     }
 
     @Override
-    public Single<GoodByeCommand> adapt(final io.gravitee.exchange.api.command.goodbye.GoodByeCommand command) {
+    public Single<GoodByeCommand> adapt(final String targetId, final io.gravitee.exchange.api.command.goodbye.GoodByeCommand command) {
         return Single.fromCallable(() -> {
             // The legacy protocol doesn't support reconnect option, we ignore the command to generate a websocket.close()
             // from the controller instead of doing it on controller.

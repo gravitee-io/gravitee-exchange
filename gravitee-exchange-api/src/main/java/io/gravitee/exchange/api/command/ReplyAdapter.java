@@ -31,9 +31,12 @@ public interface ReplyAdapter<R1 extends Reply<?>, R2 extends Reply<?>> {
 
     /**
      * Method invoked when receiving the reply
+     *
+     * @param targetId the target id of this command. Could be <code>null</code> during hello handshake.
+     * @param reply the original {@link Reply} to adapt
      * @return the reply adapted
      */
-    default Single<R2> adapt(R1 reply) {
+    default Single<R2> adapt(final String targetId, final R1 reply) {
         return (Single<R2>) Single.just(reply);
     }
 }

@@ -31,7 +31,7 @@ public class DummyCommandAdapter implements CommandAdapter<DummyCommand, Adapted
     }
 
     @Override
-    public Single<AdaptedDummyCommand> adapt(final DummyCommand command) {
+    public Single<AdaptedDummyCommand> adapt(final String targetId, final DummyCommand command) {
         checkpoint.flag();
         return Single.just(new AdaptedDummyCommand(command.getId(), command.getPayload()));
     }

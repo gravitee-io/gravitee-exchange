@@ -160,7 +160,7 @@ class EmbeddedChannelTest {
                             }
 
                             @Override
-                            public Single<Command<?>> adapt(final Command<?> command) {
+                            public Single<Command<?>> adapt(final String targetId, final Command<?> command) {
                                 checkpoint.flag();
                                 return Single.just(command);
                             }
@@ -176,7 +176,7 @@ class EmbeddedChannelTest {
                             }
 
                             @Override
-                            public Single<Reply<?>> adapt(final Reply<?> reply) {
+                            public Single<Reply<?>> adapt(final String targetId, final Reply<?> reply) {
                                 checkpoint.flag();
                                 return Single.just(reply);
                             }

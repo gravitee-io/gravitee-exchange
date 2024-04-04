@@ -35,7 +35,7 @@ public class HealthCheckCommandAdapter implements CommandAdapter<HealthCheckComm
     }
 
     @Override
-    public Single<HealthCheckCommand> adapt(final HealthCheckCommand command) {
+    public Single<HealthCheckCommand> adapt(final String targetId, final HealthCheckCommand command) {
         return Single.fromCallable(() -> {
             command.setReplyTimeoutMs(0);
             return command;

@@ -31,7 +31,7 @@ public class NoReplyAdapter implements ReplyAdapter<NoReply, IgnoredReply> {
     }
 
     @Override
-    public Single<IgnoredReply> adapt(final NoReply noReply) {
+    public Single<IgnoredReply> adapt(final String targetId, final NoReply noReply) {
         return Single.just(new IgnoredReply(noReply.getCommandId()));
     }
 }
