@@ -31,7 +31,7 @@ public class LegacyHelloReplyAdapter implements ReplyAdapter<HelloReply, io.grav
     }
 
     @Override
-    public Single<io.gravitee.exchange.api.command.hello.HelloReply> adapt(final HelloReply helloReply) {
+    public Single<io.gravitee.exchange.api.command.hello.HelloReply> adapt(final String targetId, final HelloReply helloReply) {
         return Single.just(
             new io.gravitee.exchange.api.command.hello.HelloReply(
                 helloReply.getCommandId(),

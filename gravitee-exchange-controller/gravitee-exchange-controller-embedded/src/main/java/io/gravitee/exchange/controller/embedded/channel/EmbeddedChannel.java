@@ -106,7 +106,7 @@ public class EmbeddedChannel implements ControllerChannel, ConnectorChannel {
                         command.getType()
                     );
                     if (commandAdapter != null) {
-                        return commandAdapter.adapt(command);
+                        return commandAdapter.adapt(targetId, command);
                     } else {
                         return Single.just(command);
                     }
@@ -136,7 +136,7 @@ public class EmbeddedChannel implements ControllerChannel, ConnectorChannel {
                 .flatMap(reply -> {
                     ReplyAdapter<Reply<?>, R> replyAdapter = (ReplyAdapter<Reply<?>, R>) replyAdapters.get(reply.getType());
                     if (replyAdapter != null) {
-                        return replyAdapter.adapt(reply);
+                        return replyAdapter.adapt(targetId, reply);
                     } else {
                         return Single.just((R) reply);
                     }

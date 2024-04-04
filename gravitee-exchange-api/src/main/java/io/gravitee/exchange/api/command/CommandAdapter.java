@@ -31,16 +31,19 @@ public interface CommandAdapter<C1 extends Command<?>, C2 extends Command<?>, R 
 
     /**
      * Method invoked before sending the command.
-
+     *
+     * @param targetId the target id of this command. Could be <code>null</code> during hello handshake.
+     * @param command the original {@link Command} to adapt
      * @return the command adapted
      */
-    default Single<C2> adapt(C1 command) {
+    default Single<C2> adapt(final String targetId, final C1 command) {
         return (Single<C2>) Single.just(command);
     }
 
     /**
      * Method invoke when an error is raised when sending a command.
      *
+     * @param command the original {@link Command} to adapt
      * @param throwable a throwable
      */
     default Single<R> onError(final Command<?> command, final Throwable throwable) {

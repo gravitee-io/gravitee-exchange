@@ -34,7 +34,7 @@ public class LegacyGoodByeReplyAdapter implements ReplyAdapter<GoodByeReply, io.
     }
 
     @Override
-    public Single<io.gravitee.exchange.api.command.goodbye.GoodByeReply> adapt(final GoodByeReply reply) {
+    public Single<io.gravitee.exchange.api.command.goodbye.GoodByeReply> adapt(final String targetId, final GoodByeReply reply) {
         return Single.fromCallable(() -> {
             if (reply.getCommandStatus() == CommandStatus.SUCCEEDED) {
                 return new io.gravitee.exchange.api.command.goodbye.GoodByeReply(

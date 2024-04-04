@@ -35,7 +35,7 @@ public class PrimaryCommandAdapter implements CommandAdapter<PrimaryCommand, Pri
     }
 
     @Override
-    public Single<PrimaryCommand> adapt(final PrimaryCommand command) {
+    public Single<PrimaryCommand> adapt(final String targetId, final PrimaryCommand command) {
         return Single.fromCallable(() -> {
             command.setReplyTimeoutMs(0);
             return command;
