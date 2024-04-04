@@ -1,3 +1,10 @@
+## [1.2.2](https://github.com/gravitee-io/gravitee-exchange/compare/1.2.1...1.2.2) (2024-04-04)
+
+
+### Bug Fixes
+
+* increase connector retry factor ([25fd826](https://github.com/gravitee-io/gravitee-exchange/commit/25fd826326091bd96c277abae4b296a3138f4a62))
+
 ## [1.2.1](https://github.com/gravitee-io/gravitee-exchange/compare/1.2.0...1.2.1) (2024-03-29)
 
 
