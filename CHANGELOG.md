@@ -1,3 +1,11 @@
+## [1.2.3](https://github.com/gravitee-io/gravitee-exchange/compare/1.2.2...1.2.3) (2024-04-05)
+
+
+### Bug Fixes
+
+* add target id on adapter interface ([5cb7ec9](https://github.com/gravitee-io/gravitee-exchange/commit/5cb7ec9e49ae7664d5cb3cc9073030aed31f579f))
+* ignore new channel without target ([94e1c8b](https://github.com/gravitee-io/gravitee-exchange/commit/94e1c8bc3ed642d186cbe09e142afd11683c4406))
+
 ## [1.2.2](https://github.com/gravitee-io/gravitee-exchange/compare/1.2.1...1.2.2) (2024-04-04)
 
 
