@@ -1,3 +1,10 @@
+## [1.2.4](https://github.com/gravitee-io/gravitee-exchange/compare/1.2.3...1.2.4) (2024-04-09)
+
+
+### Bug Fixes
+
+* **deps:** update dependency jakarta.annotation:jakarta.annotation-api to v3 ([64c80b2](https://github.com/gravitee-io/gravitee-exchange/commit/64c80b2c8636cfe5f724398b88467ac7840dcf7b))
+
 ## [1.2.3](https://github.com/gravitee-io/gravitee-exchange/compare/1.2.2...1.2.3) (2024-04-05)
 
 
