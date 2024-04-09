@@ -19,6 +19,7 @@ import static io.gravitee.exchange.api.command.CommandStatus.ERROR;
 
 import io.gravitee.exchange.api.channel.Channel;
 import io.gravitee.exchange.api.channel.exception.ChannelClosedException;
+import io.gravitee.exchange.api.channel.exception.ChannelException;
 import io.gravitee.exchange.api.channel.exception.ChannelInactiveException;
 import io.gravitee.exchange.api.channel.exception.ChannelInitializationException;
 import io.gravitee.exchange.api.channel.exception.ChannelNoReplyException;
@@ -201,6 +202,10 @@ public abstract class AbstractWebSocketChannel implements Channel {
                     );
                 }
                 return Completable.complete();
+            })
+            .onErrorResumeNext(throwable -> {
+                log.warn("Unexpected internal error occurred when handling command type %s".formatted(command.getId()));
+                return writeReply(new NoReply(command.getId(), "Unexpected internal error occurred"));
             })
             .subscribe();
     }
