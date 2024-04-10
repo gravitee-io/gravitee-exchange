@@ -18,6 +18,7 @@ package io.gravitee.exchange.connector.websocket.client;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.stream.Stream;
+import lombok.SneakyThrows;
 import org.junit.jupiter.api.DisplayNameGeneration;
 import org.junit.jupiter.api.DisplayNameGenerator;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -34,6 +35,8 @@ class WebSocketEndpointTest {
     private static Stream<Arguments> urls() {
         return Stream.of(
             // URL / host / port / root path
+            Arguments.of("http://management_api:8072", "management_api", 8072),
+            Arguments.of("http://management-api.gravitee.io:8072", "management-api.gravitee.io", 8072),
             Arguments.of("http://localhost:8062", "localhost", 8062),
             Arguments.of("http://localhost:8062/", "localhost", 8062),
             Arguments.of("https://localhost:8063", "localhost", 8063),
@@ -45,16 +48,21 @@ class WebSocketEndpointTest {
 
     @ParameterizedTest
     @MethodSource("urls")
+    @SneakyThrows
     void should_create_default_websocket_endpoint(String baseUrl, String host, int port) {
-        WebSocketEndpoint endpoint = new WebSocketEndpoint(baseUrl);
-        assertThat(endpoint.getHost()).isEqualTo(host);
-        assertThat(endpoint.getPort()).isEqualTo(port);
+        var endpoint = WebSocketEndpoint.newEndpoint(baseUrl);
+        assertThat(endpoint)
+            .isPresent()
+            .get()
+            .extracting(WebSocketEndpoint::getHost, WebSocketEndpoint::getPort)
+            .containsExactly(host, port);
     }
 
     @ParameterizedTest
     @MethodSource("urls")
+    @SneakyThrows
     void should_resolve_path(String baseUrl) {
-        WebSocketEndpoint endpoint = new WebSocketEndpoint(baseUrl);
+        WebSocketEndpoint endpoint = WebSocketEndpoint.newEndpoint(baseUrl).orElseThrow();
         assertThat(endpoint.resolvePath("/path")).isEqualTo("/path");
     }
 }

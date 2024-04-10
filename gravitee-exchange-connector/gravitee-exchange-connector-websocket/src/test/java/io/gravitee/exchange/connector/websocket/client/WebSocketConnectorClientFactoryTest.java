@@ -120,7 +120,7 @@ class WebSocketConnectorClientFactoryTest {
                 .trustStorePassword("password");
             wireMockServer = new WireMockServer(wireMockConfiguration);
             wireMockServer.start();
-            webSocketEndpoint = WebSocketEndpoint.builder().url("http://localhost:%s".formatted(wireMockServer.port())).build();
+            webSocketEndpoint = WebSocketEndpoint.newEndpoint("http://localhost:%s".formatted(wireMockServer.port())).orElseThrow();
         }
 
         @AfterAll
@@ -159,7 +159,7 @@ class WebSocketConnectorClientFactoryTest {
                 .trustStorePassword("password");
             wireMockServer = new WireMockServer(wireMockConfiguration);
             wireMockServer.start();
-            webSocketEndpoint = WebSocketEndpoint.builder().url("https://localhost:%s".formatted(wireMockServer.httpsPort())).build();
+            webSocketEndpoint = WebSocketEndpoint.newEndpoint("https://localhost:%s".formatted(wireMockServer.httpsPort())).orElseThrow();
         }
 
         @AfterAll
@@ -235,7 +235,7 @@ class WebSocketConnectorClientFactoryTest {
                 .needClientAuth(true);
             wireMockServer = new WireMockServer(wireMockConfiguration);
             wireMockServer.start();
-            webSocketEndpoint = WebSocketEndpoint.builder().url("https://localhost:%s".formatted(wireMockServer.httpsPort())).build();
+            webSocketEndpoint = WebSocketEndpoint.newEndpoint("https://localhost:%s".formatted(wireMockServer.httpsPort())).orElseThrow();
         }
 
         @AfterAll

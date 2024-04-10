@@ -129,7 +129,7 @@ public class WebSocketExchangeConnector extends EmbeddedExchangeConnector {
             )
             .toSingle()
             .flatMap(webSocketEndpoint -> {
-                log.debug("Trying to connect to Exchange Controller WebSocket [{}]", webSocketEndpoint.getUri());
+                log.debug("Trying to connect to Exchange Controller WebSocket [{}]", webSocketEndpoint.getUrl());
                 HttpClient httpClient = webSocketConnectorClientFactory.createHttpClient(webSocketEndpoint);
                 WebSocketConnectOptions webSocketConnectOptions = new WebSocketConnectOptions()
                     .setURI(webSocketEndpoint.resolvePath(WebsocketControllerConstants.EXCHANGE_CONTROLLER_PATH))
@@ -144,7 +144,7 @@ public class WebSocketExchangeConnector extends EmbeddedExchangeConnector {
                         webSocketConnectorClientFactory.resetEndpointRetries();
                         log.info(
                             "Connector is now connected to Exchange Controller through websocket via [{}]",
-                            webSocketEndpoint.getUri().toString()
+                            webSocketEndpoint.getUrl().toString()
                         );
                     })
                     .onErrorResumeNext(throwable -> {
