@@ -21,6 +21,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 
 /**
@@ -150,7 +151,9 @@ public class WebSocketClientConfiguration {
         List<WebSocketEndpoint> endpointsConfiguration = new ArrayList<>();
         List<String> propertyList = identifyConfiguration.getPropertyList(ENDPOINTS_KEY);
         if (propertyList != null) {
-            endpointsConfiguration.addAll(propertyList.stream().map(WebSocketEndpoint::new).toList());
+            endpointsConfiguration.addAll(
+                propertyList.stream().map(WebSocketEndpoint::newEndpoint).filter(Optional::isPresent).map(Optional::get).toList()
+            );
         }
         return endpointsConfiguration;
     }
