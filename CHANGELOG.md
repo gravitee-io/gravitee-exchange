@@ -1,3 +1,10 @@
+## [1.2.5](https://github.com/gravitee-io/gravitee-exchange/compare/1.2.4...1.2.5) (2024-04-10)
+
+
+### Bug Fixes
+
+* handle endpoint url containing underscore ([df05b82](https://github.com/gravitee-io/gravitee-exchange/commit/df05b820f8948693a0b8d40ff39bc821a4ea38a4))
+
 ## [1.2.4](https://github.com/gravitee-io/gravitee-exchange/compare/1.2.3...1.2.4) (2024-04-09)
 
 
