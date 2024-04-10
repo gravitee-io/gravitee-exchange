@@ -16,8 +16,6 @@
 package io.gravitee.exchange.connector.websocket.client;
 
 import java.net.MalformedURLException;
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.Optional;
 import lombok.Getter;
@@ -36,11 +34,9 @@ public class WebSocketEndpoint {
     private static final int DEFAULT_HTTPS_PORT = 443;
 
     private final URL url;
-    private final URI uri;
 
-    private WebSocketEndpoint(final URL url, final URI uri) {
+    private WebSocketEndpoint(final URL url) {
         this.url = url;
-        this.uri = uri;
     }
 
     /**
@@ -51,20 +47,22 @@ public class WebSocketEndpoint {
      */
     public static Optional<WebSocketEndpoint> newEndpoint(String value) {
         try {
-            URL url = new URL(value);
-            URI uri = url.toURI();
-
-            return Optional.of(new WebSocketEndpoint(url, uri));
-        } catch (MalformedURLException | URISyntaxException e) {
+            if (value != null && !value.isEmpty()) {
+                URL url = new URL(value.endsWith("/") ? value.substring(0, value.length() - 1) : value);
+                return Optional.of(new WebSocketEndpoint(url));
+            }
+            log.warn("Invalid websocket endpoint url {}", value);
+        } catch (MalformedURLException e) {
             log.warn("Invalid websocket endpoint url {}", value, e);
-            return Optional.empty();
         }
+
+        return Optional.empty();
     }
 
     public int getPort() {
         if (url.getPort() != -1) {
             return url.getPort();
-        } else if (HTTPS_SCHEME.equals(uri.getScheme())) {
+        } else if (HTTPS_SCHEME.equals(url.getProtocol())) {
             return DEFAULT_HTTPS_PORT;
         } else {
             return DEFAULT_HTTP_PORT;
@@ -76,6 +74,11 @@ public class WebSocketEndpoint {
     }
 
     public String resolvePath(String path) {
-        return uri.resolve(path).getRawPath();
+        String value = path;
+        if (path == null) {
+            value = "";
+        }
+
+        return url.getPath() + (value.startsWith("/") ? value : "/" + value);
     }
 }
