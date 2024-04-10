@@ -24,6 +24,7 @@ import org.junit.jupiter.api.DisplayNameGenerator;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.NullAndEmptySource;
 
 /**
  * @author Guillaume LAMIRAND (guillaume.lamirand at graviteesource.com)
@@ -35,15 +36,19 @@ class WebSocketEndpointTest {
     private static Stream<Arguments> urls() {
         return Stream.of(
             // URL / host / port / root path
-            Arguments.of("http://management_api:8072", "management_api", 8072),
-            Arguments.of("http://management-api.gravitee.io:8072", "management-api.gravitee.io", 8072),
-            Arguments.of("http://localhost:8062", "localhost", 8062),
-            Arguments.of("http://localhost:8062/", "localhost", 8062),
-            Arguments.of("https://localhost:8063", "localhost", 8063),
-            Arguments.of("https://localhost:8063/", "localhost", 8063),
-            Arguments.of("https://localhost:8064/root", "localhost", 8064),
-            Arguments.of("https://localhost:8064/root/", "localhost", 8064)
+            Arguments.of("http://management_api:8072", "management_api", 8072, ""),
+            Arguments.of("http://management-api.gravitee.io:8072", "management-api.gravitee.io", 8072, ""),
+            Arguments.of("http://localhost:8062", "localhost", 8062, ""),
+            Arguments.of("http://localhost:8062/", "localhost", 8062, ""),
+            Arguments.of("https://localhost:8063", "localhost", 8063, ""),
+            Arguments.of("https://localhost:8063/", "localhost", 8063, ""),
+            Arguments.of("https://localhost:8064/root", "localhost", 8064, "/root"),
+            Arguments.of("https://localhost:8064/root/", "localhost", 8064, "/root")
         );
+    }
+
+    private static Stream<Arguments> invalidUrls() {
+        return Stream.of(Arguments.of("htt.//url"), Arguments.of("http//url"));
     }
 
     @ParameterizedTest
@@ -59,10 +64,22 @@ class WebSocketEndpointTest {
     }
 
     @ParameterizedTest
+    @NullAndEmptySource
+    @MethodSource("invalidUrls")
+    void should_not_create_when_invalid_url(String invalid) {
+        var endpoint = WebSocketEndpoint.newEndpoint(invalid);
+        assertThat(endpoint).isEmpty();
+    }
+
+    @ParameterizedTest
     @MethodSource("urls")
     @SneakyThrows
-    void should_resolve_path(String baseUrl) {
+    void should_resolve_path(String baseUrl, String host, int port, String path) {
         WebSocketEndpoint endpoint = WebSocketEndpoint.newEndpoint(baseUrl).orElseThrow();
-        assertThat(endpoint.resolvePath("/path")).isEqualTo("/path");
+        assertThat(endpoint.resolvePath("my-path")).isEqualTo(path + "/my-path");
+        assertThat(endpoint.resolvePath("/my-path")).isEqualTo(path + "/my-path");
+        assertThat(endpoint.resolvePath("/")).isEqualTo(path + "/");
+        assertThat(endpoint.resolvePath("")).isEqualTo(path + "/");
+        assertThat(endpoint.resolvePath(null)).isEqualTo(path + "/");
     }
 }

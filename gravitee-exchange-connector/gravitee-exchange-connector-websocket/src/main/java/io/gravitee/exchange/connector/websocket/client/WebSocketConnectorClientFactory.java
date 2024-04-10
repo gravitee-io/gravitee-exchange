@@ -22,7 +22,7 @@ import io.vertx.core.net.PemTrustOptions;
 import io.vertx.core.net.PfxOptions;
 import io.vertx.rxjava3.core.Vertx;
 import io.vertx.rxjava3.core.http.HttpClient;
-import java.net.URI;
+import java.net.URL;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import lombok.Getter;
@@ -65,12 +65,12 @@ public class WebSocketConnectorClientFactory {
     }
 
     public HttpClient createHttpClient(WebSocketEndpoint websocketEndpoint) {
-        URI target = websocketEndpoint.getUri();
+        URL target = websocketEndpoint.getUrl();
         HttpClientOptions options = new HttpClientOptions();
         options.setDefaultHost(websocketEndpoint.getHost());
         options.setDefaultPort(websocketEndpoint.getPort());
 
-        if (isSecureProtocol(target.getScheme())) {
+        if (isSecureProtocol(target.getProtocol())) {
             options.setSsl(true);
             options.setTrustAll(configuration.trustAll());
             options.setVerifyHost(configuration.verifyHost());
