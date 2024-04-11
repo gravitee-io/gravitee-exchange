@@ -1,3 +1,10 @@
+# [1.3.0](https://github.com/gravitee-io/gravitee-exchange/compare/1.2.5...1.3.0) (2024-04-11)
+
+
+### Features
+
+* **connector:** handle URL containing a path ([6094748](https://github.com/gravitee-io/gravitee-exchange/commit/6094748ee00ef53b30c0e9cc58791c598895b3e0))
+
 ## [1.2.5](https://github.com/gravitee-io/gravitee-exchange/compare/1.2.4...1.2.5) (2024-04-10)
 
 
