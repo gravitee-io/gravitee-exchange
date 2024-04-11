@@ -27,14 +27,18 @@ import io.gravitee.exchange.api.command.Reply;
 import io.gravitee.exchange.api.configuration.IdentifyConfiguration;
 import io.gravitee.exchange.api.controller.ControllerChannel;
 import io.gravitee.exchange.api.controller.ExchangeController;
+import io.gravitee.exchange.api.controller.listeners.TargetListener;
 import io.gravitee.exchange.api.controller.metrics.ChannelMetric;
 import io.gravitee.exchange.api.controller.metrics.TargetMetric;
 import io.gravitee.exchange.controller.core.batch.BatchStore;
 import io.gravitee.exchange.controller.core.batch.exception.BatchDisabledException;
+import io.gravitee.exchange.controller.core.channel.primary.PrimaryChannelEvictedEvent;
+import io.gravitee.exchange.controller.core.channel.primary.PrimaryChannelManager;
 import io.gravitee.exchange.controller.core.cluster.ControllerClusterManager;
 import io.gravitee.node.api.cache.CacheConfiguration;
 import io.gravitee.node.api.cache.CacheManager;
 import io.gravitee.node.api.cluster.ClusterManager;
+import io.gravitee.node.api.cluster.messaging.Topic;
 import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Flowable;
 import io.reactivex.rxjava3.core.Single;
@@ -58,12 +62,16 @@ public class DefaultExchangeController extends AbstractService<ExchangeControlle
 
     private final Map<String, List<BatchObserver>> keyBasedBatchObservers = new ConcurrentHashMap<>();
     private final Map<String, BatchObserver> idBasedBatchObservers = new ConcurrentHashMap<>();
+    private final List<TargetListener> targetListeners = new ArrayList<>();
+
     protected final IdentifyConfiguration identifyConfiguration;
     protected final ClusterManager clusterManager;
     protected final CacheManager cacheManager;
     protected final ControllerClusterManager controllerClusterManager;
     private BatchStore batchStore;
     private ScheduledFuture<?> scheduledFuture;
+    private Topic<PrimaryChannelEvictedEvent> primaryChannelEvictedTopic;
+    private String primaryChannelEvictedSubscriptionId;
 
     public DefaultExchangeController(
         final IdentifyConfiguration identifyConfiguration,
@@ -82,6 +90,15 @@ public class DefaultExchangeController extends AbstractService<ExchangeControlle
         super.doStart();
         controllerClusterManager.start();
         startBatchFeature();
+
+        primaryChannelEvictedTopic =
+            clusterManager.topic(identifyConfiguration.identifyName(PrimaryChannelManager.PRIMARY_CHANNEL_EVENTS_EVICTED_TOPIC));
+        primaryChannelEvictedSubscriptionId =
+            primaryChannelEvictedTopic.addMessageListener(message -> {
+                if (clusterManager.self().primary()) {
+                    targetListeners.forEach(listener -> listener.onPrimaryChannelEvicted(message.content().targetId()));
+                }
+            });
     }
 
     private void startBatchFeature() {
@@ -144,6 +161,11 @@ public class DefaultExchangeController extends AbstractService<ExchangeControlle
     protected void doStop() throws Exception {
         log.debug("[{}] Stopping {} controller", this.identifyConfiguration.id(), this.getClass().getSimpleName());
         super.doStop();
+
+        if (primaryChannelEvictedTopic != null && primaryChannelEvictedSubscriptionId != null) {
+            primaryChannelEvictedTopic.removeMessageListener(primaryChannelEvictedSubscriptionId);
+        }
+
         controllerClusterManager.stop();
         stopBatchFeature();
     }
@@ -158,6 +180,18 @@ public class DefaultExchangeController extends AbstractService<ExchangeControlle
                 batchStore.clear();
             }
         }
+    }
+
+    @Override
+    public ExchangeController addListener(TargetListener targetListener) {
+        this.targetListeners.add(targetListener);
+        return this;
+    }
+
+    @Override
+    public ExchangeController removeListener(TargetListener targetListener) {
+        this.targetListeners.remove(targetListener);
+        return this;
     }
 
     @Override

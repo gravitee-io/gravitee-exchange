@@ -42,6 +42,7 @@ public class PrimaryChannelManager extends AbstractService<PrimaryChannelManager
 
     public static final String PRIMARY_CHANNEL_EVENTS_TOPIC = "controller-primary-channel-events";
     public static final String PRIMARY_CHANNEL_EVENTS_ELECTED_TOPIC = "controller-primary-channel-elected-events";
+    public static final String PRIMARY_CHANNEL_EVENTS_EVICTED_TOPIC = "controller-primary-channel-evicted-events";
     public static final String PRIMARY_CHANNEL_CACHE = "controller-primary-channel";
     public static final String PRIMARY_CHANNEL_CANDIDATE_CACHE = "controller-primary-channel-candidate";
     private final IdentifyConfiguration identifyConfiguration;
@@ -52,6 +53,7 @@ public class PrimaryChannelManager extends AbstractService<PrimaryChannelManager
     private String subscriptionListenerId;
     private Topic<ChannelEvent> primaryChannelEventTopic;
     private Topic<PrimaryChannelElectedEvent> primaryChannelElectedEventTopic;
+    private Topic<PrimaryChannelEvictedEvent> primaryChannelEvictedEventTopic;
     private CacheConfiguration cacheConfiguration;
 
     @Override
@@ -68,6 +70,7 @@ public class PrimaryChannelManager extends AbstractService<PrimaryChannelManager
         primaryChannelCache = cacheManager.getOrCreateCache(identifyConfiguration.identifyName(PRIMARY_CHANNEL_CACHE), cacheConfiguration);
         primaryChannelEventTopic = clusterManager.topic(identifyConfiguration.identifyName(PRIMARY_CHANNEL_EVENTS_TOPIC));
         primaryChannelElectedEventTopic = clusterManager.topic(identifyConfiguration.identifyName(PRIMARY_CHANNEL_EVENTS_ELECTED_TOPIC));
+        primaryChannelEvictedEventTopic = clusterManager.topic(identifyConfiguration.identifyName(PRIMARY_CHANNEL_EVENTS_EVICTED_TOPIC));
         subscriptionListenerId =
             primaryChannelEventTopic.addMessageListener(message -> {
                 ChannelEvent channelEvent = message.content();
@@ -146,6 +149,7 @@ public class PrimaryChannelManager extends AbstractService<PrimaryChannelManager
                 targetId
             );
             primaryChannelCache.evict(targetId);
+            primaryChannelEvictedEventTopic.publish(PrimaryChannelEvictedEvent.builder().targetId(targetId).build());
             return;
         }
         if (!channelIds.contains(previousPrimaryChannelId)) {
