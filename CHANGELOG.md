@@ -1,3 +1,10 @@
+# [1.4.0](https://github.com/gravitee-io/gravitee-exchange/compare/1.3.0...1.4.0) (2024-04-11)
+
+
+### Features
+
+* **controller:** register listener to listen primary channel eviction ([790c4ad](https://github.com/gravitee-io/gravitee-exchange/commit/790c4ad5827c7a3f4628d4a9779e88818141cf49))
+
 # [1.3.0](https://github.com/gravitee-io/gravitee-exchange/compare/1.2.5...1.3.0) (2024-04-11)
 
 
