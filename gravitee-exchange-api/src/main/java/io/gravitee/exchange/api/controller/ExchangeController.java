@@ -21,6 +21,7 @@ import io.gravitee.exchange.api.batch.BatchObserver;
 import io.gravitee.exchange.api.batch.KeyBatchObserver;
 import io.gravitee.exchange.api.command.Command;
 import io.gravitee.exchange.api.command.Reply;
+import io.gravitee.exchange.api.controller.listeners.TargetListener;
 import io.gravitee.exchange.api.controller.metrics.ChannelMetric;
 import io.gravitee.exchange.api.controller.metrics.TargetMetric;
 import io.reactivex.rxjava3.core.Completable;
@@ -32,6 +33,18 @@ import io.reactivex.rxjava3.core.Single;
  * @author GraviteeSource Team
  */
 public interface ExchangeController extends Service<ExchangeController> {
+    /**
+     * Add a {@link TargetListener} that will be notified
+     * @param targetListener {@link TargetListener} that will be notified
+     */
+    ExchangeController addListener(TargetListener targetListener);
+
+    /**
+     * Remove a {@link TargetListener}
+     * @param targetListener {@link TargetListener} to remove.
+     */
+    ExchangeController removeListener(TargetListener targetListener);
+
     /**
      * Return all target metrics
      *
