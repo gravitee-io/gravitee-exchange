@@ -1,3 +1,10 @@
+## [1.4.1](https://github.com/gravitee-io/gravitee-exchange/compare/1.4.0...1.4.1) (2024-04-12)
+
+
+### Bug Fixes
+
+* handle internal error when handling command ([2198d43](https://github.com/gravitee-io/gravitee-exchange/commit/2198d43cac3aa86324f2fe23ee5de1901cb8a099))
+
 # [1.4.0](https://github.com/gravitee-io/gravitee-exchange/compare/1.3.0...1.4.0) (2024-04-11)
 
 
