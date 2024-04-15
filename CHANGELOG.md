@@ -1,3 +1,10 @@
+## [1.4.2](https://github.com/gravitee-io/gravitee-exchange/compare/1.4.1...1.4.2) (2024-04-15)
+
+
+### Bug Fixes
+
+* add throwable to internal error warn log ([1ef23d7](https://github.com/gravitee-io/gravitee-exchange/commit/1ef23d70c196a009d3fb1fd13da61fee55228def))
+
 ## [1.4.1](https://github.com/gravitee-io/gravitee-exchange/compare/1.4.0...1.4.1) (2024-04-12)
 
 
