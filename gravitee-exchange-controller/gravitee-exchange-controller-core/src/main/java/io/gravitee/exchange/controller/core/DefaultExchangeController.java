@@ -42,16 +42,15 @@ import io.gravitee.node.api.cluster.messaging.Topic;
 import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Flowable;
 import io.reactivex.rxjava3.core.Single;
+import io.reactivex.rxjava3.disposables.Disposable;
 import io.reactivex.rxjava3.schedulers.Schedulers;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
-import org.springframework.scheduling.support.CronTrigger;
 
 /**
  * @author Guillaume LAMIRAND (guillaume.lamirand at graviteesource.com)
@@ -59,6 +58,8 @@ import org.springframework.scheduling.support.CronTrigger;
  */
 @Slf4j
 public class DefaultExchangeController extends AbstractService<ExchangeController> implements ExchangeController {
+
+    public static final long DEFAULT_BATCH_RETRY_SCHEDULER_PERIOD_IN_SECONDS = 60;
 
     private final Map<String, List<BatchObserver>> keyBasedBatchObservers = new ConcurrentHashMap<>();
     private final Map<String, BatchObserver> idBasedBatchObservers = new ConcurrentHashMap<>();
@@ -69,9 +70,10 @@ public class DefaultExchangeController extends AbstractService<ExchangeControlle
     protected final CacheManager cacheManager;
     protected final ControllerClusterManager controllerClusterManager;
     private BatchStore batchStore;
-    private ScheduledFuture<?> scheduledFuture;
     private Topic<PrimaryChannelEvictedEvent> primaryChannelEvictedTopic;
     private String primaryChannelEvictedSubscriptionId;
+    private Disposable batchSchedulerDisposable;
+    private Long batchRetryDelayMs;
 
     public DefaultExchangeController(
         final IdentifyConfiguration identifyConfiguration,
@@ -119,16 +121,29 @@ public class DefaultExchangeController extends AbstractService<ExchangeControlle
     }
 
     private void startBatchScheduler() {
-        log.debug("[{}] Starting batch scheduler", this.identifyConfiguration.id());
-        ThreadPoolTaskScheduler taskScheduler = new ThreadPoolTaskScheduler();
-        taskScheduler.setThreadNamePrefix(this.identifyConfiguration.identifyName("controller-batch-scheduler-"));
-        taskScheduler.initialize();
-        scheduledFuture =
-            taskScheduler.schedule(
-                () -> {
+        batchRetryDelayMs =
+            identifyConfiguration.getProperty(
+                "controller.batch.retry_interval_ms",
+                Long.class,
+                DEFAULT_BATCH_RETRY_SCHEDULER_PERIOD_IN_SECONDS * 1000
+            );
+        log.debug("[{}] Starting batch scheduler with delay [{}ms]", this.identifyConfiguration.id(), batchRetryDelayMs);
+        batchSchedulerDisposable =
+            Flowable
+                .<Long, Long>generate(
+                    () -> 0L,
+                    (state, emitter) -> {
+                        emitter.onNext(state);
+                        return state + 1;
+                    }
+                )
+                .delay(batchRetryDelayMs, TimeUnit.MILLISECONDS)
+                .rebatchRequests(1)
+                .flatMapCompletable(interval -> {
                     if (clusterManager.self().primary()) {
                         log.debug("[{}] Executing Batch scheduled tasks", this.identifyConfiguration.id());
-                        this.batchStore.findByStatus(BatchStatus.PENDING)
+                        return this.batchStore.findByStatus(BatchStatus.PENDING)
+                            .filter(batch -> batch.shouldRetryNow(batchRetryDelayMs))
                             .doOnNext(batch ->
                                 log.info(
                                     "[{}] Retrying batch '{}' with key '{}' and target id '{}'",
@@ -138,14 +153,28 @@ public class DefaultExchangeController extends AbstractService<ExchangeControlle
                                     batch.targetId()
                                 )
                             )
-                            .flatMapSingle(this::sendBatchCommands)
-                            .ignoreElements()
-                            .blockingAwait();
-                        log.debug("[{}] Batch scheduled tasks executed", this.identifyConfiguration.id());
+                            .flatMapCompletable(batch ->
+                                sendBatchCommands(batch)
+                                    .onErrorComplete(throwable -> {
+                                        log.error(
+                                            "Unable to retry batch '{}' with key '{}' and target id '{}'",
+                                            batch.id(),
+                                            batch.key(),
+                                            batch.targetId(),
+                                            throwable
+                                        );
+                                        return true;
+                                    })
+                                    .ignoreElement()
+                            );
                     }
-                },
-                new CronTrigger(identifyConfiguration.getProperty("controller.batch.cron", String.class, "*/60 * * * * *"))
-            );
+                    return Completable.complete();
+                })
+                .onErrorComplete(throwable -> {
+                    log.debug("Unable to find batch to retry", throwable);
+                    return true;
+                })
+                .subscribe();
     }
 
     private void resetPendingBatches() {
@@ -173,9 +202,10 @@ public class DefaultExchangeController extends AbstractService<ExchangeControlle
     private void stopBatchFeature() {
         boolean enabled = isBatchFeatureEnabled();
         if (enabled) {
-            if (scheduledFuture != null) {
-                scheduledFuture.cancel(true);
+            if (batchSchedulerDisposable != null) {
+                batchSchedulerDisposable.dispose();
             }
+
             if (batchStore != null) {
                 batchStore.clear();
             }
