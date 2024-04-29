@@ -116,6 +116,7 @@ public class Batch implements Serializable {
     }
 
     public Batch markCommandInError(final String commandId, final String errorDetails) {
+        this.errorDetails = errorDetails;
         return markCommand(commandId, CommandStatus.ERROR, errorDetails);
     }
 
