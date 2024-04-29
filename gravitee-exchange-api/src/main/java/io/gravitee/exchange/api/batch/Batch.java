@@ -20,10 +20,10 @@ import io.gravitee.exchange.api.command.CommandStatus;
 import io.gravitee.exchange.api.command.Reply;
 import java.io.Serializable;
 import java.time.Instant;
-import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -44,7 +44,6 @@ import lombok.experimental.Accessors;
 public class Batch implements Serializable {
 
     public static final int DEFAULT_MAX_RETRY = 5;
-    public static final long DEFAULT_SCHEDULER_PERIOD_IN_SECONDS = 60;
 
     /**
      * The ID of the batch
@@ -85,19 +84,20 @@ public class Batch implements Serializable {
 
     private Instant lastRetryAt;
 
-    public Batch start() {
+    public boolean shouldRetryNow(Long retryDelayMs) {
         Instant now = Instant.now();
-        boolean shouldRetry = Optional
+        return Optional
             .ofNullable(this.lastRetryAt)
-            .map(t -> now.compareTo(t.plusSeconds(this.retry * DEFAULT_SCHEDULER_PERIOD_IN_SECONDS)))
+            .map(t -> now.compareTo(t.plusMillis(this.retry * retryDelayMs)))
             .map(compare -> compare >= 0)
             .orElse(true);
+    }
 
-        if (shouldRetry) {
-            this.status = BatchStatus.IN_PROGRESS;
-            this.retry = Optional.ofNullable(this.retry).map(r -> r + 1).orElse(0);
-            this.lastRetryAt = now;
-        }
+    public Batch start() {
+        Instant now = Instant.now();
+        this.status = BatchStatus.IN_PROGRESS;
+        this.retry = Optional.ofNullable(this.retry).map(r -> r + 1).orElse(0);
+        this.lastRetryAt = now;
         return this;
     }
 
