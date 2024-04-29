@@ -1,3 +1,15 @@
+# [1.5.0](https://github.com/gravitee-io/gravitee-exchange/compare/1.4.2...1.5.0) (2024-04-29)
+
+
+### Bug Fixes
+
+* update batch error details when batch command fails ([44301c7](https://github.com/gravitee-io/gravitee-exchange/commit/44301c76447083e803119c95ce4ad806b6ae5720))
+
+
+### Features
+
+* improve batch retry scheduler ([34584aa](https://github.com/gravitee-io/gravitee-exchange/commit/34584aa5090626915408691c8559cab866f70dbf))
+
 ## [1.4.2](https://github.com/gravitee-io/gravitee-exchange/compare/1.4.1...1.4.2) (2024-04-15)
 
 
