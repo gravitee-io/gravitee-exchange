@@ -393,7 +393,13 @@ public abstract class AbstractWebSocketChannel implements Channel {
                         adaptedCommand.getReplyTimeoutMs(),
                         TimeUnit.MILLISECONDS,
                         Single.error(() -> {
-                            log.warn("No reply received in time for command [{}, {}]", adaptedCommand.getType(), adaptedCommand.getId());
+                            if (adaptedCommand.getReplyTimeoutMs() > 0) {
+                                log.warn(
+                                    "No reply received in time for command [{}, {}]",
+                                    adaptedCommand.getType(),
+                                    adaptedCommand.getId()
+                                );
+                            }
                             throw new ChannelTimeoutException();
                         })
                     )
