@@ -1,3 +1,10 @@
+## [1.5.1](https://github.com/gravitee-io/gravitee-exchange/compare/1.5.0...1.5.1) (2024-05-28)
+
+
+### Bug Fixes
+
+* avoid warn log when the timeout is inevitable ([c533e3b](https://github.com/gravitee-io/gravitee-exchange/commit/c533e3b69c19709cacf73515090b57ed0f4e8767))
+
 # [1.5.0](https://github.com/gravitee-io/gravitee-exchange/compare/1.4.2...1.5.0) (2024-04-29)
 
 

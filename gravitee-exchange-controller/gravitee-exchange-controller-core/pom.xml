@@ -24,7 +24,7 @@
     <parent>
         <groupId>io.gravitee.exchange</groupId>
         <artifactId>gravitee-exchange-controller</artifactId>
-        <version>1.5.0</version>
+        <version>1.5.1</version>
     </parent>
 
     <artifactId>gravitee-exchange-controller-core</artifactId>
