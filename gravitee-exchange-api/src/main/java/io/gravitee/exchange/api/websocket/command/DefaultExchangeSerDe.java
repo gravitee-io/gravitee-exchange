@@ -15,8 +15,12 @@
  */
 package io.gravitee.exchange.api.websocket.command;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.exc.InvalidFormatException;
 import com.fasterxml.jackson.databind.exc.InvalidTypeIdException;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import io.gravitee.exchange.api.command.Command;
@@ -95,7 +99,12 @@ public class DefaultExchangeSerDe implements ExchangeSerDe {
         final Map<String, Class<? extends Command<?>>> customCommandTypes,
         final Map<String, Class<? extends Reply<?>>> customReplyTypes
     ) {
-        this.objectMapper = objectMapper;
+        this.objectMapper =
+            objectMapper
+                .enable(DeserializationFeature.READ_UNKNOWN_ENUM_VALUES_USING_DEFAULT_VALUE)
+                .disable(DeserializationFeature.FAIL_ON_IGNORED_PROPERTIES)
+                .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
+                .setSerializationInclusion(JsonInclude.Include.NON_NULL);
 
         registerCommandTypes(objectMapper, customCommandTypes);
         registerReplyTypes(objectMapper, customReplyTypes);

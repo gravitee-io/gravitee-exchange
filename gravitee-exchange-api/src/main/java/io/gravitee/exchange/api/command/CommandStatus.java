@@ -15,6 +15,8 @@
  */
 package io.gravitee.exchange.api.command;
 
+import com.fasterxml.jackson.annotation.JsonEnumDefaultValue;
+
 /**
  * @author Guillaume LAMIRAND (guillaume.lamirand at graviteesource.com)
  * @author GraviteeSource Team
@@ -38,5 +40,6 @@ public enum CommandStatus {
     /**
      * The command got an unexpected error.
      */
+    @JsonEnumDefaultValue
     ERROR,
 }

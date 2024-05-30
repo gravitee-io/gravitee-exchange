@@ -19,6 +19,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.gravitee.exchange.api.command.Command;
+import io.gravitee.exchange.api.command.CommandStatus;
 import io.gravitee.exchange.api.command.Reply;
 import io.gravitee.exchange.api.command.goodbye.GoodByeCommand;
 import io.gravitee.exchange.api.command.goodbye.GoodByeCommandPayload;
@@ -144,6 +145,17 @@ class DefaultExchangeSerDeTest {
             assertThat(reply).isInstanceOf(UnknownReply.class);
         }
 
+        @Test
+        void should_deserialize_reply_with_unknown_status() {
+            Reply<?> reply = cut.deserializeAsReply(
+                ProtocolVersion.V1,
+                "wrong",
+                "{\"commandId\":\"commandId\",\"type\":\"HELLO\",\"commandStatus\":\"FAILURE\",\"errorDetails\":\"error\"}"
+            );
+            assertThat(reply).isInstanceOf(HelloReply.class);
+            assertThat(reply.getCommandStatus()).isEqualTo(CommandStatus.ERROR);
+        }
+
         private static Stream<Arguments> knownReplies() {
             return Stream.of(
                 Arguments.of(
@@ -158,7 +170,7 @@ class DefaultExchangeSerDeTest {
                 ),
                 Arguments.of(
                     HealthCheckCommand.COMMAND_TYPE,
-                    "{\"commandId\":\"commandId\",\"type\":\"HEALTH_CHECK\",\"commandStatus\":\"SUCCEEDED\",\"payload\":{\"healthy\":true,\"detail\":null}}",
+                    "{\"commandId\":\"commandId\",\"type\":\"HEALTH_CHECK\",\"commandStatus\":\"SUCCEEDED\",\"payload\":{\"healthy\":true}}",
                     new HealthCheckReply("commandId", new HealthCheckReplyPayload(true, null))
                 ),
                 Arguments.of(
