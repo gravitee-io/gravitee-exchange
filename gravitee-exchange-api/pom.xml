@@ -24,11 +24,11 @@
     <parent>
         <groupId>io.gravitee.exchange</groupId>
         <artifactId>gravitee-exchange</artifactId>
-        <version>1.5.1</version>
+        <version>1.5.2</version>
     </parent>
 
     <artifactId>gravitee-exchange-api</artifactId>
-    <version>1.5.1</version>
+    <version>1.5.2</version>
     <name>Gravitee.io - Exchange - API</name>
 
     <dependencies>

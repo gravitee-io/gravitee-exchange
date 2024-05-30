@@ -1,3 +1,10 @@
+## [1.5.2](https://github.com/gravitee-io/gravitee-exchange/compare/1.5.1...1.5.2) (2024-05-30)
+
+
+### Bug Fixes
+
+* set default enum value for CommandStatus ([a9bf170](https://github.com/gravitee-io/gravitee-exchange/commit/a9bf170f70fe934a3835ac3f6fcd28dfd38027e5))
+
 ## [1.5.1](https://github.com/gravitee-io/gravitee-exchange/compare/1.5.0...1.5.1) (2024-05-28)
 
 
