@@ -27,10 +27,13 @@ import io.gravitee.exchange.api.connector.ConnectorChannel;
 import io.gravitee.exchange.api.controller.ControllerChannel;
 import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Single;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.TimeUnit;
 import lombok.Builder;
 import lombok.extern.slf4j.Slf4j;
@@ -49,6 +52,7 @@ public class EmbeddedChannel implements ControllerChannel, ConnectorChannel {
         new ConcurrentHashMap<>();
     protected final Map<String, ReplyAdapter<? extends Reply<?>, ? extends Reply<?>>> replyAdapters = new ConcurrentHashMap<>();
     private boolean active = false;
+    protected final Set<String> pendingCommandsId = ConcurrentHashMap.newKeySet();
 
     @Builder
     public EmbeddedChannel(
@@ -66,6 +70,11 @@ public class EmbeddedChannel implements ControllerChannel, ConnectorChannel {
     @Override
     public boolean isActive() {
         return this.active;
+    }
+
+    @Override
+    public boolean hasPendingCommands() {
+        return !pendingCommandsId.isEmpty();
     }
 
     @Override
@@ -102,6 +111,7 @@ public class EmbeddedChannel implements ControllerChannel, ConnectorChannel {
                     if (!active) {
                         return Single.error(new ChannelInactiveException());
                     }
+                    pendingCommandsId.add(command.getId());
                     CommandAdapter<C, Command<?>, Reply<?>> commandAdapter = (CommandAdapter<C, Command<?>, Reply<?>>) commandAdapters.get(
                         command.getType()
                     );
@@ -140,7 +150,8 @@ public class EmbeddedChannel implements ControllerChannel, ConnectorChannel {
                     } else {
                         return Single.just((R) reply);
                     }
-                });
+                })
+                .doFinally(() -> pendingCommandsId.remove(command.getId()));
         } else {
             return Single.error(() -> {
                 if (!active) {

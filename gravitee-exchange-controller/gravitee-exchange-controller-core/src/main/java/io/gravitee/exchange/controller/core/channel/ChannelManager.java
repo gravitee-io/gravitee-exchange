@@ -236,7 +236,19 @@ public class ChannelManager extends AbstractService<ChannelManager> {
                     .flattenStreamAsFlowable(primaryChannel ->
                         channelIds
                             .stream()
-                            .map(channelId -> ChannelMetric.builder().id(channelId).primary(channelId.equals(primaryChannel)).build())
+                            .map(channelId -> {
+                                ChannelMetric.ChannelMetricBuilder metricBuilder = ChannelMetric
+                                    .builder()
+                                    .id(channelId)
+                                    .primary(channelId.equals(primaryChannel));
+                                this.localChannelRegistry.getById(channelId)
+                                    .ifPresent(controllerChannel ->
+                                        metricBuilder
+                                            .active(controllerChannel.isActive())
+                                            .pendingCommands(controllerChannel.hasPendingCommands())
+                                    );
+                                return metricBuilder.build();
+                            })
                     )
                     .toList()
                     .map(channelMetrics -> TargetMetric.builder().id(targetId).channelMetrics(channelMetrics).build());

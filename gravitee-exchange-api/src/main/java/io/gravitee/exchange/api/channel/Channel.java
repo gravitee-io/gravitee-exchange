@@ -70,6 +70,13 @@ public interface Channel {
     boolean isActive();
 
     /**
+     * Return <code>true</code> is the current channel has pending commands waiting for reply, <code>false</code> otherwise.
+     *
+     * @return status of the channel.
+     */
+    boolean hasPendingCommands();
+
+    /**
      * Send the actual commands to the current channel. In case of error, different exception could be returned:
      * <ul>
      * <li>if the channel is inactive {@link ChannelInitializationException} is signaled</li>
