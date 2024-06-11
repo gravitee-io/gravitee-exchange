@@ -31,5 +31,7 @@ import lombok.experimental.Accessors;
 public class ChannelMetric {
 
     String id;
+    boolean active;
+    boolean pendingCommands;
     boolean primary;
 }

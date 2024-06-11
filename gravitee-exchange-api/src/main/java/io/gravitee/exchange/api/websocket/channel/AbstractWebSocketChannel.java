@@ -115,6 +115,11 @@ public abstract class AbstractWebSocketChannel implements Channel {
     }
 
     @Override
+    public boolean hasPendingCommands() {
+        return !resultEmitters.isEmpty();
+    }
+
+    @Override
     public Completable initialize() {
         return Completable
             .create(emitter -> {
