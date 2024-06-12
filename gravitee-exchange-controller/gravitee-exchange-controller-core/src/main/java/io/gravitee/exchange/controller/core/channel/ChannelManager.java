@@ -43,6 +43,7 @@ import io.reactivex.rxjava3.core.Single;
 import io.reactivex.rxjava3.disposables.Disposable;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -97,7 +98,7 @@ public class ChannelManager extends AbstractService<ChannelManager> {
                 .rebatchRequests(1)
                 .doOnNext(aLong -> log.debug("[{}] Sending healthcheck command to all registered channels", this.identifyConfiguration.id())
                 )
-                .flatMapCompletable(interval -> sendHealthCheckCommand())
+                .concatMapCompletable(interval -> sendHealthCheckCommand())
                 .onErrorComplete()
                 .subscribe();
     }
@@ -233,23 +234,7 @@ public class ChannelManager extends AbstractService<ChannelManager> {
                 Set<String> channelIds = candidatesChannelEntries.getValue();
                 return this.primaryChannelManager.primaryChannelBy(targetId)
                     .defaultIfEmpty("unknown")
-                    .flattenStreamAsFlowable(primaryChannel ->
-                        channelIds
-                            .stream()
-                            .map(channelId -> {
-                                ChannelMetric.ChannelMetricBuilder metricBuilder = ChannelMetric
-                                    .builder()
-                                    .id(channelId)
-                                    .primary(channelId.equals(primaryChannel));
-                                this.localChannelRegistry.getById(channelId)
-                                    .ifPresent(controllerChannel ->
-                                        metricBuilder
-                                            .active(controllerChannel.isActive())
-                                            .pendingCommands(controllerChannel.hasPendingCommands())
-                                    );
-                                return metricBuilder.build();
-                            })
-                    )
+                    .flattenStreamAsFlowable(primaryChannel -> getChanelMetrics(channelIds, primaryChannel))
                     .toList()
                     .map(channelMetrics -> TargetMetric.builder().id(targetId).channelMetrics(channelMetrics).build());
             });
@@ -260,12 +245,24 @@ public class ChannelManager extends AbstractService<ChannelManager> {
             .defaultIfEmpty("unknown")
             .flatMapPublisher(primaryChannel ->
                 this.primaryChannelManager.candidatesChannel(targetId)
-                    .flattenStreamAsFlowable(candidatesChannel ->
-                        candidatesChannel
-                            .stream()
-                            .map(channelId -> ChannelMetric.builder().id(channelId).primary(channelId.equals(primaryChannel)).build())
-                    )
+                    .flattenStreamAsFlowable(candidatesChannel -> getChanelMetrics(candidatesChannel, primaryChannel))
             );
+    }
+
+    private Stream<ChannelMetric> getChanelMetrics(final Set<String> channelIds, final String primaryChannel) {
+        return channelIds
+            .stream()
+            .map(channelId -> {
+                ChannelMetric.ChannelMetricBuilder metricBuilder = ChannelMetric
+                    .builder()
+                    .id(channelId)
+                    .primary(channelId.equals(primaryChannel));
+                this.localChannelRegistry.getById(channelId)
+                    .ifPresent(controllerChannel ->
+                        metricBuilder.active(controllerChannel.isActive()).pendingCommands(controllerChannel.hasPendingCommands())
+                    );
+                return metricBuilder.build();
+            });
     }
 
     public ControllerChannel getChannelById(final String id) {
