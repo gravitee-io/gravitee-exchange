@@ -70,7 +70,7 @@ public interface Channel {
     boolean isActive();
 
     /**
-     * Return <code>true</code> is the current channel has pending commands waiting for reply, <code>false</code> otherwise.
+     * Return <code>true</code> if the current channel has pending commands waiting for reply, <code>false</code> otherwise.
      *
      * @return status of the channel.
      */

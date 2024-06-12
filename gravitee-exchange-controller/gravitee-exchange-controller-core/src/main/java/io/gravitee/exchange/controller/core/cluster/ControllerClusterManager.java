@@ -31,17 +31,22 @@ import io.gravitee.exchange.controller.core.cluster.exception.ControllerClusterS
 import io.gravitee.exchange.controller.core.cluster.exception.ControllerClusterTimeoutException;
 import io.gravitee.node.api.cache.CacheManager;
 import io.gravitee.node.api.cluster.ClusterManager;
+import io.gravitee.node.api.cluster.Member;
+import io.gravitee.node.api.cluster.MemberListener;
 import io.gravitee.node.api.cluster.messaging.Message;
 import io.gravitee.node.api.cluster.messaging.Queue;
 import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Flowable;
 import io.reactivex.rxjava3.core.Single;
 import io.reactivex.rxjava3.core.SingleEmitter;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -54,15 +59,26 @@ import org.springframework.stereotype.Service;
 @Service
 public class ControllerClusterManager extends AbstractService<ControllerClusterManager> {
 
+    private static final String AUTO_REBALANCING_ENABLED = "controller.auto-rebalancing.enabled";
+    private static final String AUTO_REBALANCING_DELAY = "controller.auto-rebalancing.delay";
+    private static final long AUTO_REBALANCING_DELAY_DEFAULT = 60_000;
+    private static final String AUTO_REBALANCING_UNIT = "controller.auto-rebalancing.unit";
+    private static final TimeUnit AUTO_REBALANCING_UNIT_DEFAULT = TimeUnit.MILLISECONDS;
     private final IdentifyConfiguration identifyConfiguration;
     private final ClusterManager clusterManager;
     private final ChannelManager channelManager;
     private final Map<String, SingleEmitter<Reply<?>>> resultEmittersByCommand = new ConcurrentHashMap<>();
     private final Map<String, String> subscriptionsListenersByChannel = new ConcurrentHashMap<>();
     private final String replyQueueName;
+    private final long rebalancingDelay;
+    private final TimeUnit rebalancingUnit;
+    private final Boolean rebalancingEnabled;
 
     private Queue<ClusteredReply<?>> clusteredReplyQueue;
     private String clusteredReplySubscriptionId;
+    private MemberListener memberListener;
+    private ScheduledExecutorService rebalancingExecutorService;
+    private LocalDateTime lastMemberAddedTime;
 
     public ControllerClusterManager(
         final IdentifyConfiguration identifyConfiguration,
@@ -73,6 +89,9 @@ public class ControllerClusterManager extends AbstractService<ControllerClusterM
         this.clusterManager = clusterManager;
         this.channelManager = new ChannelManager(identifyConfiguration, clusterManager, cacheManager);
         this.replyQueueName = identifyConfiguration.identifyName("controller-cluster-replies-" + UUID.randomUUID());
+        this.rebalancingEnabled = identifyConfiguration.getProperty(AUTO_REBALANCING_ENABLED, Boolean.class, true);
+        this.rebalancingDelay = identifyConfiguration.getProperty(AUTO_REBALANCING_DELAY, Long.class, AUTO_REBALANCING_DELAY_DEFAULT);
+        this.rebalancingUnit = identifyConfiguration.getProperty(AUTO_REBALANCING_UNIT, TimeUnit.class, AUTO_REBALANCING_UNIT_DEFAULT);
     }
 
     @Override
@@ -84,6 +103,25 @@ public class ControllerClusterManager extends AbstractService<ControllerClusterM
         // Create a queue to receive replies on and start to listen it.
         clusteredReplyQueue = clusterManager.queue(replyQueueName);
         clusteredReplySubscriptionId = clusteredReplyQueue.addMessageListener(this::handleClusteredReply);
+
+        // Add listener on member to manage re-scaling mechanism
+        if (Boolean.TRUE.equals(rebalancingEnabled)) {
+            rebalancingExecutorService = Executors.newSingleThreadScheduledExecutor(r -> new Thread(r, "gio-exchange-rebalancing"));
+            memberListener =
+                new MemberListener() {
+                    @Override
+                    public void onMemberAdded(final Member member) {
+                        lastMemberAddedTime = LocalDateTime.now();
+                        rebalancingExecutorService.schedule(() -> handleChannelsRebalancing(), rebalancingDelay, rebalancingUnit);
+                    }
+
+                    @Override
+                    public void onMemberRemoved(final Member member) {
+                        // Nothing to do
+                    }
+                };
+            clusterManager.addMemberListener(memberListener);
+        }
     }
 
     private void handleClusteredReply(Message<ClusteredReply<?>> clusteredReplyMessage) {
@@ -96,6 +134,47 @@ public class ControllerClusterManager extends AbstractService<ControllerClusterM
             } else {
                 emitter.onSuccess(clusteredReply.getReply());
             }
+        }
+    }
+
+    private void handleChannelsRebalancing() {
+        log.debug("[{}] Starting re-balancing process", identifyConfiguration.id());
+        if (lastMemberAddedTime.plus(rebalancingDelay, rebalancingUnit.toChronoUnit()).isBefore(LocalDateTime.now())) {
+            int clusterSize = clusterManager.members().size();
+            if (clusterSize > 1) {
+                targetsMetric()
+                    // Keep only target with more than 1 channel connected
+                    .filter(targetMetric -> targetMetric.channelMetrics().size() > 1)
+                    .map(TargetMetric::channelMetrics)
+                    // Reduce the list of 1/members elements
+                    .flatMapStream(channelMetrics -> {
+                        int size = channelMetrics.size();
+                        int reducedSize = (int) Math.ceil((float) size / clusterSize);
+                        log.debug("[{}] {} channels will be scheduled for re-balancing", identifyConfiguration.id(), reducedSize);
+                        return channelMetrics.stream().limit(reducedSize);
+                    })
+                    .map(channelMetric -> channelManager.getChannelById(channelMetric.id()))
+                    .filter(Objects::nonNull)
+                    // Filter channel with pending commands
+                    .filter(controllerChannel -> !controllerChannel.hasPendingCommands())
+                    // Unregister channel (close with reconnection)
+                    .flatMapCompletable(controllerChannel -> {
+                        log.debug(
+                            "[{}] Re-balancing channel [{}] for the target [{}]",
+                            identifyConfiguration.id(),
+                            controllerChannel.id(),
+                            controllerChannel.targetId()
+                        );
+                        return unregister(controllerChannel).onErrorComplete();
+                    })
+                    .doOnComplete(() -> log.debug("[{}] Starting re-balancing finished", identifyConfiguration.id()))
+                    // Need to await the current process to finish
+                    .blockingAwait();
+            } else {
+                log.debug("[{}] Rebalancing process ignored: there is no other cluster member", identifyConfiguration.id());
+            }
+        } else {
+            log.debug("[{}] Rebalancing process ignored: latest member added is too recent", identifyConfiguration.id());
         }
     }
 
@@ -114,6 +193,16 @@ public class ControllerClusterManager extends AbstractService<ControllerClusterM
             .toList();
 
         channels.forEach(this::channelDisconnected);
+
+        // Remove member listener
+        if (memberListener != null) {
+            clusterManager.removeMemberListener(memberListener);
+        }
+
+        // Shutting down rebalancing executor
+        if (rebalancingExecutorService != null) {
+            rebalancingExecutorService.shutdown();
+        }
 
         // Stop channel manager
         channelManager.stop();
