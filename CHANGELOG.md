@@ -1,3 +1,11 @@
+# [1.6.0](https://github.com/gravitee-io/gravitee-exchange/compare/1.5.2...1.6.0) (2024-06-18)
+
+
+### Features
+
+* add new metrics information ([3df8351](https://github.com/gravitee-io/gravitee-exchange/commit/3df83517b6ff26831ce805a6333594a46f220c5c))
+* implement rebalance mechanism ([834bfed](https://github.com/gravitee-io/gravitee-exchange/commit/834bfede455a3689c3c90d8aea0b5e8324fe44df))
+
 ## [1.5.2](https://github.com/gravitee-io/gravitee-exchange/compare/1.5.1...1.5.2) (2024-05-30)
 
 
