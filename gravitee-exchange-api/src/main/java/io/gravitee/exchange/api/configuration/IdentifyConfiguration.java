@@ -56,12 +56,18 @@ public class IdentifyConfiguration {
     }
 
     public boolean containsProperty(final String key) {
-        boolean containsProperty = environment.containsProperty(identifyProperty(key));
+        String identifyProperty = identifyProperty(key);
+        boolean containsProperty = environment.containsProperty(identifyProperty);
         if (!containsProperty && fallbackKeys.containsKey(key)) {
             String fallbackKey = fallbackKeys.get(key);
             containsProperty = environment.containsProperty(fallbackKey);
             if (containsProperty) {
-                log.warn("[{}] Using deprecated configuration '{}', replace it by '{}' as it will be removed.", id, fallbackKey, key);
+                log.warn(
+                    "[{}] Using deprecated configuration '{}', replace it by '{}' as it will be removed.",
+                    id,
+                    fallbackKey,
+                    identifyProperty
+                );
             }
         }
         return containsProperty;
@@ -72,12 +78,18 @@ public class IdentifyConfiguration {
     }
 
     public <T> T getProperty(final String key, final Class<T> clazz, final T defaultValue) {
-        T value = environment.getProperty(identifyProperty(key), clazz);
+        String identifyProperty = identifyProperty(key);
+        T value = environment.getProperty(identifyProperty, clazz);
         if (value == null && fallbackKeys.containsKey(key)) {
             String fallbackKey = fallbackKeys.get(key);
             value = environment.getProperty(fallbackKeys.get(key), clazz);
             if (value != null) {
-                log.warn("[{}] Using deprecated configuration '{}', replace it by '{}' as it will be removed.", id, fallbackKey, key);
+                log.warn(
+                    "[{}] Using deprecated configuration '{}', replace it by '{}' as it will be removed.",
+                    id,
+                    fallbackKey,
+                    identifyProperty
+                );
             }
         }
         return value != null ? value : defaultValue;
