@@ -1,3 +1,10 @@
+## [1.6.1](https://github.com/gravitee-io/gravitee-exchange/compare/1.6.0...1.6.1) (2024-06-27)
+
+
+### Bug Fixes
+
+* log the identified key instead of the key when using deprecated configuration ([9fd77fb](https://github.com/gravitee-io/gravitee-exchange/commit/9fd77fb2d1b74a1fc7190395abb179d0330ba8d6))
+
 # [1.6.0](https://github.com/gravitee-io/gravitee-exchange/compare/1.5.2...1.6.0) (2024-06-18)
 
 
