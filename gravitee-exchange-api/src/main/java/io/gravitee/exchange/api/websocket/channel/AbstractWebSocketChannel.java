@@ -394,6 +394,9 @@ public abstract class AbstractWebSocketChannel implements Channel {
                         resultEmitters.put(adaptedCommand.getId(), emitter);
                         writeCommand(adaptedCommand).doOnError(emitter::onError).onErrorComplete().subscribe();
                     })
+                    .doOnSuccess(reply -> {
+                        log.debug("Command reply received for command [{}, {}]", adaptedCommand.getType(), adaptedCommand.getId());
+                    })
                     .timeout(
                         adaptedCommand.getReplyTimeoutMs(),
                         TimeUnit.MILLISECONDS,
@@ -428,6 +431,7 @@ public abstract class AbstractWebSocketChannel implements Channel {
             .exchangeType(command.getType())
             .exchange(command)
             .build();
+
         return writeToSocket(command.getId(), protocolExchange);
     }
 
