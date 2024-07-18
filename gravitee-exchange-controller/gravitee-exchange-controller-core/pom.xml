@@ -47,6 +47,11 @@
             <scope>provided</scope>
         </dependency>
         <dependency>
+            <groupId>io.gravitee.node</groupId>
+            <artifactId>gravitee-node-management</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-lang3</artifactId>
             <scope>provided</scope>

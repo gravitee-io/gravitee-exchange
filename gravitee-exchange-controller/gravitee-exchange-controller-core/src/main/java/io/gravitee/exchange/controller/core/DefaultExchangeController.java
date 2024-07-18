@@ -28,19 +28,32 @@ import io.gravitee.exchange.api.configuration.IdentifyConfiguration;
 import io.gravitee.exchange.api.controller.ControllerChannel;
 import io.gravitee.exchange.api.controller.ExchangeController;
 import io.gravitee.exchange.api.controller.listeners.TargetListener;
+import io.gravitee.exchange.api.controller.metrics.BatchMetric;
 import io.gravitee.exchange.api.controller.metrics.ChannelMetric;
-import io.gravitee.exchange.api.controller.metrics.TargetMetric;
+import io.gravitee.exchange.api.controller.metrics.TargetBatchsMetric;
+import io.gravitee.exchange.api.controller.metrics.TargetChannelsMetric;
 import io.gravitee.exchange.controller.core.batch.BatchStore;
 import io.gravitee.exchange.controller.core.batch.exception.BatchDisabledException;
 import io.gravitee.exchange.controller.core.channel.primary.PrimaryChannelEvictedEvent;
 import io.gravitee.exchange.controller.core.channel.primary.PrimaryChannelManager;
 import io.gravitee.exchange.controller.core.cluster.ControllerClusterManager;
+import io.gravitee.exchange.controller.core.management.ControllerTargetIdMetricsEndpoint;
+import io.gravitee.exchange.controller.core.management.ControllerTargetsMetricsEndpoint;
+import io.gravitee.exchange.controller.core.management.batch.ControllerBatchMetricsEndpoint;
+import io.gravitee.exchange.controller.core.management.batch.ControllerBatchsMetricsEndpoint;
+import io.gravitee.exchange.controller.core.management.batch.ControllerTargetIdBatchsMetricsEndpoint;
+import io.gravitee.exchange.controller.core.management.channel.ControllerChannelMetricsEndpoint;
+import io.gravitee.exchange.controller.core.management.channel.ControllerChannelsMetricsEndpoint;
+import io.gravitee.exchange.controller.core.management.channel.ControllerTargetIdChannelsMetricsEndpoint;
 import io.gravitee.node.api.cache.CacheConfiguration;
 import io.gravitee.node.api.cache.CacheManager;
 import io.gravitee.node.api.cluster.ClusterManager;
 import io.gravitee.node.api.cluster.messaging.Topic;
+import io.gravitee.node.management.http.endpoint.ManagementEndpoint;
+import io.gravitee.node.management.http.endpoint.ManagementEndpointManager;
 import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Flowable;
+import io.reactivex.rxjava3.core.Maybe;
 import io.reactivex.rxjava3.core.Single;
 import io.reactivex.rxjava3.disposables.Disposable;
 import io.reactivex.rxjava3.schedulers.Schedulers;
@@ -68,7 +81,9 @@ public class DefaultExchangeController extends AbstractService<ExchangeControlle
     protected final IdentifyConfiguration identifyConfiguration;
     protected final ClusterManager clusterManager;
     protected final CacheManager cacheManager;
+    protected final ManagementEndpointManager managementEndpointManager;
     protected final ControllerClusterManager controllerClusterManager;
+    private List<ManagementEndpoint> managementEndpoints;
     private BatchStore batchStore;
     private Topic<PrimaryChannelEvictedEvent> primaryChannelEvictedTopic;
     private String primaryChannelEvictedSubscriptionId;
@@ -80,10 +95,35 @@ public class DefaultExchangeController extends AbstractService<ExchangeControlle
         final ClusterManager clusterManager,
         final CacheManager cacheManager
     ) {
+        this(identifyConfiguration, clusterManager, cacheManager, null);
+    }
+
+    public DefaultExchangeController(
+        final IdentifyConfiguration identifyConfiguration,
+        final ClusterManager clusterManager,
+        final CacheManager cacheManager,
+        final ManagementEndpointManager managementEndpointManager
+    ) {
         this.identifyConfiguration = identifyConfiguration;
         this.clusterManager = clusterManager;
         this.cacheManager = cacheManager;
+        this.managementEndpointManager = managementEndpointManager;
         this.controllerClusterManager = new ControllerClusterManager(identifyConfiguration, clusterManager, cacheManager);
+
+        boolean managementEnabled = identifyConfiguration.getProperty("controller.management.enabled", Boolean.class, true);
+        if (managementEnabled) {
+            managementEndpoints = new ArrayList<>();
+            managementEndpoints.add(new ControllerTargetsMetricsEndpoint(identifyConfiguration, this));
+            managementEndpoints.add(new ControllerTargetIdMetricsEndpoint(identifyConfiguration, this));
+            managementEndpoints.add(new ControllerChannelsMetricsEndpoint(identifyConfiguration, this));
+            managementEndpoints.add(new ControllerChannelMetricsEndpoint(identifyConfiguration, this));
+            managementEndpoints.add(new ControllerTargetIdChannelsMetricsEndpoint(identifyConfiguration, this));
+            if (isBatchFeatureEnabled()) {
+                managementEndpoints.add(new ControllerBatchMetricsEndpoint(identifyConfiguration, this));
+                managementEndpoints.add(new ControllerBatchsMetricsEndpoint(identifyConfiguration, this));
+                managementEndpoints.add(new ControllerTargetIdBatchsMetricsEndpoint(identifyConfiguration, this));
+            }
+        }
     }
 
     @Override
@@ -101,11 +141,17 @@ public class DefaultExchangeController extends AbstractService<ExchangeControlle
                     targetListeners.forEach(listener -> listener.onPrimaryChannelEvicted(message.content().targetId()));
                 }
             });
+
+        if (managementEndpointManager != null && managementEndpoints != null) {
+            log.debug("[{}] Registering controller management endpoints", this.identifyConfiguration.id());
+            managementEndpoints.forEach(managementEndpointManager::register);
+        }
     }
 
     private void startBatchFeature() {
         boolean enabled = isBatchFeatureEnabled();
         if (enabled) {
+            log.debug("[{}] Starting controller batch feature", this.identifyConfiguration.id());
             if (batchStore == null) {
                 batchStore =
                     new BatchStore(
@@ -197,11 +243,17 @@ public class DefaultExchangeController extends AbstractService<ExchangeControlle
 
         controllerClusterManager.stop();
         stopBatchFeature();
+
+        if (managementEndpointManager != null && managementEndpoints != null) {
+            log.debug("[{}] Unregistering controller management endpoints", this.identifyConfiguration.id());
+            managementEndpoints.forEach(managementEndpointManager::unregister);
+        }
     }
 
     private void stopBatchFeature() {
         boolean enabled = isBatchFeatureEnabled();
         if (enabled) {
+            log.debug("[{}] Stopping controller batch feature", this.identifyConfiguration.id());
             if (batchSchedulerDisposable != null) {
                 batchSchedulerDisposable.dispose();
             }
@@ -225,13 +277,53 @@ public class DefaultExchangeController extends AbstractService<ExchangeControlle
     }
 
     @Override
-    public Flowable<TargetMetric> targetsMetric() {
-        return controllerClusterManager.targetsMetric();
+    public Flowable<TargetBatchsMetric> batchsMetricsByTarget() {
+        if (isBatchFeatureEnabled()) {
+            return batchStore
+                .getAll()
+                .groupBy(Batch::targetId)
+                .flatMapSingle(targetGroup ->
+                    targetGroup
+                        .map(BatchMetric::new)
+                        .toList()
+                        .map(batchMetrics -> TargetBatchsMetric.builder().id(targetGroup.getKey()).batchs(batchMetrics).build())
+                );
+        } else {
+            return Flowable.empty();
+        }
     }
 
     @Override
-    public Flowable<ChannelMetric> channelsMetric(final String targetId) {
-        return controllerClusterManager.channelsMetric(targetId);
+    public Flowable<BatchMetric> batchsMetricsForTarget(final String targetId) {
+        if (isBatchFeatureEnabled()) {
+            return batchStore.getAll().filter(batch -> targetId.equals(batch.targetId())).map(BatchMetric::new);
+        } else {
+            return Flowable.empty();
+        }
+    }
+
+    @Override
+    public Maybe<BatchMetric> batchMetric(final String id) {
+        if (isBatchFeatureEnabled()) {
+            return batchStore.getById(id).map(BatchMetric::new);
+        } else {
+            return Maybe.empty();
+        }
+    }
+
+    @Override
+    public Flowable<TargetChannelsMetric> channelsMetricsByTarget() {
+        return controllerClusterManager.channelsMetricsByTarget();
+    }
+
+    @Override
+    public Flowable<ChannelMetric> channelsMetricsForTarget(final String targetId) {
+        return controllerClusterManager.channelsMetricsForTarget(targetId);
+    }
+
+    @Override
+    public Maybe<ChannelMetric> channelMetric(final String id) {
+        return controllerClusterManager.channelMetric(id);
     }
 
     @Override

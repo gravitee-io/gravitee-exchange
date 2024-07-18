@@ -33,7 +33,7 @@ import io.gravitee.exchange.api.command.primary.PrimaryReply;
 import io.gravitee.exchange.api.command.primary.PrimaryReplyPayload;
 import io.gravitee.exchange.api.configuration.IdentifyConfiguration;
 import io.gravitee.exchange.api.controller.metrics.ChannelMetric;
-import io.gravitee.exchange.api.controller.metrics.TargetMetric;
+import io.gravitee.exchange.api.controller.metrics.TargetChannelsMetric;
 import io.gravitee.exchange.controller.core.channel.exception.NoChannelFoundException;
 import io.gravitee.exchange.controller.core.channel.primary.ChannelEvent;
 import io.gravitee.node.api.cache.CacheManager;
@@ -236,18 +236,18 @@ class ChannelManagerTest {
         assertThat(vertxTestContext.awaitCompletion(10, TimeUnit.SECONDS)).isTrue();
 
         cut
-            .targetsMetric()
+            .channelsMetricsByTarget()
             .toList()
             .test()
             .awaitDone(10, TimeUnit.SECONDS)
             .assertValue(targetMetrics -> {
-                for (TargetMetric targetMetric : targetMetrics) {
-                    if (targetMetric.id().equals("targetId")) {
-                        assertThat(targetMetric.channelMetrics())
+                for (TargetChannelsMetric targetChannelsMetric : targetMetrics) {
+                    if (targetChannelsMetric.id().equals("targetId")) {
+                        assertThat(targetChannelsMetric.channels())
                             .extracting(ChannelMetric::id, ChannelMetric::primary, ChannelMetric::active)
                             .containsOnly(Tuple.tuple("channelId", true, true), Tuple.tuple("channelId2", false, false));
-                    } else if (targetMetric.id().equals("targetId2")) {
-                        assertThat(targetMetric.channelMetrics())
+                    } else if (targetChannelsMetric.id().equals("targetId2")) {
+                        assertThat(targetChannelsMetric.channels())
                             .extracting(ChannelMetric::id, ChannelMetric::primary, ChannelMetric::active)
                             .containsOnly(Tuple.tuple("channelId3", true, true));
                     } else {
@@ -275,7 +275,7 @@ class ChannelManagerTest {
         assertThat(vertxTestContext.awaitCompletion(10, TimeUnit.SECONDS)).isTrue();
 
         cut
-            .channelsMetric("targetId")
+            .channelsMetricsForTarget("targetId")
             .toList()
             .test()
             .awaitDone(10, TimeUnit.SECONDS)

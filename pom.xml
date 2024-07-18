@@ -184,18 +184,6 @@
                 <artifactId>maven-source-plugin</artifactId>
             </plugin>
             <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-javadoc-plugin</artifactId>
-                <version>${maven-javadoc-plugin.version}</version>
-                <configuration>
-                    <additionalOptions>-Xdoclint:none</additionalOptions>
-                    <additionalJOption>-Xdoclint:none</additionalJOption>
-                    <quiet>true</quiet>
-                    <doclint>none</doclint>
-                    <source>${jdk.version}</source>
-                </configuration>
-            </plugin>
-            <plugin>
                 <groupId>com.hubspot.maven.plugins</groupId>
                 <artifactId>prettier-maven-plugin</artifactId>
                 <configuration>

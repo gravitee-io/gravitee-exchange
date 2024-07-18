@@ -21,7 +21,7 @@ import io.gravitee.exchange.api.command.Reply;
 import io.gravitee.exchange.api.configuration.IdentifyConfiguration;
 import io.gravitee.exchange.api.controller.ControllerChannel;
 import io.gravitee.exchange.api.controller.metrics.ChannelMetric;
-import io.gravitee.exchange.api.controller.metrics.TargetMetric;
+import io.gravitee.exchange.api.controller.metrics.TargetChannelsMetric;
 import io.gravitee.exchange.controller.core.channel.ChannelManager;
 import io.gravitee.exchange.controller.core.cluster.command.ClusteredCommand;
 import io.gravitee.exchange.controller.core.cluster.command.ClusteredReply;
@@ -37,6 +37,7 @@ import io.gravitee.node.api.cluster.messaging.Message;
 import io.gravitee.node.api.cluster.messaging.Queue;
 import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Flowable;
+import io.reactivex.rxjava3.core.Maybe;
 import io.reactivex.rxjava3.core.Single;
 import io.reactivex.rxjava3.core.SingleEmitter;
 import java.time.LocalDateTime;
@@ -142,10 +143,10 @@ public class ControllerClusterManager extends AbstractService<ControllerClusterM
         if (lastMemberAddedTime.plus(rebalancingDelay, rebalancingUnit.toChronoUnit()).isBefore(LocalDateTime.now())) {
             int clusterSize = clusterManager.members().size();
             if (clusterSize > 1) {
-                targetsMetric()
+                channelsMetricsByTarget()
                     // Keep only target with more than 1 channel connected
-                    .filter(targetMetric -> targetMetric.channelMetrics().size() > 1)
-                    .map(TargetMetric::channelMetrics)
+                    .filter(targetMetric -> targetMetric.channels().size() > 1)
+                    .map(TargetChannelsMetric::channels)
                     // Reduce the list of 1/members elements
                     .flatMapStream(channelMetrics -> {
                         int size = channelMetrics.size();
@@ -217,12 +218,16 @@ public class ControllerClusterManager extends AbstractService<ControllerClusterM
         resultEmittersByCommand.clear();
     }
 
-    public Flowable<TargetMetric> targetsMetric() {
-        return channelManager.targetsMetric();
+    public Flowable<TargetChannelsMetric> channelsMetricsByTarget() {
+        return channelManager.channelsMetricsByTarget();
     }
 
-    public Flowable<ChannelMetric> channelsMetric(final String targetId) {
-        return channelManager.channelsMetric(targetId);
+    public Flowable<ChannelMetric> channelsMetricsForTarget(final String targetId) {
+        return channelManager.channelsMetricsForTarget(targetId);
+    }
+
+    public Maybe<ChannelMetric> channelMetric(final String id) {
+        return channelManager.channelMetric(id);
     }
 
     /**
@@ -286,7 +291,7 @@ public class ControllerClusterManager extends AbstractService<ControllerClusterM
         final ClusteredCommand<?> clusteredCommand = new ClusteredCommand<>(command, targetId, replyQueueName);
 
         return channelManager
-            .channelsMetric(targetId)
+            .channelsMetricsForTarget(targetId)
             .isEmpty()
             .flatMap(isEmpty -> {
                 if (Boolean.TRUE.equals(isEmpty)) {

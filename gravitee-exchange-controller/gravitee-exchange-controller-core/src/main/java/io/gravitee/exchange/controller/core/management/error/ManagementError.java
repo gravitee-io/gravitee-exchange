@@ -13,13 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.gravitee.exchange.api.controller.metrics;
+package io.gravitee.exchange.controller.core.management.error;
 
 import lombok.Builder;
 
-/**
- * @author Guillaume LAMIRAND (guillaume.lamirand at graviteesource.com)
- * @author GraviteeSource Team
- */
 @Builder
-public record ChannelMetric(String id, String targetId, boolean active, boolean pendingCommands, boolean primary) {}
+public record ManagementError(int code, String message) {}

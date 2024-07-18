@@ -40,6 +40,10 @@ public class BatchStore {
         store.clear();
     }
 
+    public Flowable<Batch> getAll() {
+        return store.rxValues().subscribeOn(Schedulers.io());
+    }
+
     public Maybe<Batch> getById(String id) {
         return Maybe
             .fromCallable(() -> {

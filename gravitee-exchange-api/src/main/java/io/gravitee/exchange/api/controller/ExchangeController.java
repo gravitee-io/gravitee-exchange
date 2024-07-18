@@ -22,10 +22,13 @@ import io.gravitee.exchange.api.batch.KeyBatchObserver;
 import io.gravitee.exchange.api.command.Command;
 import io.gravitee.exchange.api.command.Reply;
 import io.gravitee.exchange.api.controller.listeners.TargetListener;
+import io.gravitee.exchange.api.controller.metrics.BatchMetric;
 import io.gravitee.exchange.api.controller.metrics.ChannelMetric;
-import io.gravitee.exchange.api.controller.metrics.TargetMetric;
+import io.gravitee.exchange.api.controller.metrics.TargetBatchsMetric;
+import io.gravitee.exchange.api.controller.metrics.TargetChannelsMetric;
 import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Flowable;
+import io.reactivex.rxjava3.core.Maybe;
 import io.reactivex.rxjava3.core.Single;
 
 /**
@@ -46,19 +49,50 @@ public interface ExchangeController extends Service<ExchangeController> {
     ExchangeController removeListener(TargetListener targetListener);
 
     /**
-     * Return all target metrics
+     * Return batchs metrics grouped by target
      *
-     * @return target metrics.
+     * @return batchs metrics by target
      */
-    Flowable<TargetMetric> targetsMetric();
+    Flowable<TargetBatchsMetric> batchsMetricsByTarget();
 
     /**
-     * Return all channel metrics for the given target
+     * Return all batchs metrics for the given target
+     *
+     * @param targetId the target id to retrieve batchs metrics
+     * @return batchs metrics.
+     */
+    Flowable<BatchMetric> batchsMetricsForTarget(String targetId);
+
+    /**
+     * Return batch metric for the given id
+     *
+     * @param batchId the batch id to retrieve
+     * @return batch metric.
+     */
+    Maybe<BatchMetric> batchMetric(String batchId);
+
+    /**
+     * Return channels metrics grouped by target
+     *
+     * @return channel metrics by target
+     */
+    Flowable<TargetChannelsMetric> channelsMetricsByTarget();
+
+    /**
+     * Return channel metrics for the given target
      *
      * @param targetId the target id to retrieve channel metrics
      * @return channel metrics.
      */
-    Flowable<ChannelMetric> channelsMetric(String targetId);
+    Flowable<ChannelMetric> channelsMetricsForTarget(String targetId);
+
+    /**
+     * Return channel metric for the given id
+     *
+     * @param channelId the channel id to retrieve
+     * @return channel metric.
+     */
+    Maybe<ChannelMetric> channelMetric(String channelId);
 
     /**
      * Register a new {@code ControllerChannel} on this controller
