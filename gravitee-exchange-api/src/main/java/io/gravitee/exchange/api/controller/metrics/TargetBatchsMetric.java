@@ -16,21 +16,11 @@
 package io.gravitee.exchange.api.controller.metrics;
 
 import java.util.List;
-import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Getter;
-import lombok.experimental.Accessors;
 
 /**
  * @author Guillaume LAMIRAND (guillaume.lamirand at graviteesource.com)
  * @author GraviteeSource Team
  */
 @Builder
-@AllArgsConstructor
-@Getter
-@Accessors(fluent = true, chain = true)
-public class TargetMetric {
-
-    String id;
-    List<ChannelMetric> channelMetrics;
-}
+public record TargetBatchsMetric(String id, List<BatchMetric> batchs) {}

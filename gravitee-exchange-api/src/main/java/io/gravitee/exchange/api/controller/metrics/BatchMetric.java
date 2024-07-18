@@ -15,11 +15,32 @@
  */
 package io.gravitee.exchange.api.controller.metrics;
 
+import io.gravitee.exchange.api.batch.Batch;
+import io.gravitee.exchange.api.batch.BatchStatus;
+import java.time.Instant;
 import lombok.Builder;
 
-/**
- * @author Guillaume LAMIRAND (guillaume.lamirand at graviteesource.com)
- * @author GraviteeSource Team
- */
 @Builder
-public record ChannelMetric(String id, String targetId, boolean active, boolean pendingCommands, boolean primary) {}
+public record BatchMetric(
+    String id,
+    String key,
+    String targetId,
+    BatchStatus status,
+    String errorDetails,
+    Integer maxRetry,
+    Integer retry,
+    Instant lastRetryAt
+) {
+    public BatchMetric(Batch batch) {
+        this(
+            batch.id(),
+            batch.key(),
+            batch.targetId(),
+            batch.status(),
+            batch.errorDetails(),
+            batch.maxRetry(),
+            batch.retry(),
+            batch.lastRetryAt()
+        );
+    }
+}

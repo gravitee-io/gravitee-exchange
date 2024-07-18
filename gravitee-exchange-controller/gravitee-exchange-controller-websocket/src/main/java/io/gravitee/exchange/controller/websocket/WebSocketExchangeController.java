@@ -20,8 +20,6 @@ import io.gravitee.exchange.api.controller.ControllerCommandHandlersFactory;
 import io.gravitee.exchange.api.controller.ExchangeController;
 import io.gravitee.exchange.api.websocket.command.ExchangeSerDe;
 import io.gravitee.exchange.controller.core.DefaultExchangeController;
-import io.gravitee.exchange.controller.core.channel.primary.PrimaryChannelManager;
-import io.gravitee.exchange.controller.core.cluster.ControllerClusterManager;
 import io.gravitee.exchange.controller.websocket.auth.WebSocketControllerAuthentication;
 import io.gravitee.exchange.controller.websocket.server.WebSocketControllerServerConfiguration;
 import io.gravitee.exchange.controller.websocket.server.WebSocketControllerServerVerticle;
@@ -30,6 +28,7 @@ import io.gravitee.node.api.certificate.KeyStoreLoaderFactoryRegistry;
 import io.gravitee.node.api.certificate.KeyStoreLoaderOptions;
 import io.gravitee.node.api.certificate.TrustStoreLoaderOptions;
 import io.gravitee.node.api.cluster.ClusterManager;
+import io.gravitee.node.management.http.endpoint.ManagementEndpointManager;
 import io.gravitee.node.vertx.server.http.VertxHttpServer;
 import io.gravitee.node.vertx.server.http.VertxHttpServerFactory;
 import io.gravitee.node.vertx.server.http.VertxHttpServerOptions;
@@ -70,7 +69,33 @@ public class WebSocketExchangeController extends DefaultExchangeController imple
         final ControllerCommandHandlersFactory controllerCommandHandlersFactory,
         final ExchangeSerDe exchangeSerDe
     ) {
-        super(identifyConfiguration, clusterManager, cacheManager);
+        this(
+            identifyConfiguration,
+            clusterManager,
+            cacheManager,
+            null,
+            vertx,
+            keyStoreLoaderFactoryRegistry,
+            trustStoreLoaderFactoryRegistry,
+            controllerAuthentication,
+            controllerCommandHandlersFactory,
+            exchangeSerDe
+        );
+    }
+
+    public WebSocketExchangeController(
+        final IdentifyConfiguration identifyConfiguration,
+        final ClusterManager clusterManager,
+        final CacheManager cacheManager,
+        final ManagementEndpointManager managementEndpointManager,
+        final Vertx vertx,
+        final KeyStoreLoaderFactoryRegistry<KeyStoreLoaderOptions> keyStoreLoaderFactoryRegistry,
+        final KeyStoreLoaderFactoryRegistry<TrustStoreLoaderOptions> trustStoreLoaderFactoryRegistry,
+        final WebSocketControllerAuthentication<?> controllerAuthentication,
+        final ControllerCommandHandlersFactory controllerCommandHandlersFactory,
+        final ExchangeSerDe exchangeSerDe
+    ) {
+        super(identifyConfiguration, clusterManager, cacheManager, managementEndpointManager);
         this.vertx = vertx;
         this.serverConfiguration = new WebSocketControllerServerConfiguration(identifyConfiguration);
         this.keyStoreLoaderFactoryRegistry = keyStoreLoaderFactoryRegistry;

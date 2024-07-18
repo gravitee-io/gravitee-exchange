@@ -15,6 +15,7 @@
  */
 package io.gravitee.exchange.api.controller.metrics;
 
+import java.util.List;
 import lombok.Builder;
 
 /**
@@ -22,4 +23,4 @@ import lombok.Builder;
  * @author GraviteeSource Team
  */
 @Builder
-public record ChannelMetric(String id, String targetId, boolean active, boolean pendingCommands, boolean primary) {}
+public record TargetChannelsMetric(String id, List<ChannelMetric> channels) {}

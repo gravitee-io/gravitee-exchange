@@ -40,3 +40,21 @@ image::docs/sending-command.png[width=1125]
 The purpose of health check is to verify that the connector is still properly working and able to receive commands, at network level and also at the business logic level. The connector can do business check to ensure it can react on any commands.
 
 image::docs/health-check.png[width=1125]
+
+== Management API
+By default, when a controller is created it will register endpoints on the Node Management API. See https://github.com/gravitee-io/gravitee-node/blob/master/README.adoc#management.
+
+The endpoints are the following, where `[identifier]` is optional and will be your controller identifier:
+
+    - `/exchange/[identifier]/targets`: return metrics information on channels and batchs grouped by target.
+    - `/exchange/[identifier]/targets/:id`: return metrics information on channels and batchs for the given target.
+    - `/exchange/[identifier]/targets/:id/channels`: return metrics information on channels for the given target.
+    - `/exchange/[identifier]/targets/:id/batchs`: return metrics information on batchs for the given target.
+    - `/exchange/[identifier]/batchs`: return metrics information on batchs. Can be filtered by `status` and `targetId`.
+    - `/exchange/[identifier]/batchs/:id`: return metrics information for the given batch.
+    - `/exchange/[identifier]/channels`: list channels. Can be filtered by `active` status and `targetId`.
+    - `/exchange/[identifier]/channels/:id`: return metrics information for the given channel.
+
+=== Deactivation
+
+This behavior can be disabled by settings the following property `[identifier].controller.management.enabled` to `false`. The `[identifier]` is your controller identifier or `exchange` by default.

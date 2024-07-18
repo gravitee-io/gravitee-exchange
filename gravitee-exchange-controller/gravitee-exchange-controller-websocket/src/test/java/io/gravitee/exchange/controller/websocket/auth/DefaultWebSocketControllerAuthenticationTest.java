@@ -30,7 +30,7 @@ import org.junit.jupiter.api.Test;
 class DefaultWebSocketControllerAuthenticationTest {
 
     @Test
-    void should_return_a_valid_context__by_default() {
+    void should_return_a_valid_context_by_default() {
         DefaultWebSocketControllerAuthentication cut = new DefaultWebSocketControllerAuthentication();
         ControllerCommandContext controllerContext = cut.authenticate(null);
         assertThat(controllerContext).isInstanceOf(DefaultCommandContext.class);

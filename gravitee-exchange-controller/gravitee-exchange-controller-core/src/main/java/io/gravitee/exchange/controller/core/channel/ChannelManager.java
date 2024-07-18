@@ -29,7 +29,7 @@ import io.gravitee.exchange.api.command.primary.PrimaryReply;
 import io.gravitee.exchange.api.configuration.IdentifyConfiguration;
 import io.gravitee.exchange.api.controller.ControllerChannel;
 import io.gravitee.exchange.api.controller.metrics.ChannelMetric;
-import io.gravitee.exchange.api.controller.metrics.TargetMetric;
+import io.gravitee.exchange.api.controller.metrics.TargetChannelsMetric;
 import io.gravitee.exchange.controller.core.channel.exception.NoChannelFoundException;
 import io.gravitee.exchange.controller.core.channel.primary.PrimaryChannelElectedEvent;
 import io.gravitee.exchange.controller.core.channel.primary.PrimaryChannelManager;
@@ -227,29 +227,49 @@ public class ChannelManager extends AbstractService<ChannelManager> {
         super.doStop();
     }
 
-    public Flowable<TargetMetric> targetsMetric() {
+    public Flowable<TargetChannelsMetric> channelsMetricsByTarget() {
         return this.primaryChannelManager.candidatesChannel()
             .flatMapSingle(candidatesChannelEntries -> {
                 String targetId = candidatesChannelEntries.getKey();
                 Set<String> channelIds = candidatesChannelEntries.getValue();
                 return this.primaryChannelManager.primaryChannelBy(targetId)
                     .defaultIfEmpty("unknown")
-                    .flattenStreamAsFlowable(primaryChannel -> getChanelMetrics(channelIds, primaryChannel))
+                    .flattenStreamAsFlowable(primaryChannel -> getChannelMetrics(channelIds, primaryChannel))
                     .toList()
-                    .map(channelMetrics -> TargetMetric.builder().id(targetId).channelMetrics(channelMetrics).build());
+                    .map(channelMetrics -> TargetChannelsMetric.builder().id(targetId).channels(channelMetrics).build());
             });
     }
 
-    public Flowable<ChannelMetric> channelsMetric(final String targetId) {
+    public Flowable<ChannelMetric> channelsMetricsForTarget(final String targetId) {
         return this.primaryChannelManager.primaryChannelBy(targetId)
             .defaultIfEmpty("unknown")
             .flatMapPublisher(primaryChannel ->
                 this.primaryChannelManager.candidatesChannel(targetId)
-                    .flattenStreamAsFlowable(candidatesChannel -> getChanelMetrics(candidatesChannel, primaryChannel))
+                    .flattenStreamAsFlowable(candidatesChannel -> getChannelMetrics(candidatesChannel, primaryChannel))
             );
     }
 
-    private Stream<ChannelMetric> getChanelMetrics(final Set<String> channelIds, final String primaryChannel) {
+    public Maybe<ChannelMetric> channelMetric(final String channelId) {
+        return Maybe
+            .fromOptional(this.localChannelRegistry.getById(channelId))
+            .flatMapSingle(controllerChannel ->
+                primaryChannelManager
+                    .primaryChannelBy(controllerChannel.targetId())
+                    .defaultIfEmpty("unknown")
+                    .map(primaryChannel ->
+                        ChannelMetric
+                            .builder()
+                            .id(channelId)
+                            .primary(channelId.equals(primaryChannel))
+                            .targetId(controllerChannel.targetId())
+                            .active(controllerChannel.isActive())
+                            .pendingCommands(controllerChannel.hasPendingCommands())
+                            .build()
+                    )
+            );
+    }
+
+    private Stream<ChannelMetric> getChannelMetrics(final Set<String> channelIds, final String primaryChannel) {
         return channelIds
             .stream()
             .map(channelId -> {
@@ -259,7 +279,10 @@ public class ChannelManager extends AbstractService<ChannelManager> {
                     .primary(channelId.equals(primaryChannel));
                 this.localChannelRegistry.getById(channelId)
                     .ifPresent(controllerChannel ->
-                        metricBuilder.active(controllerChannel.isActive()).pendingCommands(controllerChannel.hasPendingCommands())
+                        metricBuilder
+                            .targetId(controllerChannel.targetId())
+                            .active(controllerChannel.isActive())
+                            .pendingCommands(controllerChannel.hasPendingCommands())
                     );
                 return metricBuilder.build();
             });
