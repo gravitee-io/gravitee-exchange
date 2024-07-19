@@ -60,11 +60,18 @@ public class WebSocketConnectorChannel extends AbstractWebSocketChannel implemen
             .initialize()
             .andThen(
                 Single.defer(() -> {
+                    log.debug("Starting Hello handshake process for channel '{}'", this.id);
                     HelloCommand helloCommand = new HelloCommand(new HelloCommandPayload(UUID.randomUUID().toString()));
                     return sendHelloCommand(helloCommand)
                         .onErrorResumeNext(throwable -> {
                             if (throwable instanceof ChannelException) {
-                                return Single.error(new WebSocketConnectorException("Hello handshake failed", throwable, true));
+                                return Single.error(
+                                    new WebSocketConnectorException(
+                                        "Hello handshake failed for channel '%s'".formatted(this.id),
+                                        throwable,
+                                        true
+                                    )
+                                );
                             } else {
                                 return Single.error(throwable);
                             }
@@ -73,9 +80,14 @@ public class WebSocketConnectorChannel extends AbstractWebSocketChannel implemen
                             if (reply.getCommandStatus() == CommandStatus.SUCCEEDED) {
                                 this.targetId = reply.getPayload().getTargetId();
                                 this.active = true;
+                                log.debug("Hello Handshake succeed for channel '{}' on target '{}'", this.id, this.targetId);
                             } else {
                                 throw new WebSocketConnectorException(
-                                    String.format("Hello handshake failed: %s", reply.getErrorDetails()),
+                                    "Hello handshake failed for channel [%s] on target [%s]: %s".formatted(
+                                            this.id,
+                                            this.targetId,
+                                            reply.getErrorDetails()
+                                        ),
                                     false
                                 );
                             }

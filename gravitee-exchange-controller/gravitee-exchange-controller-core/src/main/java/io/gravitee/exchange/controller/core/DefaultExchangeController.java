@@ -192,7 +192,7 @@ public class DefaultExchangeController extends AbstractService<ExchangeControlle
                             .filter(batch -> batch.shouldRetryNow(batchRetryDelayMs))
                             .doOnNext(batch ->
                                 log.info(
-                                    "[{}] Retrying batch '{}' with key '{}' and target id '{}'",
+                                    "[{}] Retrying batch '{}' with key '{}' and target '{}'",
                                     this.identifyConfiguration.id(),
                                     batch.id(),
                                     batch.key(),
@@ -203,7 +203,8 @@ public class DefaultExchangeController extends AbstractService<ExchangeControlle
                                 sendBatchCommands(batch)
                                     .onErrorComplete(throwable -> {
                                         log.error(
-                                            "Unable to retry batch '{}' with key '{}' and target id '{}'",
+                                            "[{}] Unable to retry batch '{}' with key '{}' and target '{}'",
+                                            this.identifyConfiguration.id(),
                                             batch.id(),
                                             batch.key(),
                                             batch.targetId(),
@@ -462,7 +463,7 @@ public class DefaultExchangeController extends AbstractService<ExchangeControlle
             .doOnSuccess(b -> {
                 switch (b.status()) {
                     case PENDING -> log.info(
-                        "[{}] Batch '{}' for target id '{}' and key '{}' is scheduled for retry",
+                        "[{}] Batch '{}' for target '{}' and key '{}' is scheduled for retry",
                         this.identifyConfiguration.id(),
                         b.id(),
                         b.targetId(),
@@ -470,7 +471,7 @@ public class DefaultExchangeController extends AbstractService<ExchangeControlle
                     );
                     case SUCCEEDED -> {
                         log.info(
-                            "[{}] Batch '{}' for target id '{}' and key '{}' has succeed",
+                            "[{}] Batch '{}' for target '{}' and key '{}' has succeed",
                             this.identifyConfiguration.id(),
                             b.id(),
                             b.targetId(),
@@ -480,7 +481,7 @@ public class DefaultExchangeController extends AbstractService<ExchangeControlle
                     }
                     case ERROR -> {
                         log.info(
-                            "[{}] Batch '{}' for target id '{}' and key '{}' stopped in error",
+                            "[{}] Batch '{}' for target '{}' and key '{}' stopped in error",
                             this.identifyConfiguration.id(),
                             b.id(),
                             b.targetId(),
@@ -509,7 +510,7 @@ public class DefaultExchangeController extends AbstractService<ExchangeControlle
                     .subscribeOn(Schedulers.computation())
                     .doOnError(throwable ->
                         log.warn(
-                            "[{}] Unable to notify batch observer with batch '{}' for target id '{}' and key '{}' has succeed",
+                            "[{}] Unable to notify batch observer with batch '{}' for target '{}' and key '{}' has succeed",
                             this.identifyConfiguration.id(),
                             batch.id(),
                             batch.targetId(),
@@ -518,7 +519,7 @@ public class DefaultExchangeController extends AbstractService<ExchangeControlle
                     )
                     .doOnComplete(() ->
                         log.debug(
-                            "[{}] Notify batch observer in success with batch '{}' for target id '{}' and key '{}' has succeed",
+                            "[{}] Notify batch observer in success with batch '{}' for target '{}' and key '{}' has succeed",
                             this.identifyConfiguration.id(),
                             batch.id(),
                             batch.targetId(),

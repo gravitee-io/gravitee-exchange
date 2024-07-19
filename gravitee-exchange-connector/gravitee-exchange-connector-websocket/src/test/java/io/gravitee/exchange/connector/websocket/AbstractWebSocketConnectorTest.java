@@ -60,6 +60,7 @@ public abstract class AbstractWebSocketConnectorTest extends AbstractWebSocketTe
                                     .build()
                             )
                         )
+                        .onErrorComplete()
                         .subscribe();
                 } else if (command.getType().equals(io.gravitee.exchange.api.websocket.protocol.legacy.hello.HelloCommand.COMMAND_TYPE)) {
                     io.gravitee.exchange.api.websocket.protocol.legacy.hello.HelloReply helloReply =
@@ -78,6 +79,7 @@ public abstract class AbstractWebSocketConnectorTest extends AbstractWebSocketTe
                                     .build()
                             )
                         )
+                        .onErrorComplete()
                         .subscribe();
                 } else {
                     commandHandler.accept(command);

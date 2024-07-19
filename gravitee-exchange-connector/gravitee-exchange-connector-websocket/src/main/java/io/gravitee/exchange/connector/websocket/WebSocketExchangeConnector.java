@@ -15,8 +15,6 @@
  */
 package io.gravitee.exchange.connector.websocket;
 
-import static io.gravitee.exchange.api.controller.ws.WebsocketControllerConstants.EXCHANGE_PROTOCOL_HEADER;
-
 import io.gravitee.common.utils.RxHelper;
 import io.gravitee.exchange.api.command.Command;
 import io.gravitee.exchange.api.command.CommandAdapter;
@@ -33,16 +31,20 @@ import io.gravitee.exchange.connector.websocket.exception.WebSocketConnectorExce
 import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Maybe;
 import io.reactivex.rxjava3.core.Single;
+import io.reactivex.rxjava3.schedulers.Schedulers;
 import io.vertx.core.http.WebSocketConnectOptions;
 import io.vertx.rxjava3.core.Vertx;
 import io.vertx.rxjava3.core.http.HttpClient;
 import io.vertx.rxjava3.core.http.WebSocket;
+import lombok.experimental.SuperBuilder;
+import lombok.extern.slf4j.Slf4j;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
-import lombok.experimental.SuperBuilder;
-import lombok.extern.slf4j.Slf4j;
+
+import static io.gravitee.exchange.api.controller.ws.WebsocketControllerConstants.EXCHANGE_PROTOCOL_HEADER;
 
 /**
  * @author Guillaume LAMIRAND (guillaume.lamirand at graviteesource.com)
@@ -94,15 +96,15 @@ public class WebSocketExchangeConnector extends EmbeddedExchangeConnector {
                         protocolVersion.adapterFactory().apply(exchangeSerDe)
                     );
                 return connectorChannel
-                    .initialize()
-                    .doOnComplete(() ->
-                        webSocket.closeHandler(v -> {
-                            if (!Objects.equals(webSocket.closeStatusCode(), (short) 1000)) {
-                                log.warn("Exchange Connector closed abnormally, reconnecting.");
-                                initialize().onErrorComplete().subscribe();
-                            }
-                        })
-                    );
+                        .initialize()
+                        .doOnComplete(() -> webSocket.closeHandler(v -> {
+                                    log.debug("Exchange Connector has been closed with status code '{}'", webSocket.closeStatusCode());
+                                    if (!Objects.equals(webSocket.closeStatusCode(), (short) 1000)) {
+                                        log.warn("Exchange Connector closed abnormally, reconnecting...");
+                                        initialize().onErrorComplete().subscribeOn(Schedulers.io()).subscribe();
+                                    }
+                                })
+                        );
             })
             .retryWhen(
                 RxHelper.retryExponentialBackoff(
@@ -113,7 +115,8 @@ public class WebSocketExchangeConnector extends EmbeddedExchangeConnector {
                     throwable -> throwable instanceof WebSocketConnectorException connectorException && connectorException.isRetryable()
                 )
             )
-            .doOnError(throwable -> log.error("Unable to connect to Exchange Connect Endpoint."));
+            .doOnError(throwable -> log.error("Unable to connect to Exchange Controller Endpoint."))
+            .doOnComplete(() -> log.info("Exchange Connector is now connected and ready"));
     }
 
     private Single<WebSocket> connect() {
@@ -129,7 +132,7 @@ public class WebSocketExchangeConnector extends EmbeddedExchangeConnector {
             )
             .toSingle()
             .flatMap(webSocketEndpoint -> {
-                log.debug("Trying to connect to Exchange Controller WebSocket [{}]", webSocketEndpoint.getUrl());
+                log.debug("Trying to connect to the Exchange Controller WebSocket '{}'", webSocketEndpoint.getUrl());
                 HttpClient httpClient = webSocketConnectorClientFactory.createHttpClient(webSocketEndpoint);
                 WebSocketConnectOptions webSocketConnectOptions = new WebSocketConnectOptions()
                     .setURI(webSocketEndpoint.resolvePath(WebsocketControllerConstants.EXCHANGE_CONTROLLER_PATH))
@@ -142,14 +145,11 @@ public class WebSocketExchangeConnector extends EmbeddedExchangeConnector {
                     .rxWebSocket(webSocketConnectOptions)
                     .doOnSuccess(webSocket -> {
                         webSocketConnectorClientFactory.resetEndpointRetries();
-                        log.info(
-                            "Connector is now connected to Exchange Controller through websocket via [{}]",
-                            webSocketEndpoint.getUrl().toString()
-                        );
+                        log.debug("Exchange Connector has successfully connected to the Exchange Controller WebSocket");
                     })
                     .onErrorResumeNext(throwable -> {
                         log.error(
-                            "Unable to connect to Exchange Connect Endpoint {} times, retrying...",
+                            "Unable to connect to the Exchange Controller Endpoint {} times, retrying...",
                             webSocketConnectorClientFactory.endpointRetries(),
                             throwable
                         );
@@ -158,7 +158,7 @@ public class WebSocketExchangeConnector extends EmbeddedExchangeConnector {
                             .close()
                             .andThen(
                                 Single.error(
-                                    new WebSocketConnectorException("Unable to connect to Exchange Connect Endpoint", throwable, true)
+                                    new WebSocketConnectorException("Unable to connect to Exchange Controller Endpoint", throwable, true)
                                 )
                             );
                     });

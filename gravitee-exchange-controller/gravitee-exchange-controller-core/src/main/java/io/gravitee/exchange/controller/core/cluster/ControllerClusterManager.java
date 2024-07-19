@@ -161,21 +161,23 @@ public class ControllerClusterManager extends AbstractService<ControllerClusterM
                     // Unregister channel (close with reconnection)
                     .flatMapCompletable(controllerChannel -> {
                         log.debug(
-                            "[{}] Re-balancing channel [{}] for the target [{}]",
+                            "[{}] Re-balancing channel '{}' for the target '{}'",
                             identifyConfiguration.id(),
                             controllerChannel.id(),
                             controllerChannel.targetId()
                         );
                         return unregister(controllerChannel).onErrorComplete();
                     })
-                    .doOnComplete(() -> log.debug("[{}] Starting re-balancing finished", identifyConfiguration.id()))
+                    .doOnComplete(() -> log.debug("[{}] Re-balancing process finished", identifyConfiguration.id()))
+                    .doOnError(throwable -> log.warn("[{}] Re-balancing process failed", identifyConfiguration.id(), throwable))
+                    .onErrorComplete()
                     // Need to await the current process to finish
                     .blockingAwait();
             } else {
-                log.debug("[{}] Rebalancing process ignored: there is no other cluster member", identifyConfiguration.id());
+                log.debug("[{}] Re-balancing process ignored: there is no other cluster member", identifyConfiguration.id());
             }
         } else {
-            log.debug("[{}] Rebalancing process ignored: latest member added is too recent", identifyConfiguration.id());
+            log.debug("[{}] Re-balancing process ignored: latest member added is too recent", identifyConfiguration.id());
         }
     }
 
@@ -330,7 +332,7 @@ public class ControllerClusterManager extends AbstractService<ControllerClusterM
         final String queueName = getTargetQueueName(targetId);
 
         log.debug(
-            "[{}] Trying to send a command [{} ({})] to the target [{}] through the cluster.",
+            "[{}] Trying to send a command [{} ({})] to the target '{}' through the cluster.",
             this.identifyConfiguration.id(),
             clusteredCommand.command().getId(),
             clusteredCommand.command().getType(),
@@ -345,7 +347,7 @@ public class ControllerClusterManager extends AbstractService<ControllerClusterM
             final Queue<ClusteredCommand<?>> queue = clusterManager.queue(queueName);
             queue.add(clusteredCommand);
         } catch (Exception e) {
-            log.error("[{}] Failed to send command to the installation [{}].", this.identifyConfiguration.id(), targetId, e);
+            log.error("[{}] Failed to send command to the installation '{}'.", this.identifyConfiguration.id(), targetId, e);
             emitter.onError(e);
         }
     }

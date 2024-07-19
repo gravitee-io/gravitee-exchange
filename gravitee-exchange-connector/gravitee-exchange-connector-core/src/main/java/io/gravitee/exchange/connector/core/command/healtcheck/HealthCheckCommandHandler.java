@@ -42,7 +42,7 @@ public class HealthCheckCommandHandler implements CommandHandler<HealthCheckComm
     @Override
     public Single<HealthCheckReply> handle(HealthCheckCommand command) {
         return Single.fromCallable(() -> {
-            log.debug("Health check command received for target id [{}]", exchangeConnector.targetId());
+            log.debug("Health check command received for target '{}'", exchangeConnector.targetId());
             return new HealthCheckReply(command.getId(), HealthCheckReplyPayload.builder().healthy(true).build());
         });
     }

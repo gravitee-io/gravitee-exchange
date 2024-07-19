@@ -88,7 +88,7 @@ public class PrimaryChannelManager extends AbstractService<PrimaryChannelManager
 
         if (null == channelIds || channelIds.isEmpty()) {
             log.warn(
-                "[{}] Unable to elect a primary channel because there is no channel for target id '{}'",
+                "[{}] Unable to elect a primary channel because there is no channel for target '{}'",
                 this.identifyConfiguration.id(),
                 targetId
             );
