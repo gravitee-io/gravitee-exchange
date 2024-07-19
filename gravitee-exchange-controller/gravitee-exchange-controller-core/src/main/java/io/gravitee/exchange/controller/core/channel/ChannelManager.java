@@ -44,6 +44,8 @@ import io.reactivex.rxjava3.core.Flowable;
 import io.reactivex.rxjava3.core.Maybe;
 import io.reactivex.rxjava3.core.Single;
 import io.reactivex.rxjava3.disposables.Disposable;
+import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import lombok.extern.slf4j.Slf4j;
 
@@ -309,12 +311,16 @@ public class ChannelManager extends AbstractService<ChannelManager> {
         return this.channelMetricsRegistry.rxGet(channelId);
     }
 
-    public ControllerChannel getChannelById(final String id) {
-        return localChannelRegistry.getById(id).filter(ControllerChannel::isActive).orElse(null);
+    public Optional<ControllerChannel> getChannelById(final String id) {
+        return localChannelRegistry.getById(id);
     }
 
-    public ControllerChannel getOneChannelByTargetId(final String targetId) {
-        return localChannelRegistry.getAllByTargetId(targetId).stream().filter(ControllerChannel::isActive).findFirst().orElse(null);
+    public List<ControllerChannel> getChannels() {
+        return localChannelRegistry.getAll();
+    }
+
+    public Optional<ControllerChannel> getOneActiveChannelByTargetId(final String targetId) {
+        return localChannelRegistry.getAllByTargetId(targetId).stream().filter(ControllerChannel::isActive).findFirst();
     }
 
     public Completable register(ControllerChannel controllerChannel) {
@@ -368,7 +374,7 @@ public class ChannelManager extends AbstractService<ChannelManager> {
 
     public <C extends Command<?>, R extends Reply<?>> Single<R> send(C command, String targetId) {
         return Maybe
-            .fromCallable(() -> getOneChannelByTargetId(targetId))
+            .defer(() -> Maybe.fromOptional(getOneActiveChannelByTargetId(targetId)))
             .doOnComplete(() ->
                 log.debug(
                     "[{}] No channel found for target '{}' to handle command '{}'",

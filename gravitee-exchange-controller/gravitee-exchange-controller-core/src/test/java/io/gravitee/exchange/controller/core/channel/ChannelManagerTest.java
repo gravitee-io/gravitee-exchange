@@ -179,7 +179,7 @@ class ChannelManagerTest {
         sampleChannel.setInitialize(Completable.error(new RuntimeException()));
         cut.register(sampleChannel).test().awaitDone(10, TimeUnit.SECONDS);
 
-        assertThat(cut.getChannelById("channelId")).isNull();
+        assertThat(cut.getChannelById("channelId")).isEmpty();
     }
 
     @Test
@@ -203,7 +203,7 @@ class ChannelManagerTest {
             .awaitDone(10, TimeUnit.SECONDS);
         assertThat(vertxTestContext.awaitCompletion(10, TimeUnit.SECONDS)).isTrue();
 
-        assertThat(cut.getChannelById("channelId")).isNull();
+        assertThat(cut.getChannelById("channelId")).isEmpty();
     }
 
     @Test
@@ -221,7 +221,7 @@ class ChannelManagerTest {
             .test()
             .awaitDone(10, TimeUnit.SECONDS);
 
-        assertThat(cut.getChannelById("channelId")).isNull();
+        assertThat(cut.getChannelById("channelId")).isEmpty();
     }
 
     @Test
@@ -320,7 +320,6 @@ class ChannelManagerTest {
                 }
             )
         );
-        SampleChannel sampleChannel2 = new SampleChannel("channelId2", "targetId", false);
         cut
             .register(sampleChannel)
             .andThen(cut.send(new HelloCommand(new HelloCommandPayload()), "targetId"))
