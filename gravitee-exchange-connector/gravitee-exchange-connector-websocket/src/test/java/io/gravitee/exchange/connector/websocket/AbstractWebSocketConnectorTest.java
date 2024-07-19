@@ -16,6 +16,7 @@
 package io.gravitee.exchange.connector.websocket;
 
 import io.gravitee.exchange.api.command.Command;
+import io.gravitee.exchange.api.command.Reply;
 import io.gravitee.exchange.api.command.hello.HelloCommand;
 import io.gravitee.exchange.api.command.hello.HelloReply;
 import io.gravitee.exchange.api.command.hello.HelloReplyPayload;
@@ -24,6 +25,7 @@ import io.gravitee.exchange.api.websocket.protocol.ProtocolAdapter;
 import io.gravitee.exchange.api.websocket.protocol.ProtocolExchange;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.rxjava3.core.http.ServerWebSocket;
+import java.util.Map;
 import java.util.function.Consumer;
 import org.junit.jupiter.api.extension.ExtendWith;
 
@@ -35,18 +37,30 @@ import org.junit.jupiter.api.extension.ExtendWith;
 public abstract class AbstractWebSocketConnectorTest extends AbstractWebSocketTest {
 
     protected void replyHello(final ServerWebSocket serverWebSocket, final ProtocolAdapter protocolAdapter) {
-        this.replyHello(serverWebSocket, protocolAdapter, cmd -> {});
+        this.replyHello(serverWebSocket, protocolAdapter, Map.of(), Map.of());
     }
 
     protected void replyHello(
         final ServerWebSocket serverWebSocket,
         final ProtocolAdapter protocolAdapter,
-        Consumer<Command<?>> commandHandler
+        final Map<String, Consumer<Command<?>>> commandConsumers
+    ) {
+        replyHello(serverWebSocket, protocolAdapter, commandConsumers, Map.of());
+    }
+
+    protected void replyHello(
+        final ServerWebSocket serverWebSocket,
+        final ProtocolAdapter protocolAdapter,
+        final Map<String, Consumer<Command<?>>> commandConsumers,
+        final Map<String, Consumer<Reply<?>>> replyConsumers
     ) {
         serverWebSocket.binaryMessageHandler(buffer -> {
             ProtocolExchange websocketExchange = protocolAdapter.read(buffer);
             if (websocketExchange.type() == ProtocolExchange.Type.COMMAND) {
                 Command<?> command = websocketExchange.asCommand();
+                if (commandConsumers.containsKey(command.getType())) {
+                    commandConsumers.get(command.getType()).accept(command);
+                }
                 if (command.getType().equals(HelloCommand.COMMAND_TYPE)) {
                     HelloReply helloReply = new HelloReply(command.getId(), new HelloReplyPayload("targetId"));
                     serverWebSocket
@@ -81,8 +95,11 @@ public abstract class AbstractWebSocketConnectorTest extends AbstractWebSocketTe
                         )
                         .onErrorComplete()
                         .subscribe();
-                } else {
-                    commandHandler.accept(command);
+                }
+            } else if (websocketExchange.type() == ProtocolExchange.Type.REPLY) {
+                Reply<?> reply = websocketExchange.asReply();
+                if (replyConsumers.containsKey(reply.getType())) {
+                    replyConsumers.get(reply.getType()).accept(reply);
                 }
             }
         });

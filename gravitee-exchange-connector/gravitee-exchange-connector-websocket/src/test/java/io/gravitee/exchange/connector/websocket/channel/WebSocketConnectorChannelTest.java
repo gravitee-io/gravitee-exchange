@@ -18,6 +18,7 @@ package io.gravitee.exchange.connector.websocket.channel;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import io.gravitee.exchange.api.channel.exception.ChannelTimeoutException;
+import io.gravitee.exchange.api.command.hello.HelloCommand;
 import io.gravitee.exchange.api.controller.ws.WebsocketControllerConstants;
 import io.gravitee.exchange.api.websocket.channel.test.AbstractWebSocketTest;
 import io.gravitee.exchange.api.websocket.channel.test.DummyCommand;
@@ -34,14 +35,17 @@ import io.reactivex.rxjava3.plugins.RxJavaPlugins;
 import io.reactivex.rxjava3.schedulers.TestScheduler;
 import io.vertx.core.http.WebSocketConnectOptions;
 import io.vertx.junit5.Checkpoint;
+import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import io.vertx.rxjava3.core.buffer.Buffer;
 import io.vertx.rxjava3.core.http.HttpClient;
 import io.vertx.rxjava3.core.http.ServerWebSocket;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 
@@ -49,6 +53,7 @@ import org.junit.jupiter.params.provider.EnumSource;
  * @author Guillaume LAMIRAND (guillaume.lamirand at graviteesource.com)
  * @author GraviteeSource Team
  */
+@ExtendWith(VertxExtension.class)
 class WebSocketConnectorChannelTest extends AbstractWebSocketConnectorTest {
 
     @AfterEach
@@ -126,21 +131,24 @@ class WebSocketConnectorChannelTest extends AbstractWebSocketConnectorTest {
                 this.replyHello(
                         serverWebSocket,
                         protocolAdapter,
-                        command -> {
-                            DummyReply dummyReply = new DummyReply(command.getId(), new DummyPayload());
-                            serverWebSocket
-                                .writeBinaryMessage(
-                                    protocolAdapter.write(
-                                        ProtocolExchange
-                                            .builder()
-                                            .type(ProtocolExchange.Type.REPLY)
-                                            .exchangeType(dummyReply.getType())
-                                            .exchange(dummyReply)
-                                            .build()
+                        Map.of(
+                            DummyCommand.COMMAND_TYPE,
+                            command -> {
+                                DummyReply dummyReply = new DummyReply(command.getId(), new DummyPayload());
+                                serverWebSocket
+                                    .writeBinaryMessage(
+                                        protocolAdapter.write(
+                                            ProtocolExchange
+                                                .builder()
+                                                .type(ProtocolExchange.Type.REPLY)
+                                                .exchangeType(dummyReply.getType())
+                                                .exchange(dummyReply)
+                                                .build()
+                                        )
                                     )
-                                )
-                                .subscribe();
-                        }
+                                    .subscribe();
+                            }
+                        )
                     );
         DummyCommand command = new DummyCommand(new DummyPayload());
         AbstractWebSocketTest
@@ -175,7 +183,11 @@ class WebSocketConnectorChannelTest extends AbstractWebSocketConnectorTest {
         // Advance in time when primary command is received so reply will timeout
         AbstractWebSocketTest.websocketServerHandler =
             serverWebSocket ->
-                this.replyHello(serverWebSocket, protocolAdapter, command -> testScheduler.advanceTimeBy(60, TimeUnit.SECONDS));
+                this.replyHello(
+                        serverWebSocket,
+                        protocolAdapter,
+                        Map.of(DummyCommand.COMMAND_TYPE, command -> testScheduler.advanceTimeBy(60, TimeUnit.SECONDS))
+                    );
         DummyCommand command = new DummyCommand(new DummyPayload());
 
         AbstractWebSocketTest
@@ -243,7 +255,7 @@ class WebSocketConnectorChannelTest extends AbstractWebSocketConnectorTest {
             .rxWebSocket()
             .flatMapCompletable(webSocket -> {
                 WebSocketConnectorChannel webSocketConnectorChannel = new WebSocketConnectorChannel(
-                    List.of(new DummyCommandHandler(handlerCheckpoint)),
+                    List.of(new DummyCommandHandler(c -> handlerCheckpoint.flag())),
                     List.of(),
                     List.of(),
                     AbstractWebSocketTest.vertx,
@@ -270,5 +282,116 @@ class WebSocketConnectorChannelTest extends AbstractWebSocketConnectorTest {
             );
 
         assertThat(vertxTestContext.awaitCompletion(10, TimeUnit.SECONDS)).isTrue();
+    }
+
+    @ParameterizedTest
+    @EnumSource(ProtocolVersion.class)
+    void should_have_pending_command_during_hello_handshake(ProtocolVersion protocolVersion, VertxTestContext vertxTestContext) {
+        Checkpoint checkpoint = vertxTestContext.checkpoint(1);
+        ProtocolAdapter protocolAdapter = protocolAdapter(protocolVersion);
+        HttpClient httpClient = AbstractWebSocketTest.vertx.createHttpClient();
+        WebSocketConnectOptions webSocketConnectOptions = new WebSocketConnectOptions()
+            .setHost("localhost")
+            .setPort(AbstractWebSocketTest.serverPort)
+            .setURI(WebsocketControllerConstants.EXCHANGE_CONTROLLER_PATH);
+        AtomicReference<WebSocketConnectorChannel> webSocketConnectorChannel = new AtomicReference<>();
+        AbstractWebSocketTest.websocketServerHandler =
+            ws ->
+                this.replyHello(
+                        ws,
+                        protocolAdapter,
+                        Map.of(
+                            HelloCommand.COMMAND_TYPE,
+                            command -> {
+                                if (webSocketConnectorChannel.get().hasPendingCommands()) {
+                                    checkpoint.flag();
+                                }
+                            },
+                            io.gravitee.exchange.api.websocket.protocol.legacy.hello.HelloCommand.COMMAND_TYPE,
+                            command -> {
+                                if (webSocketConnectorChannel.get().hasPendingCommands()) {
+                                    checkpoint.flag();
+                                }
+                            }
+                        )
+                    );
+        httpClient
+            .rxWebSocket(webSocketConnectOptions)
+            .flatMapCompletable(webSocket -> {
+                webSocketConnectorChannel.set(
+                    new WebSocketConnectorChannel(List.of(), List.of(), List.of(), AbstractWebSocketTest.vertx, webSocket, protocolAdapter)
+                );
+                return webSocketConnectorChannel.get().initialize().doFinally(webSocket::close);
+            })
+            .test()
+            .awaitDone(10, TimeUnit.SECONDS)
+            .assertComplete();
+        assertThat(webSocketConnectorChannel.get().hasPendingCommands()).isFalse();
+    }
+
+    @ParameterizedTest
+    @EnumSource(ProtocolVersion.class)
+    void should_have_pending_command_during_handling_command(ProtocolVersion protocolVersion, VertxTestContext vertxTestContext)
+        throws InterruptedException {
+        ProtocolAdapter protocolAdapter = protocolAdapter(protocolVersion);
+        Checkpoint checkpoint = vertxTestContext.checkpoint(2);
+
+        AtomicReference<WebSocketConnectorChannel> webSocketConnectorChannelRef = new AtomicReference<>();
+        AtomicReference<ServerWebSocket> webSocketRef = new AtomicReference<>();
+        AbstractWebSocketTest.websocketServerHandler =
+            ws -> {
+                webSocketRef.set(ws);
+                this.replyHello(
+                        ws,
+                        protocolAdapter,
+                        Map.of(),
+                        Map.of(
+                            DummyCommand.COMMAND_TYPE,
+                            r -> {
+                                if (!webSocketConnectorChannelRef.get().hasPendingCommands()) {
+                                    checkpoint.flag();
+                                }
+                            }
+                        )
+                    );
+            };
+        AbstractWebSocketTest
+            .rxWebSocket()
+            .flatMapCompletable(webSocket -> {
+                webSocketConnectorChannelRef.set(
+                    new WebSocketConnectorChannel(
+                        List.of(
+                            new DummyCommandHandler(command -> {
+                                checkpoint.flag();
+                            })
+                        ),
+                        List.of(),
+                        List.of(),
+                        AbstractWebSocketTest.vertx,
+                        webSocket,
+                        protocolAdapter
+                    )
+                );
+                return webSocketConnectorChannelRef.get().initialize();
+            })
+            .test()
+            .awaitDone(10, TimeUnit.SECONDS)
+            .assertComplete();
+
+        webSocketRef
+            .get()
+            .writeBinaryMessage(
+                protocolAdapter.write(
+                    ProtocolExchange
+                        .builder()
+                        .type(ProtocolExchange.Type.COMMAND)
+                        .exchangeType(DummyCommand.COMMAND_TYPE)
+                        .exchange(new DummyCommand(new DummyPayload()))
+                        .build()
+                )
+            );
+
+        assertThat(vertxTestContext.awaitCompletion(10, TimeUnit.SECONDS)).isTrue();
+        assertThat(webSocketConnectorChannelRef.get().hasPendingCommands()).isFalse();
     }
 }

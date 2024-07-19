@@ -193,8 +193,8 @@ class AbstractWebSocketChannelTest extends AbstractWebSocketTest {
             .<Reply<?>>flatMap(webSocket -> {
                 Channel webSocketChannel = new SimpleWebSocketChannel(
                     List.of(),
-                    List.of(new DummyCommandAdapter(handlerCheckpoint)),
-                    List.of(new DummyReplyAdapter(handlerCheckpoint)),
+                    List.of(new DummyCommandAdapter(c -> handlerCheckpoint.flag())),
+                    List.of(new DummyReplyAdapter(r -> handlerCheckpoint.flag())),
                     vertx,
                     webSocket,
                     protocolAdapter
@@ -245,7 +245,7 @@ class AbstractWebSocketChannelTest extends AbstractWebSocketTest {
         rxWebSocket()
             .flatMapCompletable(webSocket -> {
                 Channel webSocketChannel = new SimpleWebSocketChannel(
-                    List.of(new DummyCommandHandler(handlerCheckpoint)),
+                    List.of(new DummyCommandHandler(c -> handlerCheckpoint.flag())),
                     List.of(),
                     List.of(),
                     vertx,

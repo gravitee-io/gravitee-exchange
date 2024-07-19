@@ -15,15 +15,16 @@
  */
 package io.gravitee.exchange.api.websocket.channel.test;
 
+import io.gravitee.exchange.api.command.Command;
 import io.gravitee.exchange.api.command.CommandHandler;
 import io.reactivex.rxjava3.core.Single;
-import io.vertx.junit5.Checkpoint;
+import java.util.function.Consumer;
 import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
 public class DummyCommandHandler implements CommandHandler<DummyCommand, DummyReply> {
 
-    private final Checkpoint checkpoint;
+    private final Consumer<Command<?>> consumer;
 
     @Override
     public String supportType() {
@@ -32,7 +33,7 @@ public class DummyCommandHandler implements CommandHandler<DummyCommand, DummyRe
 
     @Override
     public Single<DummyReply> handle(final DummyCommand command) {
-        checkpoint.flag();
+        consumer.accept(command);
         return Single.just(new DummyReply(command.getId(), new DummyPayload()));
     }
 }
