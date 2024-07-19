@@ -163,8 +163,8 @@ public abstract class AbstractWebSocketChannel implements Channel {
                     emitter.onComplete();
                 }
             })
-            .doOnComplete(() -> log.debug("Channel '{}' for target '{}' has been successfully initialized", id, targetId))
-            .doOnError(throwable -> log.error("Unable to initialize channel '{}' for target '{}'", id, targetId));
+            .doOnComplete(() -> log.debug("Channel '{}' has been successfully initialized", id))
+            .doOnError(throwable -> log.error("Unable to initialize channel '{}'", id));
     }
 
     private <C extends Command<?>> void receiveCommand(final CompletableEmitter emitter, final C command) {
@@ -197,18 +197,18 @@ public abstract class AbstractWebSocketChannel implements Channel {
                 } else if (commandHandler != null) {
                     return handleCommandAsync(adaptedCommand, commandHandler);
                 } else {
-                    log.info("No handler found for command type {}. Ignoring", adaptedCommand.getType());
+                    log.info("No handler found for command type '{}'. Ignoring", adaptedCommand.getType());
                     return writeReply(
                         new NoReply(
                             adaptedCommand.getId(),
-                            "No handler found for command type %s. Ignoring".formatted(adaptedCommand.getType())
+                            "No handler found for command type '%s'. Ignoring".formatted(adaptedCommand.getType())
                         )
                     );
                 }
                 return Completable.complete();
             })
             .onErrorResumeNext(throwable -> {
-                log.warn("Unexpected internal error occurred when handling command type %s".formatted(command.getType()), throwable);
+                log.warn("Unexpected internal error occurred when handling command type '%s'".formatted(command.getType()), throwable);
                 return writeReply(new NoReply(command.getId(), "Unexpected internal error occurred"));
             })
             .subscribe();
@@ -240,7 +240,7 @@ public abstract class AbstractWebSocketChannel implements Channel {
                     }
                 })
                 .doOnError(throwable -> {
-                    log.warn("Unable to handle reply [{}, {}]", reply.getType(), reply.getCommandId());
+                    log.warn("Unable to handle reply '{}' for command '{}'", reply.getType(), reply.getCommandId());
                     replyEmitter.onError(new ChannelReplyException(throwable));
                 })
                 .subscribe();
@@ -361,7 +361,7 @@ public abstract class AbstractWebSocketChannel implements Channel {
                 return Single.just(reply);
             })
             .doOnError(throwable -> {
-                log.warn("Unable to handle command [{}, {}]", command.getType(), command.getId());
+                log.warn("Unable to handle command '{}' with id '{}'", command.getType(), command.getId());
                 webSocket.close((short) 1011, "Unexpected error").subscribe();
             });
     }
@@ -400,7 +400,7 @@ public abstract class AbstractWebSocketChannel implements Channel {
                         Single.error(() -> {
                             if (adaptedCommand.getReplyTimeoutMs() > 0) {
                                 log.warn(
-                                    "No reply received in time for command [{}, {}]",
+                                    "No reply received in time for command '{}' with id '{}'",
                                     adaptedCommand.getType(),
                                     adaptedCommand.getId()
                                 );
@@ -457,10 +457,18 @@ public abstract class AbstractWebSocketChannel implements Channel {
             return webSocket
                 .writeBinaryMessage(protocolAdapter.write(websocketExchange))
                 .doOnComplete(() ->
-                    log.debug("Write command/reply [{}, {}] to websocket successfully", websocketExchange.exchangeType(), commandId)
+                    log.debug(
+                        "Write command/reply '{}' with id '{}' to websocket successfully",
+                        websocketExchange.exchangeType(),
+                        commandId
+                    )
                 )
                 .onErrorResumeNext(throwable -> {
-                    log.error("An error occurred when trying to send command/reply [{}, {}]", websocketExchange.exchangeType(), commandId);
+                    log.error(
+                        "An error occurred when trying to send command/reply '{}' with id '{}'",
+                        websocketExchange.exchangeType(),
+                        commandId
+                    );
                     return Completable.error(new Exception("Write to socket failed"));
                 });
         } else {

@@ -42,7 +42,7 @@ public class GoodByeCommandHandler implements CommandHandler<GoodByeCommand, Goo
     @Override
     public Single<GoodByeReply> handle(GoodByeCommand command) {
         return Single.fromCallable(() -> {
-            log.debug("Goodbye command received for target id [{}]", exchangeConnector.targetId());
+            log.debug("Goodbye command received for target '{}'", exchangeConnector.targetId());
             return new GoodByeReply(command.getId(), GoodByeReplyPayload.builder().targetId(command.getPayload().getTargetId()).build());
         });
     }

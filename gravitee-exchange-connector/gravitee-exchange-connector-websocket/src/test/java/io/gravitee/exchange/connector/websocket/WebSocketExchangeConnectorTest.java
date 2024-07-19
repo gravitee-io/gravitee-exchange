@@ -15,8 +15,6 @@
  */
 package io.gravitee.exchange.connector.websocket;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
 import io.gravitee.exchange.api.command.Command;
 import io.gravitee.exchange.api.command.hello.HelloReply;
 import io.gravitee.exchange.api.configuration.IdentifyConfiguration;
@@ -29,13 +27,16 @@ import io.gravitee.exchange.connector.websocket.exception.WebSocketConnectorExce
 import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.VertxTestContext;
 import io.vertx.rxjava3.core.http.ServerWebSocket;
-import java.util.List;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.env.MockEnvironment;
+
+import java.util.List;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * @author Guillaume LAMIRAND (guillaume.lamirand at graviteesource.com)
@@ -126,11 +127,11 @@ class WebSocketExchangeConnectorTest extends AbstractWebSocketConnectorTest {
         AtomicReference<ServerWebSocket> ws = new AtomicReference<>();
         Checkpoint checkpoint = testContext.checkpoint(2);
         websocketServerHandler =
-            serverWebSocket -> {
-                replyHello(serverWebSocket, protocolAdapter(ProtocolVersion.V1));
-                ws.set(serverWebSocket);
-                checkpoint.flag();
-            };
+                serverWebSocket -> {
+                    replyHello(serverWebSocket, protocolAdapter(ProtocolVersion.V1));
+                    ws.set(serverWebSocket);
+                    checkpoint.flag();
+                };
         // Initialize first
         websocketExchangeConnector.initialize().test().awaitDone(10, TimeUnit.SECONDS).assertComplete();
 
