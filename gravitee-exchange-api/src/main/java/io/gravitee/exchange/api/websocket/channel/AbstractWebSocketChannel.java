@@ -56,6 +56,7 @@ import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -77,6 +78,7 @@ public abstract class AbstractWebSocketChannel implements Channel {
     protected String targetId;
     protected final Map<String, SingleEmitter<? extends Reply<?>>> resultEmitters = new ConcurrentHashMap<>();
     protected boolean active;
+    protected AtomicInteger inflightCommandCount = new AtomicInteger(0);
     private long pingTaskId = -1;
 
     protected AbstractWebSocketChannel(
@@ -116,7 +118,7 @@ public abstract class AbstractWebSocketChannel implements Channel {
 
     @Override
     public boolean hasPendingCommands() {
-        return !resultEmitters.isEmpty();
+        return !resultEmitters.isEmpty() || inflightCommandCount.get() > 0;
     }
 
     @Override
@@ -352,8 +354,9 @@ public abstract class AbstractWebSocketChannel implements Channel {
         final CommandHandler<Command<?>, Reply<?>> commandHandler,
         boolean dontReply
     ) {
-        return commandHandler
-            .handle(command)
+        return Completable
+            .fromRunnable(() -> inflightCommandCount.incrementAndGet())
+            .andThen(Single.defer(() -> commandHandler.handle(command)))
             .flatMap(reply -> {
                 if (!dontReply) {
                     return writeReply(reply).andThen(Single.just(reply));
@@ -363,7 +366,8 @@ public abstract class AbstractWebSocketChannel implements Channel {
             .doOnError(throwable -> {
                 log.warn("Unable to handle command '{}' with id '{}'", command.getType(), command.getId());
                 webSocket.close((short) 1011, "Unexpected error").subscribe();
-            });
+            })
+            .doFinally(() -> inflightCommandCount.decrementAndGet());
     }
 
     @Override

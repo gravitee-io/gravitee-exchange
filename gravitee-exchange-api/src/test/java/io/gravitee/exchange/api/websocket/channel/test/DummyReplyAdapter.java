@@ -15,15 +15,16 @@
  */
 package io.gravitee.exchange.api.websocket.channel.test;
 
+import io.gravitee.exchange.api.command.Reply;
 import io.gravitee.exchange.api.command.ReplyAdapter;
 import io.reactivex.rxjava3.core.Single;
-import io.vertx.junit5.Checkpoint;
+import java.util.function.Consumer;
 import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
 public class DummyReplyAdapter implements ReplyAdapter<AdaptedDummyReply, DummyReply> {
 
-    private final Checkpoint checkpoint;
+    private final Consumer<Reply<?>> consumer;
 
     @Override
     public String supportType() {
@@ -32,7 +33,7 @@ public class DummyReplyAdapter implements ReplyAdapter<AdaptedDummyReply, DummyR
 
     @Override
     public Single<DummyReply> adapt(final String targetId, final AdaptedDummyReply reply) {
-        checkpoint.flag();
+        consumer.accept(reply);
         return Single.just(new DummyReply(reply.getCommandId(), reply.getPayload()));
     }
 }
