@@ -16,6 +16,7 @@
 package io.gravitee.exchange.controller.core.cluster;
 
 import io.gravitee.common.service.AbstractService;
+import io.gravitee.exchange.api.channel.Channel;
 import io.gravitee.exchange.api.command.Command;
 import io.gravitee.exchange.api.command.Reply;
 import io.gravitee.exchange.api.configuration.IdentifyConfiguration;
@@ -143,21 +144,30 @@ public class ControllerClusterManager extends AbstractService<ControllerClusterM
         if (lastMemberAddedTime.plus(rebalancingDelay, rebalancingUnit.toChronoUnit()).isBefore(LocalDateTime.now())) {
             int clusterSize = clusterManager.members().size();
             if (clusterSize > 1) {
-                channelsMetricsByTarget()
-                    // Keep only target with more than 1 channel connected
-                    .filter(targetMetric -> targetMetric.channels().size() > 1)
-                    .map(TargetChannelsMetric::channels)
-                    // Reduce the list of 1/members elements
-                    .flatMapStream(channelMetrics -> {
-                        int size = channelMetrics.size();
-                        int reducedSize = (int) Math.ceil((float) size / clusterSize);
-                        log.debug("[{}] {} channels will be scheduled for re-balancing", identifyConfiguration.id(), reducedSize);
-                        return channelMetrics.stream().limit(reducedSize);
-                    })
-                    .map(channelMetric -> channelManager.getChannelById(channelMetric.id()))
-                    .filter(Objects::nonNull)
-                    // Filter channel with pending commands
-                    .filter(controllerChannel -> !controllerChannel.hasPendingCommands())
+                Flowable
+                    .fromIterable(channelManager.getChannels())
+                    .groupBy(Channel::targetId)
+                    .flatMap(group ->
+                        group
+                            .toList()
+                            // Keep only target with more than 1 channel
+                            .filter(channels -> channels.size() > 1)
+                            // Reduce the list of 1/members elements
+                            .flattenStreamAsFlowable(channelMetrics -> {
+                                int size = channelMetrics.size();
+                                int reducedSize = (int) Math.ceil((float) size / clusterSize);
+                                log.debug(
+                                    "[{}] Maximum '{}' channels will be scheduled for re-balancing",
+                                    identifyConfiguration.id(),
+                                    reducedSize
+                                );
+                                // Filter channel with pending commands
+                                return channelMetrics
+                                    .stream()
+                                    .filter(channelMetric -> !channelMetric.hasPendingCommands())
+                                    .limit(reducedSize);
+                            })
+                    )
                     // Unregister channel (close with reconnection)
                     .flatMapCompletable(controllerChannel -> {
                         log.debug(
@@ -191,7 +201,7 @@ public class ControllerClusterManager extends AbstractService<ControllerClusterM
         final List<ControllerChannel> channels = subscriptionsListenersByChannel
             .values()
             .stream()
-            .map(channelManager::getChannelById)
+            .map(id -> channelManager.getChannelById(id).orElse(null))
             .filter(Objects::nonNull)
             .toList();
 

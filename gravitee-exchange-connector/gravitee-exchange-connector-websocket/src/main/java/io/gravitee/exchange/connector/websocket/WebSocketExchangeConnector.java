@@ -15,6 +15,8 @@
  */
 package io.gravitee.exchange.connector.websocket;
 
+import static io.gravitee.exchange.api.controller.ws.WebsocketControllerConstants.EXCHANGE_PROTOCOL_HEADER;
+
 import io.gravitee.common.utils.RxHelper;
 import io.gravitee.exchange.api.command.Command;
 import io.gravitee.exchange.api.command.CommandAdapter;
@@ -36,15 +38,12 @@ import io.vertx.core.http.WebSocketConnectOptions;
 import io.vertx.rxjava3.core.Vertx;
 import io.vertx.rxjava3.core.http.HttpClient;
 import io.vertx.rxjava3.core.http.WebSocket;
-import lombok.experimental.SuperBuilder;
-import lombok.extern.slf4j.Slf4j;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
-
-import static io.gravitee.exchange.api.controller.ws.WebsocketControllerConstants.EXCHANGE_PROTOCOL_HEADER;
+import lombok.experimental.SuperBuilder;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * @author Guillaume LAMIRAND (guillaume.lamirand at graviteesource.com)
@@ -96,15 +95,16 @@ public class WebSocketExchangeConnector extends EmbeddedExchangeConnector {
                         protocolVersion.adapterFactory().apply(exchangeSerDe)
                     );
                 return connectorChannel
-                        .initialize()
-                        .doOnComplete(() -> webSocket.closeHandler(v -> {
-                                    log.debug("Exchange Connector has been closed with status code '{}'", webSocket.closeStatusCode());
-                                    if (!Objects.equals(webSocket.closeStatusCode(), (short) 1000)) {
-                                        log.warn("Exchange Connector closed abnormally, reconnecting...");
-                                        initialize().onErrorComplete().subscribeOn(Schedulers.io()).subscribe();
-                                    }
-                                })
-                        );
+                    .initialize()
+                    .doOnComplete(() ->
+                        webSocket.closeHandler(v -> {
+                            log.debug("Exchange Connector has been closed with status code '{}'", webSocket.closeStatusCode());
+                            if (!Objects.equals(webSocket.closeStatusCode(), (short) 1000)) {
+                                log.warn("Exchange Connector closed abnormally, reconnecting...");
+                                initialize().onErrorComplete().subscribeOn(Schedulers.io()).subscribe();
+                            }
+                        })
+                    );
             })
             .retryWhen(
                 RxHelper.retryExponentialBackoff(

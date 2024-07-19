@@ -88,7 +88,6 @@ public class DefaultExchangeController extends AbstractService<ExchangeControlle
     private Topic<PrimaryChannelEvictedEvent> primaryChannelEvictedTopic;
     private String primaryChannelEvictedSubscriptionId;
     private Disposable batchSchedulerDisposable;
-    private Long batchRetryDelayMs;
 
     public DefaultExchangeController(
         final IdentifyConfiguration identifyConfiguration,
@@ -167,12 +166,11 @@ public class DefaultExchangeController extends AbstractService<ExchangeControlle
     }
 
     private void startBatchScheduler() {
-        batchRetryDelayMs =
-            identifyConfiguration.getProperty(
-                "controller.batch.retry_interval_ms",
-                Long.class,
-                DEFAULT_BATCH_RETRY_SCHEDULER_PERIOD_IN_SECONDS * 1000
-            );
+        long batchRetryDelayMs = identifyConfiguration.getProperty(
+            "controller.batch.retry_interval_ms",
+            Long.class,
+            DEFAULT_BATCH_RETRY_SCHEDULER_PERIOD_IN_SECONDS * 1000
+        );
         log.debug("[{}] Starting batch scheduler with delay [{}ms]", this.identifyConfiguration.id(), batchRetryDelayMs);
         batchSchedulerDisposable =
             Flowable

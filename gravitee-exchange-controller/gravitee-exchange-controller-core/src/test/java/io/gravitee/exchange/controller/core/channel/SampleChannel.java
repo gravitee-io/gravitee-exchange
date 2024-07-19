@@ -40,6 +40,7 @@ public class SampleChannel implements ControllerChannel {
     private final String channelId;
     private final String targetId;
     private boolean active;
+    private final boolean pendingCommands;
     private CompletableSource initializeCompletableSource = Completable.complete();
     private CompletableSource closeCompletableSource = Completable.complete();
 
@@ -48,9 +49,14 @@ public class SampleChannel implements ControllerChannel {
     }
 
     public SampleChannel(String channelId, String targetId, boolean active) {
+        this(channelId, targetId, active, false);
+    }
+
+    public SampleChannel(String channelId, String targetId, boolean active, boolean pendingCommands) {
         this.channelId = channelId;
         this.targetId = targetId;
         this.active = active;
+        this.pendingCommands = pendingCommands;
     }
 
     @Override
@@ -88,7 +94,7 @@ public class SampleChannel implements ControllerChannel {
 
     @Override
     public boolean hasPendingCommands() {
-        return false;
+        return this.pendingCommands;
     }
 
     @Override

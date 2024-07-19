@@ -22,6 +22,8 @@ import io.gravitee.exchange.controller.core.channel.ChannelManager;
 import io.gravitee.exchange.controller.core.channel.SampleChannel;
 import io.gravitee.exchange.controller.core.channel.primary.ChannelEvent;
 import io.gravitee.node.api.cache.CacheManager;
+import io.gravitee.node.api.cluster.Member;
+import io.gravitee.node.api.cluster.MemberListener;
 import io.gravitee.node.api.cluster.messaging.Topic;
 import io.gravitee.node.plugin.cache.standalone.StandaloneCacheManager;
 import io.gravitee.node.plugin.cluster.standalone.StandaloneMember;
@@ -32,6 +34,7 @@ import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayNameGeneration;
 import org.junit.jupiter.api.DisplayNameGenerator;
@@ -53,6 +56,7 @@ class ControllerClusterManagerTest {
     private IdentifyConfiguration identifyConfiguration;
     private ControllerClusterManager cut;
     private Topic<ChannelEvent> channelEventTopic;
+    private MemberListener memberListener;
 
     @BeforeEach
     public void beforeEach(Vertx vertx) throws Exception {
@@ -71,9 +75,18 @@ class ControllerClusterManagerTest {
         channelEventTopic = clusterManager.topic(identifyConfiguration.identifyName(ChannelManager.CHANNEL_EVENTS_TOPIC));
     }
 
+    @AfterEach
+    public void afterEach() {
+        if (memberListener != null) {
+            clusterManager.removeMemberListener(memberListener);
+        }
+    }
+
     @Test
     void should_not_rebalance_with_only_member(VertxTestContext vertxTestContext) throws InterruptedException {
-        Checkpoint checkpoint = vertxTestContext.checkpoint(2);
+        Checkpoint checkpoint = vertxTestContext.checkpoint(3);
+        clusterManager.addMemberListener(memberListener(checkpoint));
+
         channelEventTopic.addMessageListener(message -> checkpoint.flag());
         SampleChannel sampleChannel = new SampleChannel("channelId", "targetId", true);
         sampleChannel.setClose(Completable.fromRunnable(checkpoint::flag));
@@ -90,19 +103,77 @@ class ControllerClusterManagerTest {
         // 4 checkpoints:
         //   - 1 for channel id active
         //   - 1 for channel id2 active
+        //   - 2 for new member
         //   - 1 for channel id2 close
         //   - 1 for channel id2 not active
-        Checkpoint checkpoint = vertxTestContext.checkpoint(4);
+        Checkpoint checkpoint = vertxTestContext.checkpoint(6);
         channelEventTopic.addMessageListener(message -> {
             checkpoint.flag();
             if (channelEventsCount.incrementAndGet() == 1) {
                 clusterManager.addMember(new StandaloneMember());
             }
         });
+        memberListener = memberListener(checkpoint);
+        clusterManager.addMemberListener(memberListener);
         clusterManager.addMember(new StandaloneMember());
         SampleChannel sampleChannel = new SampleChannel("channelId", "targetId", true);
         sampleChannel.setClose(Completable.fromRunnable(checkpoint::flag));
         SampleChannel sampleChannel2 = new SampleChannel("channelId2", "targetId", true);
+        sampleChannel2.setClose(Completable.fromRunnable(checkpoint::flag));
+        cut.register(sampleChannel).andThen(cut.register(sampleChannel2)).test().awaitDone(10, TimeUnit.SECONDS);
+        assertThat(vertxTestContext.awaitCompletion(10, TimeUnit.SECONDS)).isTrue();
+    }
+
+    @Test
+    void should_rebalance_channels_when_new_member_join_and_only_1_channels_is_active(VertxTestContext vertxTestContext)
+        throws InterruptedException {
+        AtomicInteger channelEventsCount = new AtomicInteger(0);
+        // 4 checkpoints:
+        //   - 1 for channel id alive
+        //   - 1 for channel id2 alive
+        //   - 2 for new member
+        //   - 1 for channel id2 close
+        //   - 1 for channel id2 not alive
+        Checkpoint checkpoint = vertxTestContext.checkpoint(6);
+        primaryChannelEventTopic.addMessageListener(message -> {
+            checkpoint.flag();
+            if (channelEventsCount.incrementAndGet() == 1) {
+                clusterManager.addMember(new StandaloneMember());
+            }
+        });
+        memberListener = memberListener(checkpoint);
+        clusterManager.addMemberListener(memberListener);
+        clusterManager.addMember(new StandaloneMember());
+        SampleChannel sampleChannel = new SampleChannel("channelId", "targetId", true);
+        sampleChannel.setClose(Completable.fromRunnable(checkpoint::flag));
+        SampleChannel sampleChannel2 = new SampleChannel("channelId2", "targetId", false);
+        sampleChannel2.setClose(Completable.fromRunnable(checkpoint::flag));
+        cut.register(sampleChannel).andThen(cut.register(sampleChannel2)).test().awaitDone(10, TimeUnit.SECONDS);
+        assertThat(vertxTestContext.awaitCompletion(10, TimeUnit.SECONDS)).isTrue();
+    }
+
+    @Test
+    void should_rebalance_channel_without_pending_commands_when_new_member_join(VertxTestContext vertxTestContext)
+        throws InterruptedException {
+        AtomicInteger channelEventsCount = new AtomicInteger(0);
+        // 4 checkpoints:
+        //   - 1 for channel id alive
+        //   - 1 for channel id2 alive
+        //   - 2 for new member
+        //   - 1 for channel id2 close
+        //   - 1 for channel id2 not alive
+        Checkpoint checkpoint = vertxTestContext.checkpoint(6);
+        primaryChannelEventTopic.addMessageListener(message -> {
+            checkpoint.flag();
+            if (channelEventsCount.incrementAndGet() == 1) {
+                clusterManager.addMember(new StandaloneMember());
+            }
+        });
+        memberListener = memberListener(checkpoint);
+        clusterManager.addMemberListener(memberListener);
+        clusterManager.addMember(new StandaloneMember());
+        SampleChannel sampleChannel = new SampleChannel("channelId", "targetId", true, true);
+        SampleChannel sampleChannel2 = new SampleChannel("channelId2", "targetId", false, false);
         sampleChannel2.setClose(Completable.fromRunnable(checkpoint::flag));
         cut.register(sampleChannel).andThen(cut.register(sampleChannel2)).test().awaitDone(10, TimeUnit.SECONDS);
         assertThat(vertxTestContext.awaitCompletion(10, TimeUnit.SECONDS)).isTrue();
@@ -115,9 +186,10 @@ class ControllerClusterManagerTest {
         // 4 checkpoints:
         //   - 1 for channel id active
         //   - 1 for channel id2 active
+        //   - 5 for new members
         //   - 1 for channel id2 close
         //   - 1 for channel id2 not active
-        Checkpoint checkpoint = vertxTestContext.checkpoint(4);
+        Checkpoint checkpoint = vertxTestContext.checkpoint(9);
         channelEventTopic.addMessageListener(message -> {
             checkpoint.flag();
             if (channelEventsCount.incrementAndGet() == 1) {
@@ -127,6 +199,8 @@ class ControllerClusterManagerTest {
                 clusterManager.addMember(new StandaloneMember());
             }
         });
+        memberListener = memberListener(checkpoint);
+        clusterManager.addMemberListener(memberListener);
         clusterManager.addMember(new StandaloneMember());
         SampleChannel sampleChannel = new SampleChannel("channelId", "targetId", true);
         sampleChannel.setClose(Completable.fromRunnable(checkpoint::flag));
@@ -134,5 +208,17 @@ class ControllerClusterManagerTest {
         sampleChannel2.setClose(Completable.fromRunnable(checkpoint::flag));
         cut.register(sampleChannel).andThen(cut.register(sampleChannel2)).test().awaitDone(10, TimeUnit.SECONDS);
         assertThat(vertxTestContext.awaitCompletion(10, TimeUnit.SECONDS)).isTrue();
+    }
+
+    private static MemberListener memberListener(final Checkpoint checkpoint) {
+        return new MemberListener() {
+            @Override
+            public void onMemberAdded(final Member member) {
+                checkpoint.flag();
+            }
+
+            @Override
+            public void onMemberRemoved(final Member member) {}
+        };
     }
 }
