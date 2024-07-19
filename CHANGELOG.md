@@ -1,3 +1,10 @@
+# [1.7.0](https://github.com/gravitee-io/gravitee-exchange/compare/1.6.1...1.7.0) (2024-07-19)
+
+
+### Features
+
+* add management endpoint on core api ([d9609f6](https://github.com/gravitee-io/gravitee-exchange/commit/d9609f605d7b32ec366706ec08b5cb3f80adde13))
+
 ## [1.6.1](https://github.com/gravitee-io/gravitee-exchange/compare/1.6.0...1.6.1) (2024-06-27)
 
 
