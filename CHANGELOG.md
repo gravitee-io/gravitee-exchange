@@ -1,3 +1,10 @@
+## [1.7.1](https://github.com/gravitee-io/gravitee-exchange/compare/1.7.0...1.7.1) (2024-07-22)
+
+
+### Bug Fixes
+
+* fix an issue with active filter ([44b777b](https://github.com/gravitee-io/gravitee-exchange/commit/44b777bcab07a37857c57893eff37766871e7121))
+
 # [1.7.0](https://github.com/gravitee-io/gravitee-exchange/compare/1.6.1...1.7.0) (2024-07-19)
 
 
