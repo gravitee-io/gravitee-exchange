@@ -151,17 +151,25 @@ class ControllerChannelsMetricEndpointTest extends AbstractMetricEndpointTest {
         ChannelMetric inactiveChannelMetric = ChannelMetric
             .builder()
             .id("id2")
-            .targetId("target2")
+            .targetId("target1")
             .active(false)
             .pendingCommands(false)
             .primary(true)
             .build();
+        ChannelMetric activeChannelMetric2 = ChannelMetric
+                .builder()
+                .id("id2")
+                .targetId("target2")
+                .active(false)
+                .pendingCommands(false)
+                .primary(true)
+                .build();
 
         when(exchangeController.channelsMetricsByTarget())
             .thenReturn(
                 Flowable.just(
-                    TargetChannelsMetric.builder().id(activeChannelMetric.targetId()).channels(List.of(activeChannelMetric)).build(),
-                    TargetChannelsMetric.builder().id(inactiveChannelMetric.targetId()).channels(List.of(inactiveChannelMetric)).build()
+                    TargetChannelsMetric.builder().id(activeChannelMetric.targetId()).channels(List.of(activeChannelMetric, inactiveChannelMetric)).build(),
+                    TargetChannelsMetric.builder().id(inactiveChannelMetric.targetId()).channels(List.of(activeChannelMetric2)).build()
                 )
             );
 
