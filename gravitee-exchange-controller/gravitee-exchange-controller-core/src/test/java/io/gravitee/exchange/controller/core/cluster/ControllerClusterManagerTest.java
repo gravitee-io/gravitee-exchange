@@ -135,7 +135,7 @@ class ControllerClusterManagerTest {
         //   - 1 for channel id2 close
         //   - 1 for channel id2 not alive
         Checkpoint checkpoint = vertxTestContext.checkpoint(6);
-        primaryChannelEventTopic.addMessageListener(message -> {
+        channelEventTopic.addMessageListener(message -> {
             checkpoint.flag();
             if (channelEventsCount.incrementAndGet() == 1) {
                 clusterManager.addMember(new StandaloneMember());
@@ -163,7 +163,7 @@ class ControllerClusterManagerTest {
         //   - 1 for channel id2 close
         //   - 1 for channel id2 not alive
         Checkpoint checkpoint = vertxTestContext.checkpoint(6);
-        primaryChannelEventTopic.addMessageListener(message -> {
+        channelEventTopic.addMessageListener(message -> {
             checkpoint.flag();
             if (channelEventsCount.incrementAndGet() == 1) {
                 clusterManager.addMember(new StandaloneMember());

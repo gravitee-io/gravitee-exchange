@@ -129,7 +129,7 @@ class ControllerChannelsMetricEndpointTest extends AbstractMetricEndpointTest {
     void should_return_filtered_channels_metrics_with_active_filtering(Vertx vertx, VertxTestContext context) {
         ChannelMetric activeChannelMetric = ChannelMetric.builder().id("id1").targetId("target1").active(true).primary(true).build();
         ChannelMetric inactiveChannelMetric = ChannelMetric.builder().id("id2").targetId("target1").active(false).primary(true).build();
-        ChannelMetric activeChannelMetric2 = ChannelMetric.builder().id("id2").targetId("target2").active(false).primary(true).build();
+        ChannelMetric activeChannelMetric2 = ChannelMetric.builder().id("id2").targetId("target2").active(true).primary(true).build();
 
         when(exchangeController.channelsMetricsByTarget())
             .thenReturn(
@@ -153,12 +153,17 @@ class ControllerChannelsMetricEndpointTest extends AbstractMetricEndpointTest {
             })
             .map(buffer -> {
                 JsonArray jsonArray = (JsonArray) Json.decodeValue(buffer);
-                assertThat(jsonArray).hasSize(1);
+                assertThat(jsonArray).hasSize(2);
                 ChannelMetric channelMetricReturned = jsonArray.getJsonObject(0).mapTo(ChannelMetric.class);
                 assertThat(channelMetricReturned.id()).isEqualTo(activeChannelMetric.id());
                 assertThat(channelMetricReturned.targetId()).isEqualTo(activeChannelMetric.targetId());
                 assertThat(channelMetricReturned.active()).isEqualTo(activeChannelMetric.active());
-                assertThat(channelMetricReturned.primary()).isEqualTo(activeChannelMetric.primary());
+
+                ChannelMetric channelMetricReturned2 = jsonArray.getJsonObject(1).mapTo(ChannelMetric.class);
+                assertThat(channelMetricReturned2.id()).isEqualTo(activeChannelMetric2.id());
+                assertThat(channelMetricReturned2.targetId()).isEqualTo(activeChannelMetric2.targetId());
+                assertThat(channelMetricReturned2.active()).isEqualTo(activeChannelMetric2.active());
+                assertThat(channelMetricReturned2.primary()).isEqualTo(activeChannelMetric2.primary());
                 return true;
             })
             .onFailure(context::failNow)
