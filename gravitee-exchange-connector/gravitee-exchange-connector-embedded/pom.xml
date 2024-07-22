@@ -24,7 +24,7 @@
     <parent>
         <groupId>io.gravitee.exchange</groupId>
         <artifactId>gravitee-exchange-connector</artifactId>
-        <version>1.7.1</version>
+        <version>1.7.2</version>
     </parent>
 
     <artifactId>gravitee-exchange-connector-embedded</artifactId>

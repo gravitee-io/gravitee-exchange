@@ -1,3 +1,12 @@
+## [1.7.2](https://github.com/gravitee-io/gravitee-exchange/compare/1.7.1...1.7.2) (2024-07-22)
+
+
+### Bug Fixes
+
+* add counter on inflight command on websocket channel ([45aa323](https://github.com/gravitee-io/gravitee-exchange/commit/45aa323cd985436056889040b12a9d5e0edcbd0d))
+* correct a typo on tests ([11b2f62](https://github.com/gravitee-io/gravitee-exchange/commit/11b2f62e0cf4b0031feb16a4e3c12a361890ecde))
+* rework re-balancing to cover missing case ([816ff4c](https://github.com/gravitee-io/gravitee-exchange/commit/816ff4c65aca5e8b7f98133aec975a978bb5de7d))
+
 ## [1.7.1](https://github.com/gravitee-io/gravitee-exchange/compare/1.7.0...1.7.1) (2024-07-22)
 
 
