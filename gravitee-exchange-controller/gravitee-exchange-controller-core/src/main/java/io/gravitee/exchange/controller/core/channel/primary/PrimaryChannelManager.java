@@ -17,16 +17,12 @@ package io.gravitee.exchange.controller.core.channel.primary;
 
 import io.gravitee.common.service.AbstractService;
 import io.gravitee.exchange.api.configuration.IdentifyConfiguration;
-import io.gravitee.exchange.api.controller.ControllerChannel;
 import io.gravitee.node.api.cache.Cache;
 import io.gravitee.node.api.cache.CacheConfiguration;
 import io.gravitee.node.api.cache.CacheManager;
 import io.gravitee.node.api.cluster.ClusterManager;
 import io.gravitee.node.api.cluster.messaging.Topic;
-import io.reactivex.rxjava3.core.Flowable;
-import io.reactivex.rxjava3.core.Maybe;
 import java.util.Iterator;
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 import lombok.RequiredArgsConstructor;
@@ -40,107 +36,55 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class PrimaryChannelManager extends AbstractService<PrimaryChannelManager> {
 
-    public static final String PRIMARY_CHANNEL_EVENTS_TOPIC = "controller-primary-channel-events";
-    public static final String PRIMARY_CHANNEL_EVENTS_ELECTED_TOPIC = "controller-primary-channel-elected-events";
-    public static final String PRIMARY_CHANNEL_EVENTS_EVICTED_TOPIC = "controller-primary-channel-evicted-events";
+    public static final String PRIMARY_CHANNEL_ELECTED_EVENTS_TOPIC = "controller-primary-channel-elected-events";
+    public static final String PRIMARY_CHANNEL_EVICTED_EVENTS_TOPIC = "controller-primary-channel-evicted-events";
     public static final String PRIMARY_CHANNEL_CACHE = "controller-primary-channel";
     public static final String PRIMARY_CHANNEL_CANDIDATE_CACHE = "controller-primary-channel-candidate";
     private final IdentifyConfiguration identifyConfiguration;
     private final ClusterManager clusterManager;
     private final CacheManager cacheManager;
-    private PrimaryChannelCandidateStore primaryChannelCandidateStore;
-    private Cache<String, String> primaryChannelCache;
-    private String subscriptionListenerId;
-    private Topic<ChannelEvent> primaryChannelEventTopic;
+    private PrimaryChannelCandidateRegistry primaryChannelCandidateRegistry;
+    private Cache<String, String> primaryChannelRegistry;
     private Topic<PrimaryChannelElectedEvent> primaryChannelElectedEventTopic;
     private Topic<PrimaryChannelEvictedEvent> primaryChannelEvictedEventTopic;
-    private CacheConfiguration cacheConfiguration;
 
     @Override
     protected void doStart() throws Exception {
         log.debug("[{}] Starting primary channel manager", this.identifyConfiguration.id());
         super.doStart();
-        cacheConfiguration = CacheConfiguration.builder().distributed(true).build();
-        if (primaryChannelCandidateStore == null) {
-            primaryChannelCandidateStore =
-                new PrimaryChannelCandidateStore(
+        CacheConfiguration cacheConfiguration = CacheConfiguration.builder().distributed(true).build();
+        if (primaryChannelCandidateRegistry == null) {
+            primaryChannelCandidateRegistry =
+                new PrimaryChannelCandidateRegistry(
                     cacheManager.getOrCreateCache(identifyConfiguration.identifyName(PRIMARY_CHANNEL_CANDIDATE_CACHE), cacheConfiguration)
                 );
         }
-        primaryChannelCache = cacheManager.getOrCreateCache(identifyConfiguration.identifyName(PRIMARY_CHANNEL_CACHE), cacheConfiguration);
-        primaryChannelEventTopic = clusterManager.topic(identifyConfiguration.identifyName(PRIMARY_CHANNEL_EVENTS_TOPIC));
-        primaryChannelElectedEventTopic = clusterManager.topic(identifyConfiguration.identifyName(PRIMARY_CHANNEL_EVENTS_ELECTED_TOPIC));
-        primaryChannelEvictedEventTopic = clusterManager.topic(identifyConfiguration.identifyName(PRIMARY_CHANNEL_EVENTS_EVICTED_TOPIC));
-        subscriptionListenerId =
-            primaryChannelEventTopic.addMessageListener(message -> {
-                ChannelEvent channelEvent = message.content();
-                if (channelEvent.targetId() == null) {
-                    log.warn(
-                        "[{}] New PrimaryChannelEvent received for channel '{}' without any target",
-                        this.identifyConfiguration.id(),
-                        channelEvent.channelId()
-                    );
-                } else {
-                    log.debug(
-                        "[{}] New PrimaryChannelEvent received for channel '{}' on target '{}'",
-                        this.identifyConfiguration.id(),
-                        channelEvent.channelId(),
-                        channelEvent.targetId()
-                    );
-                    if (clusterManager.self().primary()) {
-                        log.debug(
-                            "[{}] Handling PrimaryChannelEvent for channel '{}' on target '{}'",
-                            this.identifyConfiguration.id(),
-                            channelEvent.channelId(),
-                            channelEvent.targetId()
-                        );
-                        handleChannelEvent(channelEvent);
-                    }
-                }
-            });
+        primaryChannelRegistry =
+            cacheManager.getOrCreateCache(identifyConfiguration.identifyName(PRIMARY_CHANNEL_CACHE), cacheConfiguration);
+        primaryChannelElectedEventTopic = clusterManager.topic(identifyConfiguration.identifyName(PRIMARY_CHANNEL_ELECTED_EVENTS_TOPIC));
+        primaryChannelEvictedEventTopic = clusterManager.topic(identifyConfiguration.identifyName(PRIMARY_CHANNEL_EVICTED_EVENTS_TOPIC));
     }
 
     @Override
     protected void doStop() throws Exception {
         log.debug("[{}] Stopping primary channel manager", this.identifyConfiguration.id());
-        if (primaryChannelEventTopic != null && subscriptionListenerId != null) {
-            primaryChannelEventTopic.removeMessageListener(subscriptionListenerId);
-        }
         super.doStop();
     }
 
-    public Flowable<Map.Entry<String, Set<String>>> candidatesChannel() {
-        return primaryChannelCandidateStore.rxEntries();
-    }
-
-    public Maybe<Set<String>> candidatesChannel(final String targetId) {
-        return primaryChannelCandidateStore.rxGet(targetId);
-    }
-
-    public Maybe<String> primaryChannelBy(final String targetId) {
-        return primaryChannelCache.rxGet(targetId);
-    }
-
-    public void sendChannelEvent(final ControllerChannel controllerChannel, final boolean alive) {
-        primaryChannelEventTopic.publish(
-            ChannelEvent.builder().channelId(controllerChannel.id()).targetId(controllerChannel.targetId()).alive(alive).build()
-        );
-    }
-
-    private void handleChannelEvent(final ChannelEvent channelEvent) {
+    public void handleChannelCandidate(final ChannelEvent channelEvent) {
         String targetId = channelEvent.targetId();
         String channelId = channelEvent.channelId();
-        if (channelEvent.alive()) {
-            primaryChannelCandidateStore.put(targetId, channelId);
+        if (channelEvent.active()) {
+            primaryChannelCandidateRegistry.put(targetId, channelId);
         } else {
-            primaryChannelCandidateStore.remove(targetId, channelId);
+            primaryChannelCandidateRegistry.remove(targetId, channelId);
         }
         electPrimaryChannel(targetId);
     }
 
     private void electPrimaryChannel(final String targetId) {
-        String previousPrimaryChannelId = primaryChannelCache.get(targetId);
-        Set<String> channelIds = primaryChannelCandidateStore.get(targetId);
+        String previousPrimaryChannelId = primaryChannelRegistry.get(targetId);
+        Set<String> channelIds = primaryChannelCandidateRegistry.get(targetId);
 
         if (null == channelIds || channelIds.isEmpty()) {
             log.warn(
@@ -148,14 +92,14 @@ public class PrimaryChannelManager extends AbstractService<PrimaryChannelManager
                 this.identifyConfiguration.id(),
                 targetId
             );
-            primaryChannelCache.evict(targetId);
+            primaryChannelRegistry.evict(targetId);
             primaryChannelEvictedEventTopic.publish(PrimaryChannelEvictedEvent.builder().targetId(targetId).build());
             return;
         }
         if (!channelIds.contains(previousPrimaryChannelId)) {
             String newPrimaryChannelId = getRandomChannel(channelIds);
             if (newPrimaryChannelId != null) {
-                primaryChannelCache.put(targetId, newPrimaryChannelId);
+                primaryChannelRegistry.put(targetId, newPrimaryChannelId);
                 primaryChannelElectedEventTopic.publish(
                     PrimaryChannelElectedEvent.builder().targetId(targetId).channelId(newPrimaryChannelId).build()
                 );

@@ -15,16 +15,10 @@
  */
 package io.gravitee.exchange.controller.core.cluster;
 
-import static io.gravitee.exchange.controller.core.channel.primary.PrimaryChannelManager.PRIMARY_CHANNEL_EVENTS_TOPIC;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import io.gravitee.exchange.api.command.Command;
-import io.gravitee.exchange.api.command.CommandHandler;
-import io.gravitee.exchange.api.command.Reply;
-import io.gravitee.exchange.api.command.goodbye.GoodByeCommand;
-import io.gravitee.exchange.api.command.goodbye.GoodByeReply;
-import io.gravitee.exchange.api.command.goodbye.GoodByeReplyPayload;
 import io.gravitee.exchange.api.configuration.IdentifyConfiguration;
+import io.gravitee.exchange.controller.core.channel.ChannelManager;
 import io.gravitee.exchange.controller.core.channel.SampleChannel;
 import io.gravitee.exchange.controller.core.channel.primary.ChannelEvent;
 import io.gravitee.node.api.cache.CacheManager;
@@ -32,12 +26,10 @@ import io.gravitee.node.api.cluster.messaging.Topic;
 import io.gravitee.node.plugin.cache.standalone.StandaloneCacheManager;
 import io.gravitee.node.plugin.cluster.standalone.StandaloneMember;
 import io.reactivex.rxjava3.core.Completable;
-import io.reactivex.rxjava3.core.Single;
 import io.vertx.core.Vertx;
 import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
-import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.BeforeEach;
@@ -60,7 +52,7 @@ class ControllerClusterManagerTest {
     private MockEnvironment environment;
     private IdentifyConfiguration identifyConfiguration;
     private ControllerClusterManager cut;
-    private Topic<ChannelEvent> primaryChannelEventTopic;
+    private Topic<ChannelEvent> channelEventTopic;
 
     @BeforeEach
     public void beforeEach(Vertx vertx) throws Exception {
@@ -76,13 +68,13 @@ class ControllerClusterManagerTest {
         clusterManager.start();
         cut = new ControllerClusterManager(identifyConfiguration, clusterManager, cacheManager);
         cut.start();
-        primaryChannelEventTopic = clusterManager.topic(identifyConfiguration.identifyName(PRIMARY_CHANNEL_EVENTS_TOPIC));
+        channelEventTopic = clusterManager.topic(identifyConfiguration.identifyName(ChannelManager.CHANNEL_EVENTS_TOPIC));
     }
 
     @Test
     void should_not_rebalance_with_only_member(VertxTestContext vertxTestContext) throws InterruptedException {
         Checkpoint checkpoint = vertxTestContext.checkpoint(2);
-        primaryChannelEventTopic.addMessageListener(message -> checkpoint.flag());
+        channelEventTopic.addMessageListener(message -> checkpoint.flag());
         SampleChannel sampleChannel = new SampleChannel("channelId", "targetId", true);
         sampleChannel.setClose(Completable.fromRunnable(checkpoint::flag));
         SampleChannel sampleChannel2 = new SampleChannel("channelId2", "targetId", true);
@@ -96,12 +88,12 @@ class ControllerClusterManagerTest {
     void should_rebalance_channels_when_new_member_join(VertxTestContext vertxTestContext) throws InterruptedException {
         AtomicInteger channelEventsCount = new AtomicInteger(0);
         // 4 checkpoints:
-        //   - 1 for channel id alive
-        //   - 1 for channel id2 alive
+        //   - 1 for channel id active
+        //   - 1 for channel id2 active
         //   - 1 for channel id2 close
-        //   - 1 for channel id2 not alive
+        //   - 1 for channel id2 not active
         Checkpoint checkpoint = vertxTestContext.checkpoint(4);
-        primaryChannelEventTopic.addMessageListener(message -> {
+        channelEventTopic.addMessageListener(message -> {
             checkpoint.flag();
             if (channelEventsCount.incrementAndGet() == 1) {
                 clusterManager.addMember(new StandaloneMember());
@@ -121,12 +113,12 @@ class ControllerClusterManagerTest {
         throws InterruptedException {
         AtomicInteger channelEventsCount = new AtomicInteger(0);
         // 4 checkpoints:
-        //   - 1 for channel id alive
-        //   - 1 for channel id2 alive
+        //   - 1 for channel id active
+        //   - 1 for channel id2 active
         //   - 1 for channel id2 close
-        //   - 1 for channel id2 not alive
+        //   - 1 for channel id2 not active
         Checkpoint checkpoint = vertxTestContext.checkpoint(4);
-        primaryChannelEventTopic.addMessageListener(message -> {
+        channelEventTopic.addMessageListener(message -> {
             checkpoint.flag();
             if (channelEventsCount.incrementAndGet() == 1) {
                 clusterManager.addMember(new StandaloneMember());

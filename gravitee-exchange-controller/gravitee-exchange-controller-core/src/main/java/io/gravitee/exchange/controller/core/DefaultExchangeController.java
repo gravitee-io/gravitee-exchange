@@ -134,7 +134,7 @@ public class DefaultExchangeController extends AbstractService<ExchangeControlle
         startBatchFeature();
 
         primaryChannelEvictedTopic =
-            clusterManager.topic(identifyConfiguration.identifyName(PrimaryChannelManager.PRIMARY_CHANNEL_EVENTS_EVICTED_TOPIC));
+            clusterManager.topic(identifyConfiguration.identifyName(PrimaryChannelManager.PRIMARY_CHANNEL_EVICTED_EVENTS_TOPIC));
         primaryChannelEvictedSubscriptionId =
             primaryChannelEvictedTopic.addMessageListener(message -> {
                 if (clusterManager.self().primary()) {

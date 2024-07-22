@@ -21,11 +21,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import io.gravitee.node.api.cache.Cache;
 import io.gravitee.node.api.cache.CacheConfiguration;
 import io.gravitee.node.plugin.cache.common.InMemoryCache;
-import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayNameGeneration;
 import org.junit.jupiter.api.DisplayNameGenerator;
@@ -36,15 +34,15 @@ import org.junit.jupiter.api.Test;
  * @author GraviteeSource Team
  */
 @DisplayNameGeneration(DisplayNameGenerator.ReplaceUnderscores.class)
-class PrimaryChannelCandidateStoreTest {
+class PrimaryChannelCandidateRegistryTest {
 
     private Cache<String, Set<String>> store;
-    private PrimaryChannelCandidateStore cut;
+    private PrimaryChannelCandidateRegistry cut;
 
     @BeforeEach
     public void beforeEach() {
         store = new InMemoryCache<>("store", CacheConfiguration.builder().build());
-        cut = new PrimaryChannelCandidateStore(store);
+        cut = new PrimaryChannelCandidateRegistry(store);
     }
 
     @Test

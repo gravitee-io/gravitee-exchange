@@ -83,7 +83,7 @@ class ControllerTargetsMetricsEndpointTest extends AbstractMetricEndpointTest {
 
     @Test
     void should_return_500_when_error_occurred_retrieving_targets_batchs_metrics(Vertx vertx, VertxTestContext context) {
-        ChannelMetric channelMetric = ChannelMetric.builder().id("id").active(true).pendingCommands(false).primary(true).build();
+        ChannelMetric channelMetric = ChannelMetric.builder().id("id").active(true).primary(true).build();
         TargetChannelsMetric targetChannelsMetric = TargetChannelsMetric.builder().id("target").channels(List.of(channelMetric)).build();
         when(exchangeController.channelsMetricsByTarget()).thenReturn(Flowable.just(targetChannelsMetric));
         when(exchangeController.batchsMetricsByTarget()).thenReturn(Flowable.error(new RuntimeException()));
@@ -161,9 +161,9 @@ class ControllerTargetsMetricsEndpointTest extends AbstractMetricEndpointTest {
 
     @Test
     void should_return_target_metrics(Vertx vertx, VertxTestContext context) {
-        ChannelMetric channelMetric1 = ChannelMetric.builder().id("id").active(true).pendingCommands(false).primary(true).build();
+        ChannelMetric channelMetric1 = ChannelMetric.builder().id("id").active(true).primary(true).build();
         TargetChannelsMetric targetChannelsMetric1 = TargetChannelsMetric.builder().id("target").channels(List.of(channelMetric1)).build();
-        ChannelMetric channelMetric2 = ChannelMetric.builder().id("id2").active(true).pendingCommands(false).primary(true).build();
+        ChannelMetric channelMetric2 = ChannelMetric.builder().id("id2").active(true).primary(true).build();
         TargetChannelsMetric targetChannelsMetric2 = TargetChannelsMetric.builder().id("target2").channels(List.of(channelMetric2)).build();
         when(exchangeController.channelsMetricsByTarget()).thenReturn(Flowable.just(targetChannelsMetric1, targetChannelsMetric2));
         BatchMetric batchMetric1 = BatchMetric

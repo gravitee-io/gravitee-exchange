@@ -15,7 +15,7 @@
  */
 package io.gravitee.exchange.controller.core.channel;
 
-import static io.gravitee.exchange.controller.core.channel.primary.PrimaryChannelManager.PRIMARY_CHANNEL_EVENTS_TOPIC;
+import static io.gravitee.exchange.controller.core.channel.ChannelManager.CHANNEL_EVENTS_TOPIC;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import io.gravitee.exchange.api.command.Command;
@@ -36,6 +36,8 @@ import io.gravitee.exchange.api.controller.metrics.ChannelMetric;
 import io.gravitee.exchange.api.controller.metrics.TargetChannelsMetric;
 import io.gravitee.exchange.controller.core.channel.exception.NoChannelFoundException;
 import io.gravitee.exchange.controller.core.channel.primary.ChannelEvent;
+import io.gravitee.exchange.controller.core.channel.primary.PrimaryChannelElectedEvent;
+import io.gravitee.exchange.controller.core.channel.primary.PrimaryChannelManager;
 import io.gravitee.node.api.cache.CacheManager;
 import io.gravitee.node.api.cluster.ClusterManager;
 import io.gravitee.node.api.cluster.messaging.Topic;
@@ -72,7 +74,8 @@ class ChannelManagerTest {
     private MockEnvironment environment;
     private IdentifyConfiguration identifyConfiguration;
     private ChannelManager cut;
-    private Topic<ChannelEvent> primaryChannelEventTopic;
+    private Topic<ChannelEvent> channelEventTopic;
+    private Topic<PrimaryChannelElectedEvent> primaryChannelElectedEventTopic;
 
     @BeforeEach
     public void beforeEach(Vertx vertx) throws Exception {
@@ -84,15 +87,17 @@ class ChannelManagerTest {
         clusterManager.start();
         cut = new ChannelManager(identifyConfiguration, clusterManager, cacheManager);
         cut.start();
-        primaryChannelEventTopic = clusterManager.topic(identifyConfiguration.identifyName(PRIMARY_CHANNEL_EVENTS_TOPIC));
+        channelEventTopic = clusterManager.topic(identifyConfiguration.identifyName(CHANNEL_EVENTS_TOPIC));
+        primaryChannelElectedEventTopic =
+            clusterManager.topic(identifyConfiguration.identifyName(PrimaryChannelManager.PRIMARY_CHANNEL_ELECTED_EVENTS_TOPIC));
     }
 
     @Test
     void should_register_new_channel(VertxTestContext vertxTestContext) throws InterruptedException {
         SampleChannel sampleChannel = new SampleChannel("channelId", "targetId");
         Checkpoint checkpoint = vertxTestContext.checkpoint();
-        primaryChannelEventTopic.addMessageListener(message -> {
-            if (message.content().alive()) {
+        channelEventTopic.addMessageListener(message -> {
+            if (message.content().active()) {
                 checkpoint.flag();
             }
         });
@@ -181,8 +186,8 @@ class ChannelManagerTest {
     void should_unregister_channel(VertxTestContext vertxTestContext) throws InterruptedException {
         SampleChannel sampleChannel = new SampleChannel("channelId", "targetId");
         Checkpoint checkpoint = vertxTestContext.checkpoint();
-        primaryChannelEventTopic.addMessageListener(message -> {
-            if (!message.content().alive()) {
+        channelEventTopic.addMessageListener(message -> {
+            if (!message.content().active()) {
                 checkpoint.flag();
             }
         });
@@ -221,16 +226,18 @@ class ChannelManagerTest {
 
     @Test
     void should_return_metrics_for_target(VertxTestContext vertxTestContext) throws InterruptedException {
-        Checkpoint checkpoint = vertxTestContext.checkpoint(3);
-        primaryChannelEventTopic.addMessageListener(message -> checkpoint.flag());
+        Checkpoint checkpoint = vertxTestContext.checkpoint(6); // 3 register, 1 manuel event and 2 election
+        channelEventTopic.addMessageListener(message -> checkpoint.flag());
+        primaryChannelElectedEventTopic.addMessageListener(message -> checkpoint.flag());
 
         SampleChannel sampleChannel = new SampleChannel("channelId", "targetId");
-        SampleChannel sampleChannel2 = new SampleChannel("channelId2", "targetId", false);
+        SampleChannel sampleChannel2 = new SampleChannel("channelId2", "targetId");
         SampleChannel sampleChannel3 = new SampleChannel("channelId3", "targetId2");
         cut
             .register(sampleChannel)
             .andThen(cut.register(sampleChannel2))
             .andThen(cut.register(sampleChannel3))
+            .andThen(channelEventTopic.rxPublish(ChannelEvent.builder().channelId("channelId2").targetId("targetId").active(false).build()))
             .test()
             .awaitDone(10, TimeUnit.SECONDS);
         assertThat(vertxTestContext.awaitCompletion(10, TimeUnit.SECONDS)).isTrue();
@@ -260,16 +267,18 @@ class ChannelManagerTest {
 
     @Test
     void should_return_metrics_for_channel(VertxTestContext vertxTestContext) throws InterruptedException {
-        Checkpoint checkpoint = vertxTestContext.checkpoint(3);
-        primaryChannelEventTopic.addMessageListener(message -> checkpoint.flag());
+        Checkpoint checkpoint = vertxTestContext.checkpoint(6); // 3 register, 1 manuel event and 2 election
+        channelEventTopic.addMessageListener(message -> checkpoint.flag());
+        primaryChannelElectedEventTopic.addMessageListener(message -> checkpoint.flag());
 
         SampleChannel sampleChannel = new SampleChannel("channelId", "targetId");
-        SampleChannel sampleChannel2 = new SampleChannel("channelId2", "targetId", false);
+        SampleChannel sampleChannel2 = new SampleChannel("channelId2", "targetId");
         SampleChannel sampleChannel3 = new SampleChannel("channelId3", "targetId2");
         cut
             .register(sampleChannel)
             .andThen(cut.register(sampleChannel2))
             .andThen(cut.register(sampleChannel3))
+            .andThen(channelEventTopic.rxPublish(ChannelEvent.builder().channelId("channelId2").targetId("targetId").active(false).build()))
             .test()
             .awaitDone(10, TimeUnit.SECONDS);
         assertThat(vertxTestContext.awaitCompletion(10, TimeUnit.SECONDS)).isTrue();
@@ -290,7 +299,7 @@ class ChannelManagerTest {
     @Test
     void should_send_command_to_channel(VertxTestContext vertxTestContext) throws InterruptedException {
         Checkpoint checkpoint = vertxTestContext.checkpoint(2);
-        primaryChannelEventTopic.addMessageListener(message -> checkpoint.flag());
+        channelEventTopic.addMessageListener(message -> checkpoint.flag());
 
         SampleChannel sampleChannel = new SampleChannel("channelId", "targetId");
         sampleChannel.addCommandHandlers(

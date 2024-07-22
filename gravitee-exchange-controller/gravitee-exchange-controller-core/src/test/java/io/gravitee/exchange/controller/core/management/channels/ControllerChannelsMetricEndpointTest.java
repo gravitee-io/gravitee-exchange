@@ -18,16 +18,12 @@ package io.gravitee.exchange.controller.core.management.channels;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 
-import io.gravitee.exchange.api.batch.BatchStatus;
 import io.gravitee.exchange.api.configuration.IdentifyConfiguration;
 import io.gravitee.exchange.api.controller.ExchangeController;
-import io.gravitee.exchange.api.controller.metrics.BatchMetric;
 import io.gravitee.exchange.api.controller.metrics.ChannelMetric;
-import io.gravitee.exchange.api.controller.metrics.TargetBatchsMetric;
 import io.gravitee.exchange.api.controller.metrics.TargetChannelsMetric;
 import io.gravitee.exchange.controller.core.management.AbstractMetricEndpointTest;
 import io.gravitee.exchange.controller.core.management.channel.ControllerChannelsMetricsEndpoint;
-import io.gravitee.exchange.controller.core.management.channel.ControllerTargetIdChannelsMetricsEndpoint;
 import io.gravitee.exchange.controller.core.management.error.ManagementError;
 import io.reactivex.rxjava3.core.Flowable;
 import io.vertx.core.Vertx;
@@ -37,7 +33,6 @@ import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonArray;
 import io.vertx.junit5.VertxTestContext;
-import java.time.Instant;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -105,14 +100,7 @@ class ControllerChannelsMetricEndpointTest extends AbstractMetricEndpointTest {
 
     @Test
     void should_return_channels_metrics(Vertx vertx, VertxTestContext context) {
-        ChannelMetric channelMetric = ChannelMetric
-            .builder()
-            .id("id")
-            .targetId("target")
-            .active(true)
-            .pendingCommands(false)
-            .primary(true)
-            .build();
+        ChannelMetric channelMetric = ChannelMetric.builder().id("id").targetId("target").active(true).primary(true).build();
         when(exchangeController.channelsMetricsByTarget())
             .thenReturn(Flowable.just(TargetChannelsMetric.builder().id("target").channels(List.of(channelMetric)).build()));
         HttpClient httpClient = vertx.createHttpClient();
@@ -130,7 +118,6 @@ class ControllerChannelsMetricEndpointTest extends AbstractMetricEndpointTest {
                 assertThat(channelMetricReturned.id()).isEqualTo(channelMetric.id());
                 assertThat(channelMetricReturned.targetId()).isEqualTo(channelMetric.targetId());
                 assertThat(channelMetricReturned.active()).isEqualTo(channelMetric.active());
-                assertThat(channelMetricReturned.pendingCommands()).isEqualTo(channelMetric.pendingCommands());
                 assertThat(channelMetricReturned.primary()).isEqualTo(channelMetric.primary());
                 return true;
             })
@@ -140,35 +127,18 @@ class ControllerChannelsMetricEndpointTest extends AbstractMetricEndpointTest {
 
     @Test
     void should_return_filtered_channels_metrics_with_active_filtering(Vertx vertx, VertxTestContext context) {
-        ChannelMetric activeChannelMetric = ChannelMetric
-            .builder()
-            .id("id1")
-            .targetId("target1")
-            .active(true)
-            .pendingCommands(false)
-            .primary(true)
-            .build();
-        ChannelMetric inactiveChannelMetric = ChannelMetric
-            .builder()
-            .id("id2")
-            .targetId("target1")
-            .active(false)
-            .pendingCommands(false)
-            .primary(true)
-            .build();
-        ChannelMetric activeChannelMetric2 = ChannelMetric
-                .builder()
-                .id("id2")
-                .targetId("target2")
-                .active(false)
-                .pendingCommands(false)
-                .primary(true)
-                .build();
+        ChannelMetric activeChannelMetric = ChannelMetric.builder().id("id1").targetId("target1").active(true).primary(true).build();
+        ChannelMetric inactiveChannelMetric = ChannelMetric.builder().id("id2").targetId("target1").active(false).primary(true).build();
+        ChannelMetric activeChannelMetric2 = ChannelMetric.builder().id("id2").targetId("target2").active(false).primary(true).build();
 
         when(exchangeController.channelsMetricsByTarget())
             .thenReturn(
                 Flowable.just(
-                    TargetChannelsMetric.builder().id(activeChannelMetric.targetId()).channels(List.of(activeChannelMetric, inactiveChannelMetric)).build(),
+                    TargetChannelsMetric
+                        .builder()
+                        .id(activeChannelMetric.targetId())
+                        .channels(List.of(activeChannelMetric, inactiveChannelMetric))
+                        .build(),
                     TargetChannelsMetric.builder().id(inactiveChannelMetric.targetId()).channels(List.of(activeChannelMetric2)).build()
                 )
             );
@@ -188,7 +158,6 @@ class ControllerChannelsMetricEndpointTest extends AbstractMetricEndpointTest {
                 assertThat(channelMetricReturned.id()).isEqualTo(activeChannelMetric.id());
                 assertThat(channelMetricReturned.targetId()).isEqualTo(activeChannelMetric.targetId());
                 assertThat(channelMetricReturned.active()).isEqualTo(activeChannelMetric.active());
-                assertThat(channelMetricReturned.pendingCommands()).isEqualTo(activeChannelMetric.pendingCommands());
                 assertThat(channelMetricReturned.primary()).isEqualTo(activeChannelMetric.primary());
                 return true;
             })
@@ -198,30 +167,9 @@ class ControllerChannelsMetricEndpointTest extends AbstractMetricEndpointTest {
 
     @Test
     void should_return_filtered_channels_metrics_with_target_filtering(Vertx vertx, VertxTestContext context) {
-        ChannelMetric activeChannelMetric = ChannelMetric
-            .builder()
-            .id("id1")
-            .targetId("target1")
-            .active(true)
-            .pendingCommands(false)
-            .primary(true)
-            .build();
-        ChannelMetric inactiveChannelMetric = ChannelMetric
-            .builder()
-            .id("id2")
-            .targetId("target2")
-            .active(false)
-            .pendingCommands(false)
-            .primary(true)
-            .build();
+        ChannelMetric activeChannelMetric = ChannelMetric.builder().id("id1").targetId("target1").active(true).primary(true).build();
 
-        when(exchangeController.channelsMetricsByTarget())
-            .thenReturn(
-                Flowable.just(
-                    TargetChannelsMetric.builder().id(activeChannelMetric.targetId()).channels(List.of(activeChannelMetric)).build(),
-                    TargetChannelsMetric.builder().id(inactiveChannelMetric.targetId()).channels(List.of(inactiveChannelMetric)).build()
-                )
-            );
+        when(exchangeController.channelsMetricsForTarget("target1")).thenReturn(Flowable.just(activeChannelMetric));
 
         HttpClient httpClient = vertx.createHttpClient();
         httpClient
@@ -238,7 +186,6 @@ class ControllerChannelsMetricEndpointTest extends AbstractMetricEndpointTest {
                 assertThat(channelMetricReturned.id()).isEqualTo(activeChannelMetric.id());
                 assertThat(channelMetricReturned.targetId()).isEqualTo(activeChannelMetric.targetId());
                 assertThat(channelMetricReturned.active()).isEqualTo(activeChannelMetric.active());
-                assertThat(channelMetricReturned.pendingCommands()).isEqualTo(activeChannelMetric.pendingCommands());
                 assertThat(channelMetricReturned.primary()).isEqualTo(activeChannelMetric.primary());
                 return true;
             })

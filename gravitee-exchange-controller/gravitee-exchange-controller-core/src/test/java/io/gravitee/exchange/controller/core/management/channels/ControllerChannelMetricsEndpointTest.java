@@ -104,14 +104,7 @@ class ControllerChannelMetricsEndpointTest extends AbstractMetricEndpointTest {
 
     @Test
     void should_return_batch_metric(Vertx vertx, VertxTestContext context) {
-        ChannelMetric channelMetric = ChannelMetric
-            .builder()
-            .id("id1")
-            .targetId("target1")
-            .active(true)
-            .pendingCommands(false)
-            .primary(true)
-            .build();
+        ChannelMetric channelMetric = ChannelMetric.builder().id("id1").targetId("target1").active(true).primary(true).build();
 
         when(exchangeController.channelMetric(channelMetric.id())).thenReturn(Maybe.just(channelMetric));
 
@@ -128,7 +121,6 @@ class ControllerChannelMetricsEndpointTest extends AbstractMetricEndpointTest {
                 assertThat(returnChannelMetric.id()).isEqualTo(channelMetric.id());
                 assertThat(returnChannelMetric.targetId()).isEqualTo(channelMetric.targetId());
                 assertThat(returnChannelMetric.active()).isEqualTo(channelMetric.active());
-                assertThat(returnChannelMetric.pendingCommands()).isEqualTo(channelMetric.pendingCommands());
                 assertThat(returnChannelMetric.primary()).isEqualTo(channelMetric.primary());
                 return true;
             })

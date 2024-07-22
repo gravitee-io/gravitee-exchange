@@ -99,14 +99,7 @@ class ControllerTargetChannelsMetricEndpointTest extends AbstractMetricEndpointT
 
     @Test
     void should_return_channels_metric(Vertx vertx, VertxTestContext context) {
-        ChannelMetric channelMetric = ChannelMetric
-            .builder()
-            .id("id")
-            .targetId("target")
-            .active(true)
-            .pendingCommands(false)
-            .primary(true)
-            .build();
+        ChannelMetric channelMetric = ChannelMetric.builder().id("id").targetId("target").active(true).primary(true).build();
         when(exchangeController.channelsMetricsForTarget(channelMetric.targetId())).thenReturn(Flowable.just(channelMetric));
 
         HttpClient httpClient = vertx.createHttpClient();
@@ -124,7 +117,6 @@ class ControllerTargetChannelsMetricEndpointTest extends AbstractMetricEndpointT
                 assertThat(channelMetricReturned.id()).isEqualTo(channelMetric.id());
                 assertThat(channelMetricReturned.targetId()).isEqualTo(channelMetric.targetId());
                 assertThat(channelMetricReturned.active()).isEqualTo(channelMetric.active());
-                assertThat(channelMetricReturned.pendingCommands()).isEqualTo(channelMetric.pendingCommands());
                 assertThat(channelMetricReturned.primary()).isEqualTo(channelMetric.primary());
                 return true;
             })
