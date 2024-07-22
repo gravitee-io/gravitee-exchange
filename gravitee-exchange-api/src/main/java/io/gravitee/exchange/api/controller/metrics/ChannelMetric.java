@@ -22,4 +22,4 @@ import lombok.Builder;
  * @author GraviteeSource Team
  */
 @Builder
-public record ChannelMetric(String id, String targetId, boolean active, boolean pendingCommands, boolean primary) {}
+public record ChannelMetric(String id, String targetId, boolean active, boolean primary) {}

@@ -16,28 +16,14 @@
 package io.gravitee.exchange.controller.core.channel.primary;
 
 import io.gravitee.node.api.cache.Cache;
-import io.reactivex.rxjava3.core.Flowable;
-import io.reactivex.rxjava3.core.Maybe;
 import java.util.HashSet;
-import java.util.Map;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
-public class PrimaryChannelCandidateStore {
+public class PrimaryChannelCandidateRegistry {
 
     private final Cache<String, Set<String>> store;
-
-    public Flowable<Map.Entry<String, Set<String>>> rxEntries() {
-        return store.rxEntrySet();
-    }
-
-    public Maybe<Set<String>> rxGet(final String targetId) {
-        if (targetId == null) {
-            return Maybe.error(new IllegalArgumentException("Target id cannot be null"));
-        }
-        return store.rxGet(targetId);
-    }
 
     public Set<String> get(final String targetId) {
         if (targetId == null) {

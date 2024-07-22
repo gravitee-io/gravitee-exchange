@@ -19,4 +19,4 @@ import java.io.Serializable;
 import lombok.Builder;
 
 @Builder
-public record ChannelEvent(String channelId, String targetId, boolean alive) implements Serializable {}
+public record ChannelEvent(String channelId, String targetId, boolean active, boolean closed) implements Serializable {}

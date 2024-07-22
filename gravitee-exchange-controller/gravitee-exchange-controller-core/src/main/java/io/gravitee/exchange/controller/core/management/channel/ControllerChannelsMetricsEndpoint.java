@@ -15,6 +15,8 @@
  */
 package io.gravitee.exchange.controller.core.management.channel;
 
+import static io.gravitee.exchange.controller.core.management.EndpointHelper.write;
+
 import io.gravitee.common.http.HttpMethod;
 import io.gravitee.exchange.api.configuration.IdentifyConfiguration;
 import io.gravitee.exchange.api.controller.ExchangeController;
@@ -26,8 +28,6 @@ import io.reactivex.rxjava3.core.Flowable;
 import io.vertx.ext.web.RoutingContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-
-import static io.gravitee.exchange.controller.core.management.EndpointHelper.write;
 
 @RequiredArgsConstructor
 @Slf4j
@@ -52,20 +52,22 @@ public class ControllerChannelsMetricsEndpoint implements ManagementEndpoint {
         var targetId = ctx.request().getParam("targetId");
         Flowable<ChannelMetric> obs;
         if (targetId == null) {
-            obs = exchangeController
+            obs =
+                exchangeController
                     .channelsMetricsByTarget()
                     .flatMapStream(targetChannelsMetric -> targetChannelsMetric.channels().stream());
         } else {
             obs = exchangeController.channelsMetricsForTarget(targetId);
         }
-        obs.filter(channelMetric -> active == null || channelMetric.active() == Boolean.parseBoolean(active))
-                .toList()
-                .doOnSuccess(channelMetrics -> write(ctx, channelMetrics))
-                .doOnError(throwable -> {
-                    log.error("[{}] Unable to retrieve channels metrics", identifyConfiguration.id(), throwable);
-                    write(ctx, ManagementError.builder().code(500).message("Unable to retrieve channels metrics").build());
-                })
-                .onErrorComplete()
-                .subscribe();
+        obs
+            .filter(channelMetric -> active == null || channelMetric.active() == Boolean.parseBoolean(active))
+            .toList()
+            .doOnSuccess(channelMetrics -> write(ctx, channelMetrics))
+            .doOnError(throwable -> {
+                log.error("[{}] Unable to retrieve channels metrics", identifyConfiguration.id(), throwable);
+                write(ctx, ManagementError.builder().code(500).message("Unable to retrieve channels metrics").build());
+            })
+            .onErrorComplete()
+            .subscribe();
     }
 }

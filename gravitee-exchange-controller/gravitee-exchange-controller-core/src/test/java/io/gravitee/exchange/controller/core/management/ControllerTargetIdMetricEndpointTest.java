@@ -103,7 +103,7 @@ class ControllerTargetIdMetricEndpointTest extends AbstractMetricEndpointTest {
 
     @Test
     void should_return_target_metric_for_specific_target(Vertx vertx, VertxTestContext context) {
-        ChannelMetric channelMetric = ChannelMetric.builder().id("id").active(true).pendingCommands(false).primary(true).build();
+        ChannelMetric channelMetric = ChannelMetric.builder().id("id").active(true).primary(true).build();
         when(exchangeController.channelsMetricsForTarget("target")).thenReturn(Flowable.just(channelMetric));
         BatchMetric batchMetric = BatchMetric
             .builder()
@@ -136,7 +136,7 @@ class ControllerTargetIdMetricEndpointTest extends AbstractMetricEndpointTest {
 
     @Test
     void should_return_target_metric_for_specific_target_with_batch(Vertx vertx, VertxTestContext context) {
-        ChannelMetric channelMetric = ChannelMetric.builder().id("id").active(true).pendingCommands(false).primary(true).build();
+        ChannelMetric channelMetric = ChannelMetric.builder().id("id").active(true).primary(true).build();
         when(exchangeController.channelsMetricsForTarget("target")).thenReturn(Flowable.just(channelMetric));
         when(exchangeController.batchsMetricsForTarget(any())).thenReturn(Flowable.empty());
         HttpClient httpClient = vertx.createHttpClient();

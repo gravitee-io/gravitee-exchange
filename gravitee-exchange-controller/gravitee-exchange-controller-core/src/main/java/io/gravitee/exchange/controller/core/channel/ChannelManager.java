@@ -31,8 +31,11 @@ import io.gravitee.exchange.api.controller.ControllerChannel;
 import io.gravitee.exchange.api.controller.metrics.ChannelMetric;
 import io.gravitee.exchange.api.controller.metrics.TargetChannelsMetric;
 import io.gravitee.exchange.controller.core.channel.exception.NoChannelFoundException;
+import io.gravitee.exchange.controller.core.channel.primary.ChannelEvent;
 import io.gravitee.exchange.controller.core.channel.primary.PrimaryChannelElectedEvent;
 import io.gravitee.exchange.controller.core.channel.primary.PrimaryChannelManager;
+import io.gravitee.node.api.cache.Cache;
+import io.gravitee.node.api.cache.CacheConfiguration;
 import io.gravitee.node.api.cache.CacheManager;
 import io.gravitee.node.api.cluster.ClusterManager;
 import io.gravitee.node.api.cluster.messaging.Topic;
@@ -41,9 +44,7 @@ import io.reactivex.rxjava3.core.Flowable;
 import io.reactivex.rxjava3.core.Maybe;
 import io.reactivex.rxjava3.core.Single;
 import io.reactivex.rxjava3.disposables.Disposable;
-import java.util.Set;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -53,13 +54,19 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class ChannelManager extends AbstractService<ChannelManager> {
 
+    public static final String CHANNEL_EVENTS_TOPIC = "controller-channel-events";
+    private static final String CHANNELS_METRICS_CACHE = "controller-channels-metrics-registry";
     private static final int HEALTH_CHECK_DELAY = 30000;
     private static final TimeUnit HEALTH_CHECK_DELAY_UNIT = TimeUnit.MILLISECONDS;
     private final LocalChannelRegistry localChannelRegistry = new LocalChannelRegistry();
     private final PrimaryChannelManager primaryChannelManager;
     private final IdentifyConfiguration identifyConfiguration;
     private final ClusterManager clusterManager;
+    private final CacheManager cacheManager;
     private Disposable healthCheckDisposable;
+    private Cache<String, ChannelMetric> channelMetricsRegistry;
+    private Topic<ChannelEvent> channelEventTopic;
+    private String channelEventSubscriptionId;
     private Topic<PrimaryChannelElectedEvent> primaryChannelElectedEventTopic;
     private String primaryChannelElectedSubscriptionId;
 
@@ -70,6 +77,7 @@ public class ChannelManager extends AbstractService<ChannelManager> {
     ) {
         this.identifyConfiguration = identifyConfiguration;
         this.clusterManager = clusterManager;
+        this.cacheManager = cacheManager;
         this.primaryChannelManager = new PrimaryChannelManager(identifyConfiguration, clusterManager, cacheManager);
     }
 
@@ -77,11 +85,48 @@ public class ChannelManager extends AbstractService<ChannelManager> {
     protected void doStart() throws Exception {
         log.debug("[{}] Starting channel manager", this.identifyConfiguration.id());
         super.doStart();
+        channelMetricsRegistry =
+            cacheManager.getOrCreateCache(
+                identifyConfiguration.identifyName(CHANNELS_METRICS_CACHE),
+                CacheConfiguration.builder().distributed(true).build()
+            );
+
         primaryChannelManager.start();
+
+        channelEventTopic = clusterManager.topic(identifyConfiguration.identifyName(CHANNEL_EVENTS_TOPIC));
+        channelEventSubscriptionId =
+            channelEventTopic.addMessageListener(message -> {
+                ChannelEvent channelEvent = message.content();
+                if (channelEvent.targetId() == null) {
+                    log.warn(
+                        "[{}] ChannelEvent received for channel '{}' without any target",
+                        this.identifyConfiguration.id(),
+                        channelEvent.channelId()
+                    );
+                } else {
+                    log.debug(
+                        "[{}] ChannelEvent received for channel '{}' on target '{}'",
+                        this.identifyConfiguration.id(),
+                        channelEvent.channelId(),
+                        channelEvent.targetId()
+                    );
+                    if (clusterManager.self().primary()) {
+                        log.debug(
+                            "[{}] Handling ChannelEvent for channel '{}' on target '{}'",
+                            this.identifyConfiguration.id(),
+                            channelEvent.channelId(),
+                            channelEvent.targetId()
+                        );
+                        handleChannelEvent(channelEvent);
+                    }
+                }
+            });
+
         primaryChannelElectedEventTopic =
-            clusterManager.topic(identifyConfiguration.identifyName(PrimaryChannelManager.PRIMARY_CHANNEL_EVENTS_ELECTED_TOPIC));
+            clusterManager.topic(identifyConfiguration.identifyName(PrimaryChannelManager.PRIMARY_CHANNEL_ELECTED_EVENTS_TOPIC));
         primaryChannelElectedSubscriptionId =
             primaryChannelElectedEventTopic.addMessageListener(message -> handlePrimaryChannelElectedEvent(message.content()));
+
         healthCheckDisposable =
             Flowable
                 .<Long, Long>generate(
@@ -101,6 +146,18 @@ public class ChannelManager extends AbstractService<ChannelManager> {
                 .concatMapCompletable(interval -> sendHealthCheckCommand())
                 .onErrorComplete()
                 .subscribe();
+    }
+
+    private void handleChannelEvent(final ChannelEvent channelEvent) {
+        if (channelEvent.closed()) {
+            channelMetricsRegistry.evict(channelEvent.channelId());
+        } else {
+            channelMetricsRegistry.put(
+                channelEvent.channelId(),
+                ChannelMetric.builder().id(channelEvent.channelId()).targetId(channelEvent.targetId()).active(channelEvent.active()).build()
+            );
+        }
+        primaryChannelManager.handleChannelCandidate(channelEvent);
     }
 
     private void handlePrimaryChannelElectedEvent(final PrimaryChannelElectedEvent event) {
@@ -156,6 +213,11 @@ public class ChannelManager extends AbstractService<ChannelManager> {
             targetId,
             isPrimary
         );
+        channelMetricsRegistry.put(
+            channel.id(),
+            ChannelMetric.builder().id(channel.id()).targetId(channel.targetId()).active(channel.isActive()).primary(isPrimary).build()
+        );
+
         return channel
             .<PrimaryCommand, PrimaryReply>send(new PrimaryCommand(new PrimaryCommandPayload(isPrimary)))
             .doOnSuccess(primaryReply -> {
@@ -189,7 +251,7 @@ public class ChannelManager extends AbstractService<ChannelManager> {
                         );
                         HealthCheckReplyPayload payload = reply.getPayload();
                         controllerChannel.enforceActiveStatus(payload.healthy());
-                        signalChannelAlive(controllerChannel, reply.getPayload().healthy());
+                        publishChannelEvent(controllerChannel, reply.getPayload().healthy(), false);
                     })
                     .ignoreElement()
                     .onErrorResumeNext(throwable -> {
@@ -200,7 +262,7 @@ public class ChannelManager extends AbstractService<ChannelManager> {
                             controllerChannel.targetId()
                         );
                         controllerChannel.enforceActiveStatus(false);
-                        signalChannelAlive(controllerChannel, false);
+                        publishChannelEvent(controllerChannel, false, false);
                         return Completable.complete();
                     })
             );
@@ -224,68 +286,27 @@ public class ChannelManager extends AbstractService<ChannelManager> {
         if (primaryChannelElectedEventTopic != null && primaryChannelElectedSubscriptionId != null) {
             primaryChannelElectedEventTopic.removeMessageListener(primaryChannelElectedSubscriptionId);
         }
+        if (channelEventTopic != null && channelEventSubscriptionId != null) {
+            channelEventTopic.removeMessageListener(channelEventSubscriptionId);
+        }
         super.doStop();
     }
 
     public Flowable<TargetChannelsMetric> channelsMetricsByTarget() {
-        return this.primaryChannelManager.candidatesChannel()
-            .flatMapSingle(candidatesChannelEntries -> {
-                String targetId = candidatesChannelEntries.getKey();
-                Set<String> channelIds = candidatesChannelEntries.getValue();
-                return this.primaryChannelManager.primaryChannelBy(targetId)
-                    .defaultIfEmpty("unknown")
-                    .flattenStreamAsFlowable(primaryChannel -> getChannelMetrics(channelIds, primaryChannel))
-                    .toList()
-                    .map(channelMetrics -> TargetChannelsMetric.builder().id(targetId).channels(channelMetrics).build());
+        return this.channelMetricsRegistry.rxValues()
+            .groupBy(ChannelMetric::targetId)
+            .flatMapSingle(group -> {
+                String targetId = group.getKey();
+                return group.toList().map(channelMetrics -> TargetChannelsMetric.builder().id(targetId).channels(channelMetrics).build());
             });
     }
 
     public Flowable<ChannelMetric> channelsMetricsForTarget(final String targetId) {
-        return this.primaryChannelManager.primaryChannelBy(targetId)
-            .defaultIfEmpty("unknown")
-            .flatMapPublisher(primaryChannel ->
-                this.primaryChannelManager.candidatesChannel(targetId)
-                    .flattenStreamAsFlowable(candidatesChannel -> getChannelMetrics(candidatesChannel, primaryChannel))
-            );
+        return this.channelMetricsRegistry.rxValues().filter(channelMetric -> channelMetric.targetId().equals(targetId));
     }
 
     public Maybe<ChannelMetric> channelMetric(final String channelId) {
-        return Maybe
-            .fromOptional(this.localChannelRegistry.getById(channelId))
-            .flatMapSingle(controllerChannel ->
-                primaryChannelManager
-                    .primaryChannelBy(controllerChannel.targetId())
-                    .defaultIfEmpty("unknown")
-                    .map(primaryChannel ->
-                        ChannelMetric
-                            .builder()
-                            .id(channelId)
-                            .primary(channelId.equals(primaryChannel))
-                            .targetId(controllerChannel.targetId())
-                            .active(controllerChannel.isActive())
-                            .pendingCommands(controllerChannel.hasPendingCommands())
-                            .build()
-                    )
-            );
-    }
-
-    private Stream<ChannelMetric> getChannelMetrics(final Set<String> channelIds, final String primaryChannel) {
-        return channelIds
-            .stream()
-            .map(channelId -> {
-                ChannelMetric.ChannelMetricBuilder metricBuilder = ChannelMetric
-                    .builder()
-                    .id(channelId)
-                    .primary(channelId.equals(primaryChannel));
-                this.localChannelRegistry.getById(channelId)
-                    .ifPresent(controllerChannel ->
-                        metricBuilder
-                            .targetId(controllerChannel.targetId())
-                            .active(controllerChannel.isActive())
-                            .pendingCommands(controllerChannel.hasPendingCommands())
-                    );
-                return metricBuilder.build();
-            });
+        return this.channelMetricsRegistry.rxGet(channelId);
     }
 
     public ControllerChannel getChannelById(final String id) {
@@ -307,7 +328,7 @@ public class ChannelManager extends AbstractService<ChannelManager> {
                     controllerChannel.id(),
                     controllerChannel.targetId()
                 );
-                signalChannelAlive(controllerChannel, true);
+                publishChannelEvent(controllerChannel, true, false);
             })
             .onErrorResumeNext(throwable -> {
                 log.warn(
@@ -325,15 +346,14 @@ public class ChannelManager extends AbstractService<ChannelManager> {
         return Completable
             .fromRunnable(() -> localChannelRegistry.remove(controllerChannel))
             .andThen(controllerChannel.close())
-            .doOnComplete(() -> {
+            .doOnComplete(() ->
                 log.debug(
                     "[{}] Channel '{}' successfully unregister for target '{}'",
                     this.identifyConfiguration.id(),
                     controllerChannel.id(),
                     controllerChannel.targetId()
-                );
-                signalChannelAlive(controllerChannel, false);
-            })
+                )
+            )
             .doOnError(throwable ->
                 log.warn(
                     "[{}] Unable to unregister channel '{}' for target '{}'",
@@ -342,7 +362,8 @@ public class ChannelManager extends AbstractService<ChannelManager> {
                     controllerChannel.targetId(),
                     throwable
                 )
-            );
+            )
+            .doFinally(() -> publishChannelEvent(controllerChannel, false, true));
     }
 
     public <C extends Command<?>, R extends Reply<?>> Single<R> send(C command, String targetId) {
@@ -386,7 +407,15 @@ public class ChannelManager extends AbstractService<ChannelManager> {
             );
     }
 
-    public void signalChannelAlive(final ControllerChannel controllerChannel, final boolean isAlive) {
-        this.primaryChannelManager.sendChannelEvent(controllerChannel, isAlive);
+    private void publishChannelEvent(final ControllerChannel controllerChannel, final boolean active, final boolean closed) {
+        channelEventTopic.publish(
+            ChannelEvent
+                .builder()
+                .channelId(controllerChannel.id())
+                .targetId(controllerChannel.targetId())
+                .active(active)
+                .closed(closed)
+                .build()
+        );
     }
 }
