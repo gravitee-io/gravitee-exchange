@@ -1,3 +1,11 @@
+## [1.7.3](https://github.com/gravitee-io/gravitee-exchange/compare/1.7.2...1.7.3) (2024-07-23)
+
+
+### Bug Fixes
+
+* improve primary command handling ([e13f189](https://github.com/gravitee-io/gravitee-exchange/commit/e13f189ffc3709ca45b71e2f6c9ea67788e6f48d))
+* improve some logs ([a0e811c](https://github.com/gravitee-io/gravitee-exchange/commit/a0e811c00ded1daeca69d3f1c7a441740ae4b4fb))
+
 ## [1.7.2](https://github.com/gravitee-io/gravitee-exchange/compare/1.7.1...1.7.2) (2024-07-22)
 
 
