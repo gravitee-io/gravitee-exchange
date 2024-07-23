@@ -1,3 +1,10 @@
+## [1.7.5](https://github.com/gravitee-io/gravitee-exchange/compare/1.7.4...1.7.5) (2024-07-23)
+
+
+### Bug Fixes
+
+* targets endpoint was returning empty array when target doesn't have batchs ([5aeb3bb](https://github.com/gravitee-io/gravitee-exchange/commit/5aeb3bbe8765050cdff3415c646cb3d2a559bedc))
+
 ## [1.7.4](https://github.com/gravitee-io/gravitee-exchange/compare/1.7.3...1.7.4) (2024-07-23)
 
 
