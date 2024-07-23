@@ -13,13 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.gravitee.exchange.api.controller.metrics;
-
-import lombok.Builder;
+package io.gravitee.exchange.controller.core.channel.exception;
 
 /**
  * @author Guillaume LAMIRAND (guillaume.lamirand at graviteesource.com)
  * @author GraviteeSource Team
  */
-@Builder(toBuilder = true)
-public record ChannelMetric(String id, String targetId, boolean active, boolean primary) {}
+public class PrimaryCommandException extends RuntimeException {
+
+    public PrimaryCommandException(final String message) {
+        super(message);
+    }
+}
