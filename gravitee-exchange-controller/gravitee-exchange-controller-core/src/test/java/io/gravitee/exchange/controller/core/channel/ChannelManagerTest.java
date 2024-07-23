@@ -237,6 +237,7 @@ class ChannelManagerTest {
             .register(sampleChannel)
             .andThen(cut.register(sampleChannel2))
             .andThen(cut.register(sampleChannel3))
+            .andThen(Completable.fromRunnable(() -> sampleChannel2.enforceActiveStatus(false)))
             .andThen(channelEventTopic.rxPublish(ChannelEvent.builder().channelId("channelId2").targetId("targetId").active(false).build()))
             .test()
             .awaitDone(10, TimeUnit.SECONDS);
@@ -251,11 +252,11 @@ class ChannelManagerTest {
                 for (TargetChannelsMetric targetChannelsMetric : targetMetrics) {
                     if (targetChannelsMetric.id().equals("targetId")) {
                         assertThat(targetChannelsMetric.channels())
-                            .extracting(ChannelMetric::id, ChannelMetric::primary, ChannelMetric::active)
+                            .extracting(ChannelMetric::id, ChannelMetric::active, ChannelMetric::primary)
                             .containsOnly(Tuple.tuple("channelId", true, true), Tuple.tuple("channelId2", false, false));
                     } else if (targetChannelsMetric.id().equals("targetId2")) {
                         assertThat(targetChannelsMetric.channels())
-                            .extracting(ChannelMetric::id, ChannelMetric::primary, ChannelMetric::active)
+                            .extracting(ChannelMetric::id, ChannelMetric::active, ChannelMetric::primary)
                             .containsOnly(Tuple.tuple("channelId3", true, true));
                     } else {
                         return false;
@@ -278,6 +279,7 @@ class ChannelManagerTest {
             .register(sampleChannel)
             .andThen(cut.register(sampleChannel2))
             .andThen(cut.register(sampleChannel3))
+            .andThen(Completable.fromRunnable(() -> sampleChannel2.enforceActiveStatus(false)))
             .andThen(channelEventTopic.rxPublish(ChannelEvent.builder().channelId("channelId2").targetId("targetId").active(false).build()))
             .test()
             .awaitDone(10, TimeUnit.SECONDS);

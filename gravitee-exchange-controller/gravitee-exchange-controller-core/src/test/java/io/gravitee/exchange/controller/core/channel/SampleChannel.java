@@ -22,6 +22,9 @@ import io.gravitee.exchange.api.command.CommandAdapter;
 import io.gravitee.exchange.api.command.CommandHandler;
 import io.gravitee.exchange.api.command.Reply;
 import io.gravitee.exchange.api.command.ReplyAdapter;
+import io.gravitee.exchange.api.command.primary.PrimaryCommand;
+import io.gravitee.exchange.api.command.primary.PrimaryReply;
+import io.gravitee.exchange.api.command.primary.PrimaryReplyPayload;
 import io.gravitee.exchange.api.controller.ControllerChannel;
 import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.CompletableSource;
@@ -57,6 +60,21 @@ public class SampleChannel implements ControllerChannel {
         this.targetId = targetId;
         this.active = active;
         this.pendingCommands = pendingCommands;
+        addCommandHandlers(
+            List.of(
+                new CommandHandler<>() {
+                    @Override
+                    public String supportType() {
+                        return PrimaryCommand.COMMAND_TYPE;
+                    }
+
+                    @Override
+                    public Single<Reply<?>> handle(final Command<?> command) {
+                        return Single.just(new PrimaryReply(command.getId(), new PrimaryReplyPayload()));
+                    }
+                }
+            )
+        );
     }
 
     @Override
@@ -152,7 +170,7 @@ public class SampleChannel implements ControllerChannel {
     @Override
     public void addCommandHandlers(final List<CommandHandler<? extends Command<?>, ? extends Reply<?>>> commandHandlers) {
         if (commandHandlers != null) {
-            commandHandlers.forEach(commandHandler -> this.commandHandlers.putIfAbsent(commandHandler.supportType(), commandHandler));
+            commandHandlers.forEach(commandHandler -> this.commandHandlers.put(commandHandler.supportType(), commandHandler));
         }
     }
 
@@ -161,14 +179,14 @@ public class SampleChannel implements ControllerChannel {
         final List<CommandAdapter<? extends Command<?>, ? extends Command<?>, ? extends Reply<?>>> commandAdapters
     ) {
         if (commandAdapters != null) {
-            commandAdapters.forEach(commandDecorator -> this.commandAdapters.putIfAbsent(commandDecorator.supportType(), commandDecorator));
+            commandAdapters.forEach(commandDecorator -> this.commandAdapters.put(commandDecorator.supportType(), commandDecorator));
         }
     }
 
     @Override
     public void addReplyAdapters(final List<ReplyAdapter<? extends Reply<?>, ? extends Reply<?>>> replyAdapters) {
         if (replyAdapters != null) {
-            replyAdapters.forEach(replyDecorator -> this.replyAdapters.putIfAbsent(replyDecorator.supportType(), replyDecorator));
+            replyAdapters.forEach(replyDecorator -> this.replyAdapters.put(replyDecorator.supportType(), replyDecorator));
         }
     }
 

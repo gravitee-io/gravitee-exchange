@@ -16,6 +16,7 @@
 package io.gravitee.exchange.controller.core.channel;
 
 import io.gravitee.common.service.AbstractService;
+import io.gravitee.common.utils.RxHelper;
 import io.gravitee.exchange.api.command.Command;
 import io.gravitee.exchange.api.command.CommandStatus;
 import io.gravitee.exchange.api.command.Reply;
@@ -31,6 +32,7 @@ import io.gravitee.exchange.api.controller.ControllerChannel;
 import io.gravitee.exchange.api.controller.metrics.ChannelMetric;
 import io.gravitee.exchange.api.controller.metrics.TargetChannelsMetric;
 import io.gravitee.exchange.controller.core.channel.exception.NoChannelFoundException;
+import io.gravitee.exchange.controller.core.channel.exception.PrimaryCommandException;
 import io.gravitee.exchange.controller.core.channel.primary.ChannelEvent;
 import io.gravitee.exchange.controller.core.channel.primary.PrimaryChannelElectedEvent;
 import io.gravitee.exchange.controller.core.channel.primary.PrimaryChannelManager;
@@ -154,10 +156,7 @@ public class ChannelManager extends AbstractService<ChannelManager> {
         if (channelEvent.closed()) {
             channelMetricsRegistry.evict(channelEvent.channelId());
         } else {
-            channelMetricsRegistry.put(
-                channelEvent.channelId(),
-                ChannelMetric.builder().id(channelEvent.channelId()).targetId(channelEvent.targetId()).active(channelEvent.active()).build()
-            );
+            updateChannelMetric(channelEvent.channelId(), channelEvent.targetId(), channelEvent.active(), false);
         }
         primaryChannelManager.handleChannelCandidate(channelEvent);
     }
@@ -195,11 +194,17 @@ public class ChannelManager extends AbstractService<ChannelManager> {
                     );
             })
             .subscribe(
-                () -> log.debug("[{}] Primary channel elected event properly handled", this.identifyConfiguration.id()),
+                () ->
+                    log.debug(
+                        "[{}] Primary channel elected event for target '{}' properly handled",
+                        this.identifyConfiguration.id(),
+                        event.targetId()
+                    ),
                 throwable ->
                     log.error(
-                        "[{}] Unable to send primary commands to local registered channels",
+                        "[{}] Unable to send primary commands to local registered channels for target '{}'",
                         this.identifyConfiguration.id(),
+                        event.targetId(),
                         throwable
                     )
             );
@@ -215,10 +220,6 @@ public class ChannelManager extends AbstractService<ChannelManager> {
             targetId,
             isPrimary
         );
-        channelMetricsRegistry.put(
-            channel.id(),
-            ChannelMetric.builder().id(channel.id()).targetId(channel.targetId()).active(channel.isActive()).primary(isPrimary).build()
-        );
 
         return channel
             .<PrimaryCommand, PrimaryReply>send(new PrimaryCommand(new PrimaryCommandPayload(isPrimary)))
@@ -226,20 +227,36 @@ public class ChannelManager extends AbstractService<ChannelManager> {
                 log.debug("[{}] Primary command successfully sent to channel '{}'", this.identifyConfiguration.id(), channelId);
                 if (primaryReply.getCommandStatus() == CommandStatus.SUCCEEDED) {
                     log.debug("[{}] Channel '{}' successfully replied from primary command", this.identifyConfiguration.id(), channelId);
+                    updateChannelMetric(channel.id(), channel.targetId(), channel.isActive(), isPrimary);
                 } else if (primaryReply.getCommandStatus() == CommandStatus.ERROR) {
                     log.warn("[{}] Channel '{}' replied in error from primary command", this.identifyConfiguration.id(), channelId);
+                    throw new PrimaryCommandException(primaryReply.getErrorDetails());
                 }
             })
-            .doOnError(throwable ->
-                log.warn("[{}] Unable to send primary command to channel '{}'", this.identifyConfiguration.id(), channelId, throwable)
-            )
+            .doOnError(throwable -> {
+                log.warn("[{}] Unable to send primary command to channel '{}'", this.identifyConfiguration.id(), channelId, throwable);
+                updateChannelMetric(channel.id(), channel.targetId(), channel.isActive(), false);
+            })
             .ignoreElement();
+    }
+
+    private void updateChannelMetric(final String channelId, final String targetId, final boolean active, final boolean primary) {
+        channelMetricsRegistry.compute(
+            channelId,
+            (k, v) -> {
+                if (v == null) {
+                    v = ChannelMetric.builder().id(channelId).targetId(targetId).active(active).primary(primary).build();
+                } else {
+                    v = v.toBuilder().active(active).primary(primary).build();
+                }
+                return v;
+            }
+        );
     }
 
     private Completable sendHealthCheckCommand() {
         return Flowable
             .fromIterable(localChannelRegistry.getAll())
-            .filter(ControllerChannel::isActive)
             .flatMapCompletable(controllerChannel ->
                 controllerChannel
                     .send(new HealthCheckCommand(new HealthCheckCommandPayload()))
