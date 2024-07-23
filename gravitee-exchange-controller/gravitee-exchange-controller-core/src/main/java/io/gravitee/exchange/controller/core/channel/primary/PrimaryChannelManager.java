@@ -75,8 +75,20 @@ public class PrimaryChannelManager extends AbstractService<PrimaryChannelManager
         String targetId = channelEvent.targetId();
         String channelId = channelEvent.channelId();
         if (channelEvent.active()) {
+            log.debug(
+                "[{}] Adding channel '{}' as new primary candidate for target'{}'",
+                this.identifyConfiguration.id(),
+                channelId,
+                targetId
+            );
             primaryChannelCandidateRegistry.put(targetId, channelId);
         } else {
+            log.debug(
+                "[{}] Channel '{}' is inactive, removing it from primary candidates for target'{}'",
+                this.identifyConfiguration.id(),
+                channelId,
+                targetId
+            );
             primaryChannelCandidateRegistry.remove(targetId, channelId);
         }
         electPrimaryChannel(targetId);
@@ -97,12 +109,26 @@ public class PrimaryChannelManager extends AbstractService<PrimaryChannelManager
             return;
         }
         if (!channelIds.contains(previousPrimaryChannelId)) {
+            log.debug(
+                "[{}] Previous elected primary channel '{}' is no more a primary candidate for target '{}'",
+                this.identifyConfiguration.id(),
+                previousPrimaryChannelId,
+                targetId
+            );
             String newPrimaryChannelId = getRandomChannel(channelIds);
             if (newPrimaryChannelId != null) {
+                log.debug(
+                    "[{}] Channel '{}' has been elected as a primary for target '{}'",
+                    this.identifyConfiguration.id(),
+                    newPrimaryChannelId,
+                    targetId
+                );
                 primaryChannelRegistry.put(targetId, newPrimaryChannelId);
                 primaryChannelElectedEventTopic.publish(
                     PrimaryChannelElectedEvent.builder().targetId(targetId).channelId(newPrimaryChannelId).build()
                 );
+            } else {
+                log.debug("[{}] Unable to elect primary channel for target '{}'", this.identifyConfiguration.id(), targetId);
             }
         }
     }
