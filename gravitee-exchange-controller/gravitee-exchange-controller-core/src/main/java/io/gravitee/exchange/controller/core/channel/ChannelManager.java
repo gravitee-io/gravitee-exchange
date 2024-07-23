@@ -156,7 +156,12 @@ public class ChannelManager extends AbstractService<ChannelManager> {
         if (channelEvent.closed()) {
             channelMetricsRegistry.evict(channelEvent.channelId());
         } else {
-            updateChannelMetric(channelEvent.channelId(), channelEvent.targetId(), channelEvent.active(), false);
+            updateChannelMetric(
+                channelEvent.channelId(),
+                channelEvent.targetId(),
+                channelEvent.active(),
+                primaryChannelManager.isPrimaryChannelFor(channelEvent.channelId(), channelEvent.targetId())
+            );
         }
         primaryChannelManager.handleChannelCandidate(channelEvent);
     }

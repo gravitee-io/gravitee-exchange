@@ -97,6 +97,7 @@ class PrimaryChannelManagerTest {
         assertThat(primaryChannelCache.get("targetId")).isEqualTo("channelId");
         assertThat(primaryChannelCandidateCache.containsKey("targetId")).isTrue();
         assertThat(primaryChannelCandidateCache.get("targetId")).containsOnly("channelId");
+        assertThat(cut.isPrimaryChannelFor("channelId", "targetId")).isTrue();
     }
 
     @Test
@@ -115,6 +116,7 @@ class PrimaryChannelManagerTest {
         // shouldn't have any primary channel for the target
         assertThat(primaryChannelCache.containsKey("targetId")).isFalse();
         assertThat(primaryChannelCandidateCache.containsKey("targetId")).isFalse();
+        assertThat(cut.isPrimaryChannelFor("channelId", "targetId")).isFalse();
     }
 
     @Test
@@ -141,6 +143,7 @@ class PrimaryChannelManagerTest {
                 assertThat(primaryChannelCache.get("targetId")).isEqualTo("channelId2");
                 assertThat(primaryChannelCandidateCache.containsKey("targetId")).isTrue();
                 assertThat(primaryChannelCandidateCache.get("targetId")).containsOnly("channelId2");
+                assertThat(cut.isPrimaryChannelFor("channelId2", "targetId")).isTrue();
             });
     }
 }
