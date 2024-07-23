@@ -22,8 +22,10 @@ import io.gravitee.exchange.api.configuration.IdentifyConfiguration;
 import io.gravitee.exchange.api.controller.ExchangeController;
 import io.gravitee.exchange.api.controller.metrics.BatchMetric;
 import io.gravitee.exchange.api.controller.metrics.ChannelMetric;
+import io.gravitee.exchange.api.controller.metrics.TargetBatchsMetric;
 import io.gravitee.exchange.controller.core.management.error.ManagementError;
 import io.gravitee.node.management.http.endpoint.ManagementEndpoint;
+import io.reactivex.rxjava3.core.Flowable;
 import io.vertx.ext.web.RoutingContext;
 import java.util.ArrayList;
 import java.util.List;
@@ -49,17 +51,16 @@ public class ControllerTargetsMetricsEndpoint implements ManagementEndpoint {
 
     @Override
     public void handle(final RoutingContext ctx) {
+        Flowable<TargetBatchsMetric> batchsMetricFlowable = exchangeController.batchsMetricsByTarget().cache();
         exchangeController
             .channelsMetricsByTarget()
-            .map(targetMetric -> new Result(targetMetric.id(), targetMetric.channels()))
-            .zipWith(
-                exchangeController.batchsMetricsByTarget().cache(),
-                (result, targetBatchsMetrics) -> {
-                    if (result.id.equals(targetBatchsMetrics.id())) {
-                        result.batchs.addAll(targetBatchsMetrics.batchs());
-                    }
-                    return result;
-                }
+            .flatMap(targetChannelsMetric ->
+                batchsMetricFlowable
+                    .filter(targetBatchsMetric -> targetBatchsMetric.id().equals(targetChannelsMetric.id()))
+                    .map(targetBatchsMetric ->
+                        new Result(targetChannelsMetric.id(), targetChannelsMetric.channels(), targetBatchsMetric.batchs())
+                    )
+                    .defaultIfEmpty(new Result(targetChannelsMetric.id(), targetChannelsMetric.channels()))
             )
             .toList()
             .doOnSuccess(results -> write(ctx, results))

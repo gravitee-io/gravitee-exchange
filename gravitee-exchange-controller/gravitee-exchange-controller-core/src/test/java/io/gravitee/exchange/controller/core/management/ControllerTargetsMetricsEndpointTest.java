@@ -219,5 +219,40 @@ class ControllerTargetsMetricsEndpointTest extends AbstractMetricEndpointTest {
             .andThen(context.succeedingThenComplete());
     }
 
+    @Test
+    void should_return_target_metrics_with_empty_batches(Vertx vertx, VertxTestContext context) {
+        ChannelMetric channelMetric1 = ChannelMetric.builder().id("id").active(true).primary(true).build();
+        TargetChannelsMetric targetChannelsMetric1 = TargetChannelsMetric.builder().id("target").channels(List.of(channelMetric1)).build();
+        ChannelMetric channelMetric2 = ChannelMetric.builder().id("id2").active(true).primary(true).build();
+        TargetChannelsMetric targetChannelsMetric2 = TargetChannelsMetric.builder().id("target2").channels(List.of(channelMetric2)).build();
+        when(exchangeController.channelsMetricsByTarget()).thenReturn(Flowable.just(targetChannelsMetric1, targetChannelsMetric2));
+
+        when(exchangeController.batchsMetricsByTarget()).thenReturn(Flowable.empty());
+
+        HttpClient httpClient = vertx.createHttpClient();
+        httpClient
+            .request(HttpMethod.GET, serverPort, "localhost", "/exchange/targets")
+            .flatMap(HttpClientRequest::send)
+            .flatMap(httpClientResponse -> {
+                assertThat(httpClientResponse.statusCode()).isEqualTo(200);
+                return httpClientResponse.body();
+            })
+            .map(buffer -> {
+                JsonArray jsonArray = (JsonArray) Json.decodeValue(buffer);
+                assertThat(jsonArray).hasSize(2);
+                Result result1 = jsonArray.getJsonObject(0).mapTo(Result.class);
+                assertThat(result1.id()).isEqualTo("target");
+                assertThat(result1.channels()).containsOnly(channelMetric1);
+                assertThat(result1.batchs()).isEmpty();
+                Result result2 = jsonArray.getJsonObject(1).mapTo(Result.class);
+                assertThat(result2.id()).isEqualTo("target2");
+                assertThat(result2.channels()).containsOnly(channelMetric2);
+                assertThat(result2.batchs()).isEmpty();
+                return true;
+            })
+            .onFailure(context::failNow)
+            .andThen(context.succeedingThenComplete());
+    }
+
     public record Result(String id, List<ChannelMetric> channels, List<BatchMetric> batchs) {}
 }

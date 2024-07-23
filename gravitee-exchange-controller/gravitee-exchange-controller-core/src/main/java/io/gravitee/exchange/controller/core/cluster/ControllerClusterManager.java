@@ -157,8 +157,9 @@ public class ControllerClusterManager extends AbstractService<ControllerClusterM
                                 int size = channelMetrics.size();
                                 int reducedSize = (int) Math.ceil((float) size / clusterSize);
                                 log.debug(
-                                    "[{}] Maximum '{}' channels will be scheduled for re-balancing",
+                                    "[{}] Maximum '{}' channels for target '{}'} will be scheduled for re-balancing",
                                     identifyConfiguration.id(),
+                                    group.getKey(),
                                     reducedSize
                                 );
                                 // Filter channel with pending commands
