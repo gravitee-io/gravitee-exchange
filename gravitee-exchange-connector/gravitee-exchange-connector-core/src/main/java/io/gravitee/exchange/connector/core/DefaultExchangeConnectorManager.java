@@ -45,7 +45,7 @@ public class DefaultExchangeConnectorManager implements ExchangeConnectorManager
     public Completable register(final ExchangeConnector exchangeConnector) {
         return Completable
             .fromRunnable(() -> {
-                log.debug("Registering new connector for target '{}'", exchangeConnector.targetId());
+                log.debug("Registering new connector");
                 // Add custom handlers to deal with healthcheck and primary commands
                 exchangeConnector.addCommandHandlers(
                     List.of(

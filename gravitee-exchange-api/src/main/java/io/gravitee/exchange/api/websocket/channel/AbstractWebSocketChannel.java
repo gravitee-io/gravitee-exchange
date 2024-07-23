@@ -131,7 +131,7 @@ public abstract class AbstractWebSocketChannel implements Channel {
                     cleanChannel();
                 });
 
-                webSocket.pongHandler(buffer -> log.debug("Receiving pong frame from channel '{}' for target '{}'", id, targetId));
+                webSocket.pongHandler(buffer -> log.trace("Receiving pong frame from channel '{}' for target '{}'", id, targetId));
 
                 webSocket.textMessageHandler(buffer -> webSocket.close((short) 1003, "Unsupported text frame").subscribe());
 
@@ -462,14 +462,16 @@ public abstract class AbstractWebSocketChannel implements Channel {
                 .writeBinaryMessage(protocolAdapter.write(websocketExchange))
                 .doOnComplete(() ->
                     log.debug(
-                        "Write command/reply '{}' with id '{}' to websocket successfully",
+                        "Write exchange '{}' for '{}' and id '{}' to websocket successfully",
+                        websocketExchange.type(),
                         websocketExchange.exchangeType(),
                         commandId
                     )
                 )
                 .onErrorResumeNext(throwable -> {
                     log.error(
-                        "An error occurred when trying to send command/reply '{}' with id '{}'",
+                        "An error occurred when trying to send exchange '{}' for '{}' and id '{}'",
+                        websocketExchange.type(),
                         websocketExchange.exchangeType(),
                         commandId
                     );
