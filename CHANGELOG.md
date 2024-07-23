@@ -1,3 +1,10 @@
+## [1.7.4](https://github.com/gravitee-io/gravitee-exchange/compare/1.7.3...1.7.4) (2024-07-23)
+
+
+### Bug Fixes
+
+* properly update primary status when updating metrics ([0000188](https://github.com/gravitee-io/gravitee-exchange/commit/0000188f7414d01341c7644e561a8707f0e139ae))
+
 ## [1.7.3](https://github.com/gravitee-io/gravitee-exchange/compare/1.7.2...1.7.3) (2024-07-23)
 
 
