@@ -22,6 +22,7 @@ import io.gravitee.node.api.cache.CacheConfiguration;
 import io.gravitee.node.api.cache.CacheManager;
 import io.gravitee.node.api.cluster.ClusterManager;
 import io.gravitee.node.api.cluster.messaging.Topic;
+import io.reactivex.rxjava3.core.Maybe;
 import java.util.Iterator;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
@@ -71,12 +72,17 @@ public class PrimaryChannelManager extends AbstractService<PrimaryChannelManager
         super.doStop();
     }
 
+    public boolean isPrimaryChannelFor(final String channelId, final String targetId) {
+        String primaryChannelId = primaryChannelRegistry.get(targetId);
+        return channelId.equals(primaryChannelId);
+    }
+
     public void handleChannelCandidate(final ChannelEvent channelEvent) {
         String targetId = channelEvent.targetId();
         String channelId = channelEvent.channelId();
         if (channelEvent.active()) {
             log.debug(
-                "[{}] Adding channel '{}' as new primary candidate for target'{}'",
+                "[{}] Adding channel '{}' as new primary candidate for target '{}'",
                 this.identifyConfiguration.id(),
                 channelId,
                 targetId
@@ -84,7 +90,7 @@ public class PrimaryChannelManager extends AbstractService<PrimaryChannelManager
             primaryChannelCandidateRegistry.put(targetId, channelId);
         } else {
             log.debug(
-                "[{}] Channel '{}' is inactive, removing it from primary candidates for target'{}'",
+                "[{}] Channel '{}' is inactive, removing it from primary candidates for target '{}'",
                 this.identifyConfiguration.id(),
                 channelId,
                 targetId
