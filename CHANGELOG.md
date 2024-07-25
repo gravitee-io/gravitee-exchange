@@ -1,3 +1,19 @@
+# [1.8.0](https://github.com/gravitee-io/gravitee-exchange/compare/1.7.5...1.8.0) (2024-07-25)
+
+
+### Bug Fixes
+
+* bump gravitee node version ([586558f](https://github.com/gravitee-io/gravitee-exchange/commit/586558f434d10c95e24281d9975f263918a0ad8e))
+* do some code cleaning ([cc61181](https://github.com/gravitee-io/gravitee-exchange/commit/cc611813f4543265482be3c13bf269d8bb13dc8b))
+* reject new incoming websocket connection when controller is shutting down ([f982401](https://github.com/gravitee-io/gravitee-exchange/commit/f9824014ad93bafbc7d75c3d47aebba8d09fee9a))
+* rework stop method to make them block ([a1255cf](https://github.com/gravitee-io/gravitee-exchange/commit/a1255cf0a24b2dfb3b9a68844c125fb50aa26cd6))
+* use a queue instead of relying on primary member condition ([9f1d314](https://github.com/gravitee-io/gravitee-exchange/commit/9f1d314f317366631b2f623a962a35f893cf663f))
+
+
+### Features
+
+* implement a healthcheck mechanism on candidate channel ([7aa9f8a](https://github.com/gravitee-io/gravitee-exchange/commit/7aa9f8a9ef01da4095084c4bc3308c31e7efbf98))
+
 ## [1.7.5](https://github.com/gravitee-io/gravitee-exchange/compare/1.7.4...1.7.5) (2024-07-23)
 
 
