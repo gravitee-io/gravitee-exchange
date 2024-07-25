@@ -16,7 +16,6 @@
 package io.gravitee.exchange.controller.core.channel;
 
 import io.gravitee.common.service.AbstractService;
-import io.gravitee.common.utils.RxHelper;
 import io.gravitee.exchange.api.command.Command;
 import io.gravitee.exchange.api.command.CommandStatus;
 import io.gravitee.exchange.api.command.Reply;
@@ -40,6 +39,7 @@ import io.gravitee.node.api.cache.Cache;
 import io.gravitee.node.api.cache.CacheConfiguration;
 import io.gravitee.node.api.cache.CacheManager;
 import io.gravitee.node.api.cluster.ClusterManager;
+import io.gravitee.node.api.cluster.messaging.Queue;
 import io.gravitee.node.api.cluster.messaging.Topic;
 import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Flowable;
@@ -58,7 +58,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class ChannelManager extends AbstractService<ChannelManager> {
 
-    public static final String CHANNEL_EVENTS_TOPIC = "controller-channel-events";
+    public static final String CHANNEL_EVENTS_QUEUE = "controller-channel-events";
     private static final String CHANNELS_METRICS_CACHE = "controller-channels-metrics-registry";
     private static final int HEALTH_CHECK_DELAY = 30000;
     private static final TimeUnit HEALTH_CHECK_DELAY_UNIT = TimeUnit.MILLISECONDS;
@@ -69,7 +69,7 @@ public class ChannelManager extends AbstractService<ChannelManager> {
     private final CacheManager cacheManager;
     private Disposable healthCheckDisposable;
     private Cache<String, ChannelMetric> channelMetricsRegistry;
-    private Topic<ChannelEvent> channelEventTopic;
+    private Queue<ChannelEvent> channelEventQueue;
     private String channelEventSubscriptionId;
     private Topic<PrimaryChannelElectedEvent> primaryChannelElectedEventTopic;
     private String primaryChannelElectedSubscriptionId;
@@ -97,9 +97,9 @@ public class ChannelManager extends AbstractService<ChannelManager> {
 
         primaryChannelManager.start();
 
-        channelEventTopic = clusterManager.topic(identifyConfiguration.identifyName(CHANNEL_EVENTS_TOPIC));
+        channelEventQueue = clusterManager.queue(identifyConfiguration.identifyName(CHANNEL_EVENTS_QUEUE));
         channelEventSubscriptionId =
-            channelEventTopic.addMessageListener(message -> {
+            channelEventQueue.addMessageListener(message -> {
                 ChannelEvent channelEvent = message.content();
                 if (channelEvent.targetId() == null) {
                     log.warn(
@@ -114,15 +114,7 @@ public class ChannelManager extends AbstractService<ChannelManager> {
                         channelEvent.channelId(),
                         channelEvent.targetId()
                     );
-                    if (clusterManager.self().primary()) {
-                        log.debug(
-                            "[{}] Handling ChannelEvent for channel '{}' on target '{}'",
-                            this.identifyConfiguration.id(),
-                            channelEvent.channelId(),
-                            channelEvent.targetId()
-                        );
-                        handleChannelEvent(channelEvent);
-                    }
+                    handleChannelEvent(channelEvent);
                 }
             });
 
@@ -294,7 +286,20 @@ public class ChannelManager extends AbstractService<ChannelManager> {
 
     @Override
     protected void doStop() throws Exception {
+        super.doStop();
         log.debug("[{}] Stopping channel manager", this.identifyConfiguration.id());
+
+        if (channelEventQueue != null && channelEventSubscriptionId != null) {
+            channelEventQueue.removeMessageListener(channelEventSubscriptionId);
+        }
+
+        if (primaryChannelElectedEventTopic != null && primaryChannelElectedSubscriptionId != null) {
+            primaryChannelElectedEventTopic.removeMessageListener(primaryChannelElectedSubscriptionId);
+        }
+
+        if (healthCheckDisposable != null) {
+            healthCheckDisposable.dispose();
+        }
 
         // Unregister all local channel
         Flowable
@@ -304,16 +309,6 @@ public class ChannelManager extends AbstractService<ChannelManager> {
             .blockingAwait();
 
         primaryChannelManager.stop();
-        if (healthCheckDisposable != null) {
-            healthCheckDisposable.dispose();
-        }
-        if (primaryChannelElectedEventTopic != null && primaryChannelElectedSubscriptionId != null) {
-            primaryChannelElectedEventTopic.removeMessageListener(primaryChannelElectedSubscriptionId);
-        }
-        if (channelEventTopic != null && channelEventSubscriptionId != null) {
-            channelEventTopic.removeMessageListener(channelEventSubscriptionId);
-        }
-        super.doStop();
     }
 
     public Flowable<TargetChannelsMetric> channelsMetricsByTarget() {
@@ -436,7 +431,7 @@ public class ChannelManager extends AbstractService<ChannelManager> {
     }
 
     private void publishChannelEvent(final ControllerChannel controllerChannel, final boolean active, final boolean closed) {
-        channelEventTopic.publish(
+        channelEventQueue.add(
             ChannelEvent
                 .builder()
                 .channelId(controllerChannel.id())
