@@ -194,19 +194,17 @@ public class ControllerClusterManager extends AbstractService<ControllerClusterM
 
     @Override
     protected void doStop() throws Exception {
+        super.doStop();
         String message = "[%s] Stopping controller cluster manager".formatted(identifyConfiguration.id());
         log.debug(message);
-        super.doStop();
 
         // Stop all command listeners.
-        final List<ControllerChannel> channels = subscriptionsListenersByChannel
+        subscriptionsListenersByChannel
             .values()
             .stream()
             .map(id -> channelManager.getChannelById(id).orElse(null))
             .filter(Objects::nonNull)
-            .toList();
-
-        channels.forEach(this::channelDisconnected);
+            .forEach(this::channelDisconnected);
 
         // Remove member listener
         if (memberListener != null) {
@@ -227,7 +225,9 @@ public class ControllerClusterManager extends AbstractService<ControllerClusterM
         }
 
         // Finally, notify all pending Rx emitters with an error.
-        resultEmittersByCommand.forEach((type, emitter) -> emitter.onError(new ControllerClusterShutdownException(message)));
+        resultEmittersByCommand.forEach((type, emitter) ->
+            emitter.onError(new ControllerClusterShutdownException("Stopping controller cluster manager"))
+        );
         resultEmittersByCommand.clear();
     }
 

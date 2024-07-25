@@ -127,8 +127,8 @@ public class DefaultExchangeController extends AbstractService<ExchangeControlle
 
     @Override
     protected void doStart() throws Exception {
-        log.debug("[{}] Starting {} controller", this.identifyConfiguration.id(), this.getClass().getSimpleName());
         super.doStart();
+        log.debug("[{}] Starting {} controller", this.identifyConfiguration.id(), this.getClass().getSimpleName());
         controllerClusterManager.start();
         startBatchFeature();
 
@@ -233,8 +233,8 @@ public class DefaultExchangeController extends AbstractService<ExchangeControlle
 
     @Override
     protected void doStop() throws Exception {
-        log.debug("[{}] Stopping {} controller", this.identifyConfiguration.id(), this.getClass().getSimpleName());
         super.doStop();
+        log.debug("[{}] Stopping {} controller", this.identifyConfiguration.id(), this.getClass().getSimpleName());
 
         if (primaryChannelEvictedTopic != null && primaryChannelEvictedSubscriptionId != null) {
             primaryChannelEvictedTopic.removeMessageListener(primaryChannelEvictedSubscriptionId);

@@ -61,8 +61,10 @@ public class WebSocketControllerServerVerticle extends AbstractVerticle {
     }
 
     @Override
-    public void stop() {
-        log.info("Stopping Controller websocket server ...");
-        controllerWebSocketHttpServer.close().doFinally(() -> log.info("HTTP Server has been successfully stopped")).subscribe();
+    public Completable rxStop() {
+        return controllerWebSocketHttpServer
+            .close()
+            .doOnSubscribe(disposable -> log.info("Stopping Controller websocket server ..."))
+            .doFinally(() -> log.info("HTTP Server has been successfully stopped"));
     }
 }
