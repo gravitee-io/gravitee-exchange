@@ -17,6 +17,7 @@ package io.gravitee.exchange.controller.websocket;
 
 import static io.gravitee.exchange.api.controller.ws.WebsocketControllerConstants.EXCHANGE_PROTOCOL_HEADER;
 
+import io.gravitee.common.component.Lifecycle;
 import io.gravitee.common.http.HttpStatusCode;
 import io.gravitee.exchange.api.command.Command;
 import io.gravitee.exchange.api.command.CommandAdapter;
@@ -31,6 +32,7 @@ import io.gravitee.exchange.api.websocket.command.ExchangeSerDe;
 import io.gravitee.exchange.api.websocket.protocol.ProtocolVersion;
 import io.gravitee.exchange.controller.websocket.auth.WebSocketControllerAuthentication;
 import io.gravitee.exchange.controller.websocket.channel.WebSocketControllerChannel;
+import io.gravitee.node.api.Node;
 import io.vertx.rxjava3.core.Vertx;
 import io.vertx.rxjava3.core.http.HttpServerRequest;
 import io.vertx.rxjava3.ext.web.RoutingContext;
@@ -54,6 +56,11 @@ public class WebSocketRequestHandler implements io.vertx.core.Handler<io.vertx.r
 
     @Override
     public void handle(final RoutingContext routingContext) {
+        if (exchangeController.lifecycleState() != Lifecycle.State.STARTED) {
+            log.warn("Incoming connection rejected because Websocket Controller is stopping");
+            routingContext.fail(HttpStatusCode.GONE_410);
+        }
+
         log.debug("Incoming connection on Websocket Controller");
         HttpServerRequest request = routingContext.request();
         ControllerCommandContext controllerContext = controllerAuthentication.authenticate(request);
