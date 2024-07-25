@@ -60,19 +60,19 @@ public class ChannelManager extends AbstractService<ChannelManager> {
 
     public static final String CHANNEL_EVENTS_QUEUE = "controller-channel-events";
     private static final String CHANNELS_METRICS_CACHE = "controller-channels-metrics-registry";
-    private static final int HEALTH_CHECK_DELAY = 30000;
-    private static final TimeUnit HEALTH_CHECK_DELAY_UNIT = TimeUnit.MILLISECONDS;
+    private static final int CHANNEL_HEALTH_CHECK_DELAY = 30_000;
+    private static final TimeUnit CHANNEL_HEALTH_CHECK_DELAY_UNIT = TimeUnit.MILLISECONDS;
     private final LocalChannelRegistry localChannelRegistry = new LocalChannelRegistry();
     private final PrimaryChannelManager primaryChannelManager;
     private final IdentifyConfiguration identifyConfiguration;
     private final ClusterManager clusterManager;
     private final CacheManager cacheManager;
-    private Disposable healthCheckDisposable;
     private Cache<String, ChannelMetric> channelMetricsRegistry;
     private Queue<ChannelEvent> channelEventQueue;
     private String channelEventSubscriptionId;
     private Topic<PrimaryChannelElectedEvent> primaryChannelElectedEventTopic;
     private String primaryChannelElectedSubscriptionId;
+    private Disposable channelHealthCheckCommandDisposable;
 
     public ChannelManager(
         final IdentifyConfiguration identifyConfiguration,
@@ -82,48 +82,36 @@ public class ChannelManager extends AbstractService<ChannelManager> {
         this.identifyConfiguration = identifyConfiguration;
         this.clusterManager = clusterManager;
         this.cacheManager = cacheManager;
-        this.primaryChannelManager = new PrimaryChannelManager(identifyConfiguration, clusterManager, cacheManager);
+        this.primaryChannelManager = new PrimaryChannelManager(identifyConfiguration, clusterManager, cacheManager, this);
     }
 
     @Override
     protected void doStart() throws Exception {
         log.debug("[{}] Starting channel manager", this.identifyConfiguration.id());
         super.doStart();
+
+        // Create channel metrics registry
         channelMetricsRegistry =
             cacheManager.getOrCreateCache(
                 identifyConfiguration.identifyName(CHANNELS_METRICS_CACHE),
                 CacheConfiguration.builder().distributed(true).build()
             );
 
+        // Start primary channel manager
         primaryChannelManager.start();
 
+        // Handle ChannelEvent
         channelEventQueue = clusterManager.queue(identifyConfiguration.identifyName(CHANNEL_EVENTS_QUEUE));
-        channelEventSubscriptionId =
-            channelEventQueue.addMessageListener(message -> {
-                ChannelEvent channelEvent = message.content();
-                if (channelEvent.targetId() == null) {
-                    log.warn(
-                        "[{}] ChannelEvent received for channel '{}' without any target",
-                        this.identifyConfiguration.id(),
-                        channelEvent.channelId()
-                    );
-                } else {
-                    log.debug(
-                        "[{}] ChannelEvent received for channel '{}' on target '{}'",
-                        this.identifyConfiguration.id(),
-                        channelEvent.channelId(),
-                        channelEvent.targetId()
-                    );
-                    handleChannelEvent(channelEvent);
-                }
-            });
+        channelEventSubscriptionId = channelEventQueue.addMessageListener(message -> handleChannelEvent(message.content()));
 
+        // Handle elected event
         primaryChannelElectedEventTopic =
             clusterManager.topic(identifyConfiguration.identifyName(PrimaryChannelManager.PRIMARY_CHANNEL_ELECTED_EVENTS_TOPIC));
         primaryChannelElectedSubscriptionId =
             primaryChannelElectedEventTopic.addMessageListener(message -> handlePrimaryChannelElectedEvent(message.content()));
 
-        healthCheckDisposable =
+        // Handle local channel health commands
+        channelHealthCheckCommandDisposable =
             Flowable
                 .<Long, Long>generate(
                     () -> 0L,
@@ -133,29 +121,42 @@ public class ChannelManager extends AbstractService<ChannelManager> {
                     }
                 )
                 .delay(
-                    identifyConfiguration.getProperty("controller.channel.healthcheck.delay", Integer.class, HEALTH_CHECK_DELAY),
-                    HEALTH_CHECK_DELAY_UNIT
+                    identifyConfiguration.getProperty("controller.channel.healthcheck.delay", Integer.class, CHANNEL_HEALTH_CHECK_DELAY),
+                    CHANNEL_HEALTH_CHECK_DELAY_UNIT
                 )
                 .rebatchRequests(1)
-                .doOnNext(aLong -> log.debug("[{}] Sending healthcheck command to all registered channels", this.identifyConfiguration.id())
-                )
                 .concatMapCompletable(interval -> sendHealthCheckCommand())
                 .onErrorComplete()
                 .subscribe();
     }
 
     private void handleChannelEvent(final ChannelEvent channelEvent) {
-        if (channelEvent.closed()) {
-            channelMetricsRegistry.evict(channelEvent.channelId());
-        } else {
-            updateChannelMetric(
-                channelEvent.channelId(),
-                channelEvent.targetId(),
-                channelEvent.active(),
-                primaryChannelManager.isPrimaryChannelFor(channelEvent.channelId(), channelEvent.targetId())
+        if (channelEvent.targetId() == null) {
+            log.warn(
+                "[{}] Ignoring ChannelEvent received for channel '{}' without any target",
+                this.identifyConfiguration.id(),
+                channelEvent.channelId()
             );
+        } else {
+            log.debug(
+                "[{}] ChannelEvent received for channel '{}' on target '{}'",
+                this.identifyConfiguration.id(),
+                channelEvent.channelId(),
+                channelEvent.targetId()
+            );
+
+            if (channelEvent.closed()) {
+                channelMetricsRegistry.evict(channelEvent.channelId());
+            } else {
+                updateChannelMetric(
+                    channelEvent.channelId(),
+                    channelEvent.targetId(),
+                    channelEvent.active(),
+                    primaryChannelManager.isPrimaryChannelFor(channelEvent.channelId(), channelEvent.targetId())
+                );
+            }
+            primaryChannelManager.handleChannelCandidate(channelEvent);
         }
-        primaryChannelManager.handleChannelCandidate(channelEvent);
     }
 
     private void handlePrimaryChannelElectedEvent(final PrimaryChannelElectedEvent event) {
@@ -252,6 +253,7 @@ public class ChannelManager extends AbstractService<ChannelManager> {
     }
 
     private Completable sendHealthCheckCommand() {
+        log.debug("[{}] Sending healthcheck command to all registered channels", this.identifyConfiguration.id());
         return Flowable
             .fromIterable(localChannelRegistry.getAll())
             .flatMapCompletable(controllerChannel ->
@@ -433,15 +435,11 @@ public class ChannelManager extends AbstractService<ChannelManager> {
             );
     }
 
+    public void publishChannelEvent(final String channelId, final String targetId, final boolean active, final boolean closed) {
+        channelEventQueue.add(ChannelEvent.builder().channelId(channelId).targetId(targetId).active(active).closed(closed).build());
+    }
+
     private void publishChannelEvent(final ControllerChannel controllerChannel, final boolean active, final boolean closed) {
-        channelEventQueue.add(
-            ChannelEvent
-                .builder()
-                .channelId(controllerChannel.id())
-                .targetId(controllerChannel.targetId())
-                .active(active)
-                .closed(closed)
-                .build()
-        );
+        this.publishChannelEvent(controllerChannel.id(), controllerChannel.targetId(), active, closed);
     }
 }
