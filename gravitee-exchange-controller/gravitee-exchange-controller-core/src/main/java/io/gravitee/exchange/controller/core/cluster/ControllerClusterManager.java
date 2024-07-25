@@ -42,7 +42,6 @@ import io.reactivex.rxjava3.core.Maybe;
 import io.reactivex.rxjava3.core.Single;
 import io.reactivex.rxjava3.core.SingleEmitter;
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
@@ -106,7 +105,19 @@ public class ControllerClusterManager extends AbstractService<ControllerClusterM
         clusteredReplyQueue = clusterManager.queue(replyQueueName);
         clusteredReplySubscriptionId = clusteredReplyQueue.addMessageListener(this::handleClusteredReply);
 
-        // Add listener on member to manage re-scaling mechanism
+        /*
+         * Handle re-balancing mechanism
+         *
+         * When a member of the cluster is joining, we must ensure that all channels are properly scaled across
+         * controllers, to avoid too many channels on the same controller.
+         *
+         * The mechanism will :
+         *   - save the last member time
+         *   - scheduled a task after a certain delay to avoid doing the processus too many times when rolling update
+         *   - discard any process after the delay if the last member is too young
+         *   - filters the local connected channels based on the cluster size
+         *   - disconnected all of them which have not any pending commands
+         */
         if (Boolean.TRUE.equals(rebalancingEnabled)) {
             rebalancingExecutorService = Executors.newSingleThreadScheduledExecutor(r -> new Thread(r, "gio-exchange-rebalancing"));
             memberListener =
@@ -114,12 +125,7 @@ public class ControllerClusterManager extends AbstractService<ControllerClusterM
                     @Override
                     public void onMemberAdded(final Member member) {
                         lastMemberAddedTime = LocalDateTime.now();
-                        rebalancingExecutorService.schedule(() -> handleChannelsRebalancing(), rebalancingDelay, rebalancingUnit);
-                    }
-
-                    @Override
-                    public void onMemberRemoved(final Member member) {
-                        // Nothing to do
+                        rebalancingExecutorService.schedule(() -> executeChannelsRebalancing(), rebalancingDelay, rebalancingUnit);
                     }
                 };
             clusterManager.addMemberListener(memberListener);
@@ -139,7 +145,7 @@ public class ControllerClusterManager extends AbstractService<ControllerClusterM
         }
     }
 
-    private void handleChannelsRebalancing() {
+    private void executeChannelsRebalancing() {
         log.debug("[{}] Starting re-balancing process", identifyConfiguration.id());
         if (lastMemberAddedTime.plus(rebalancingDelay, rebalancingUnit.toChronoUnit()).isBefore(LocalDateTime.now())) {
             int clusterSize = clusterManager.members().size();
@@ -275,6 +281,14 @@ public class ControllerClusterManager extends AbstractService<ControllerClusterM
             .map(reply -> new ClusteredReply<>(clusteredCommand.command().getId(), reply))
             .onErrorReturn(throwable -> new ClusteredReply<>(clusteredCommand.command().getId(), new ControllerClusterException(throwable)))
             .doOnSuccess(replyToQueue::add)
+            .doOnError(throwable ->
+                log.warn(
+                    "[{}] Unable to write cluster reply for command '{}' for '{}' to clustered queue",
+                    identifyConfiguration.id(),
+                    clusteredCommand.command().getId(),
+                    clusteredCommand.command().getType()
+                )
+            )
             .subscribe();
     }
 

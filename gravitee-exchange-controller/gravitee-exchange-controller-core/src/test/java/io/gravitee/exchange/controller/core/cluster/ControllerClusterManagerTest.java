@@ -55,7 +55,6 @@ class ControllerClusterManagerTest {
     private MockEnvironment environment;
     private IdentifyConfiguration identifyConfiguration;
     private ControllerClusterManager cut;
-    private Queue<ChannelEvent> channelEventQueue;
     private MemberListener memberListener;
 
     @BeforeEach
@@ -72,7 +71,6 @@ class ControllerClusterManagerTest {
         clusterManager.start();
         cut = new ControllerClusterManager(identifyConfiguration, clusterManager, cacheManager);
         cut.start();
-        channelEventQueue = clusterManager.queue(identifyConfiguration.identifyName(ChannelManager.CHANNEL_EVENTS_QUEUE));
     }
 
     @AfterEach
@@ -188,9 +186,6 @@ class ControllerClusterManagerTest {
             public void onMemberAdded(final Member member) {
                 checkpoint.flag();
             }
-
-            @Override
-            public void onMemberRemoved(final Member member) {}
         };
     }
 }
