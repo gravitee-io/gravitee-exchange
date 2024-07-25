@@ -51,8 +51,8 @@ public class PrimaryChannelManager extends AbstractService<PrimaryChannelManager
 
     @Override
     protected void doStart() throws Exception {
-        log.debug("[{}] Starting primary channel manager", this.identifyConfiguration.id());
         super.doStart();
+        log.debug("[{}] Starting primary channel manager", this.identifyConfiguration.id());
         CacheConfiguration cacheConfiguration = CacheConfiguration.builder().distributed(true).build();
         if (primaryChannelCandidateRegistry == null) {
             primaryChannelCandidateRegistry =
@@ -68,8 +68,8 @@ public class PrimaryChannelManager extends AbstractService<PrimaryChannelManager
 
     @Override
     protected void doStop() throws Exception {
-        log.debug("[{}] Stopping primary channel manager", this.identifyConfiguration.id());
         super.doStop();
+        log.debug("[{}] Stopping primary channel manager", this.identifyConfiguration.id());
     }
 
     public boolean isPrimaryChannelFor(final String channelId, final String targetId) {

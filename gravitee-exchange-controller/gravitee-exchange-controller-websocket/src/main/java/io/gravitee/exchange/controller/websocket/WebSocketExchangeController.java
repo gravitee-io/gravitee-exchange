@@ -200,12 +200,12 @@ public class WebSocketExchangeController extends DefaultExchangeController imple
 
     private void undeployVerticle() {
         if (websocketServerVerticleId != null) {
-            vertx
-                .undeploy(websocketServerVerticleId)
-                .subscribe(
-                    () -> log.info("Exchange Controller Websocket undeployed successfully"),
-                    throwable -> log.error("Unable to undeploy Exchange Controller Websocket", throwable)
-                );
+            try {
+                vertx.undeploy(websocketServerVerticleId).blockingAwait(); // Need to be "blocking" to make sure it is done before continuing
+                log.info("Exchange Controller Websocket undeployed successfully");
+            } catch (Exception e) {
+                log.error("Unable to undeploy Exchange Controller Websocket", e);
+            }
         }
     }
 }
