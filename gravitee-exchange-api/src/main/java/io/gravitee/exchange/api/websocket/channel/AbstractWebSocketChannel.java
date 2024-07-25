@@ -176,6 +176,7 @@ public abstract class AbstractWebSocketChannel implements Channel {
             return;
         }
 
+        log.debug("Handling received received command '{}' of type '{}'. Ignoring", command.getId(), command.getType());
         Single<? extends Command<?>> commandObs;
         CommandAdapter<Command<?>, Command<?>, Reply<?>> commandAdapter =
             (CommandAdapter<Command<?>, Command<?>, Reply<?>>) commandAdapters.get(command.getType());
@@ -210,7 +211,13 @@ public abstract class AbstractWebSocketChannel implements Channel {
                 return Completable.complete();
             })
             .onErrorResumeNext(throwable -> {
-                log.warn("Unexpected internal error occurred when handling command type '%s'".formatted(command.getType()), throwable);
+                log.warn(
+                    "Unexpected internal error occurred when handling command '%s' of type '%s'".formatted(
+                            command.getId(),
+                            command.getType()
+                        ),
+                    throwable
+                );
                 return writeReply(new NoReply(command.getId(), "Unexpected internal error occurred"));
             })
             .subscribe();
@@ -221,6 +228,7 @@ public abstract class AbstractWebSocketChannel implements Channel {
     private void receiveReply(final Reply<?> reply) {
         SingleEmitter<? extends Reply<?>> replyEmitter = resultEmitters.remove(reply.getCommandId());
         if (replyEmitter != null) {
+            log.debug("Handling received received reply '{}' of type '{}'. Ignoring", reply.getCommandId(), reply.getType());
             Single<? extends Reply<?>> replyObs;
             ReplyAdapter<Reply<?>, Reply<?>> replyAdapter = (ReplyAdapter<Reply<?>, Reply<?>>) replyAdapters.get(reply.getType());
             if (replyAdapter != null) {
@@ -246,6 +254,8 @@ public abstract class AbstractWebSocketChannel implements Channel {
                     replyEmitter.onError(new ChannelReplyException(throwable));
                 })
                 .subscribe();
+        } else {
+            log.debug("No reply emitter for received reply '{}' of type '{}'. Ignoring", reply.getCommandId(), reply.getType());
         }
     }
 
@@ -422,7 +432,7 @@ public abstract class AbstractWebSocketChannel implements Channel {
                 }
             })
             // Cleanup result emitters list if cancelled by the upstream.
-            .doOnDispose(() -> resultEmitters.remove(command.getId()));
+            .doFinally(() -> resultEmitters.remove(command.getId()));
     }
 
     protected <C extends Command<?>> Completable writeCommand(C command) {

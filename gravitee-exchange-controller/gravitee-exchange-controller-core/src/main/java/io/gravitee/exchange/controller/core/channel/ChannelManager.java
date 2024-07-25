@@ -289,16 +289,21 @@ public class ChannelManager extends AbstractService<ChannelManager> {
         super.doStop();
         log.debug("[{}] Stopping channel manager", this.identifyConfiguration.id());
 
+        primaryChannelManager.stop();
+
+        // Remove listener for ChannelEvent
         if (channelEventQueue != null && channelEventSubscriptionId != null) {
             channelEventQueue.removeMessageListener(channelEventSubscriptionId);
         }
 
+        // Remove listener for ChannelElectedEvent
         if (primaryChannelElectedEventTopic != null && primaryChannelElectedSubscriptionId != null) {
             primaryChannelElectedEventTopic.removeMessageListener(primaryChannelElectedSubscriptionId);
         }
 
-        if (healthCheckDisposable != null) {
-            healthCheckDisposable.dispose();
+        // Stop local channel healthcheck mechanism
+        if (channelHealthCheckCommandDisposable != null) {
+            channelHealthCheckCommandDisposable.dispose();
         }
 
         // Unregister all local channel
@@ -307,8 +312,6 @@ public class ChannelManager extends AbstractService<ChannelManager> {
             .flatMapCompletable(controllerChannel -> unregister(controllerChannel).onErrorComplete())
             .doOnComplete(() -> log.debug("[{}] All local channel unregistered.", this.identifyConfiguration.id()))
             .blockingAwait();
-
-        primaryChannelManager.stop();
     }
 
     public Flowable<TargetChannelsMetric> channelsMetricsByTarget() {
