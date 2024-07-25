@@ -24,7 +24,7 @@ import io.gravitee.exchange.controller.core.channel.primary.ChannelEvent;
 import io.gravitee.node.api.cache.CacheManager;
 import io.gravitee.node.api.cluster.Member;
 import io.gravitee.node.api.cluster.MemberListener;
-import io.gravitee.node.api.cluster.messaging.Topic;
+import io.gravitee.node.api.cluster.messaging.Queue;
 import io.gravitee.node.plugin.cache.standalone.StandaloneCacheManager;
 import io.gravitee.node.plugin.cluster.standalone.StandaloneMember;
 import io.reactivex.rxjava3.core.Completable;
@@ -55,7 +55,7 @@ class ControllerClusterManagerTest {
     private MockEnvironment environment;
     private IdentifyConfiguration identifyConfiguration;
     private ControllerClusterManager cut;
-    private Topic<ChannelEvent> channelEventTopic;
+    private Queue<ChannelEvent> channelEventQueue;
     private MemberListener memberListener;
 
     @BeforeEach
@@ -72,7 +72,7 @@ class ControllerClusterManagerTest {
         clusterManager.start();
         cut = new ControllerClusterManager(identifyConfiguration, clusterManager, cacheManager);
         cut.start();
-        channelEventTopic = clusterManager.topic(identifyConfiguration.identifyName(ChannelManager.CHANNEL_EVENTS_TOPIC));
+        channelEventQueue = clusterManager.queue(identifyConfiguration.identifyName(ChannelManager.CHANNEL_EVENTS_QUEUE));
     }
 
     @AfterEach
@@ -84,121 +84,85 @@ class ControllerClusterManagerTest {
 
     @Test
     void should_not_rebalance_with_only_member(VertxTestContext vertxTestContext) throws InterruptedException {
-        Checkpoint checkpoint = vertxTestContext.checkpoint(3);
+        Checkpoint checkpoint = vertxTestContext.checkpoint();
         clusterManager.addMemberListener(memberListener(checkpoint));
 
-        channelEventTopic.addMessageListener(message -> checkpoint.flag());
         SampleChannel sampleChannel = new SampleChannel("channelId", "targetId", true);
         sampleChannel.setClose(Completable.fromRunnable(checkpoint::flag));
         SampleChannel sampleChannel2 = new SampleChannel("channelId2", "targetId", true);
         sampleChannel2.setClose(Completable.fromRunnable(checkpoint::flag));
-        cut.register(sampleChannel).andThen(cut.register(sampleChannel2)).test().awaitDone(10, TimeUnit.SECONDS);
-        clusterManager.addMember(new StandaloneMember());
+        cut
+            .register(sampleChannel)
+            .andThen(cut.register(sampleChannel2))
+            .andThen(Completable.fromRunnable(() -> clusterManager.addMember(new StandaloneMember())))
+            .test()
+            .awaitDone(10, TimeUnit.SECONDS);
+
         assertThat(vertxTestContext.awaitCompletion(10, TimeUnit.SECONDS)).isTrue();
     }
 
     @Test
     void should_rebalance_channels_when_new_member_join(VertxTestContext vertxTestContext) throws InterruptedException {
-        AtomicInteger channelEventsCount = new AtomicInteger(0);
-        // 4 checkpoints:
-        //   - 1 for channel id active
-        //   - 1 for channel id2 active
-        //   - 2 for new member
-        //   - 1 for channel id2 close
-        //   - 1 for channel id2 not active
-        Checkpoint checkpoint = vertxTestContext.checkpoint(6);
-        channelEventTopic.addMessageListener(message -> {
-            checkpoint.flag();
-            if (channelEventsCount.incrementAndGet() == 1) {
-                clusterManager.addMember(new StandaloneMember());
-            }
-        });
+        Checkpoint checkpoint = vertxTestContext.checkpoint(2); //2 for new member
         memberListener = memberListener(checkpoint);
         clusterManager.addMemberListener(memberListener);
         clusterManager.addMember(new StandaloneMember());
-        SampleChannel sampleChannel = new SampleChannel("channelId", "targetId", true);
+        SampleChannel sampleChannel = new SampleChannel("channelId", "targetId");
         sampleChannel.setClose(Completable.fromRunnable(checkpoint::flag));
-        SampleChannel sampleChannel2 = new SampleChannel("channelId2", "targetId", true);
+        SampleChannel sampleChannel2 = new SampleChannel("channelId2", "targetId");
         sampleChannel2.setClose(Completable.fromRunnable(checkpoint::flag));
-        cut.register(sampleChannel).andThen(cut.register(sampleChannel2)).test().awaitDone(10, TimeUnit.SECONDS);
+        cut
+            .register(sampleChannel)
+            .andThen(cut.register(sampleChannel2))
+            .andThen(Completable.fromRunnable(() -> clusterManager.addMember(new StandaloneMember())))
+            .test()
+            .awaitDone(10, TimeUnit.SECONDS);
         assertThat(vertxTestContext.awaitCompletion(10, TimeUnit.SECONDS)).isTrue();
     }
 
     @Test
     void should_rebalance_channels_when_new_member_join_and_only_1_channels_is_active(VertxTestContext vertxTestContext)
         throws InterruptedException {
-        AtomicInteger channelEventsCount = new AtomicInteger(0);
-        // 4 checkpoints:
-        //   - 1 for channel id alive
-        //   - 1 for channel id2 alive
-        //   - 2 for new member
-        //   - 1 for channel id2 close
-        //   - 1 for channel id2 not alive
-        Checkpoint checkpoint = vertxTestContext.checkpoint(6);
-        channelEventTopic.addMessageListener(message -> {
-            checkpoint.flag();
-            if (channelEventsCount.incrementAndGet() == 1) {
-                clusterManager.addMember(new StandaloneMember());
-            }
-        });
+        Checkpoint checkpoint = vertxTestContext.checkpoint(2); //2 for new member
         memberListener = memberListener(checkpoint);
         clusterManager.addMemberListener(memberListener);
         clusterManager.addMember(new StandaloneMember());
-        SampleChannel sampleChannel = new SampleChannel("channelId", "targetId", true);
+        SampleChannel sampleChannel = new SampleChannel("channelId", "targetId");
         sampleChannel.setClose(Completable.fromRunnable(checkpoint::flag));
         SampleChannel sampleChannel2 = new SampleChannel("channelId2", "targetId", false);
         sampleChannel2.setClose(Completable.fromRunnable(checkpoint::flag));
-        cut.register(sampleChannel).andThen(cut.register(sampleChannel2)).test().awaitDone(10, TimeUnit.SECONDS);
+        cut
+            .register(sampleChannel)
+            .andThen(cut.register(sampleChannel2))
+            .andThen(Completable.fromRunnable(() -> clusterManager.addMember(new StandaloneMember())))
+            .test()
+            .awaitDone(10, TimeUnit.SECONDS);
         assertThat(vertxTestContext.awaitCompletion(10, TimeUnit.SECONDS)).isTrue();
     }
 
     @Test
     void should_rebalance_channel_without_pending_commands_when_new_member_join(VertxTestContext vertxTestContext)
         throws InterruptedException {
-        AtomicInteger channelEventsCount = new AtomicInteger(0);
-        // 4 checkpoints:
-        //   - 1 for channel id alive
-        //   - 1 for channel id2 alive
-        //   - 2 for new member
-        //   - 1 for channel id2 close
-        //   - 1 for channel id2 not alive
-        Checkpoint checkpoint = vertxTestContext.checkpoint(6);
-        channelEventTopic.addMessageListener(message -> {
-            checkpoint.flag();
-            if (channelEventsCount.incrementAndGet() == 1) {
-                clusterManager.addMember(new StandaloneMember());
-            }
-        });
+        Checkpoint checkpoint = vertxTestContext.checkpoint(2); //2 for new member
         memberListener = memberListener(checkpoint);
         clusterManager.addMemberListener(memberListener);
         clusterManager.addMember(new StandaloneMember());
         SampleChannel sampleChannel = new SampleChannel("channelId", "targetId", true, true);
         SampleChannel sampleChannel2 = new SampleChannel("channelId2", "targetId", false, false);
         sampleChannel2.setClose(Completable.fromRunnable(checkpoint::flag));
-        cut.register(sampleChannel).andThen(cut.register(sampleChannel2)).test().awaitDone(10, TimeUnit.SECONDS);
+        cut
+            .register(sampleChannel)
+            .andThen(cut.register(sampleChannel2))
+            .andThen(Completable.fromRunnable(() -> clusterManager.addMember(new StandaloneMember())))
+            .test()
+            .awaitDone(10, TimeUnit.SECONDS);
         assertThat(vertxTestContext.awaitCompletion(10, TimeUnit.SECONDS)).isTrue();
     }
 
     @Test
     void should_rebalance_channels_only_once_when_multiple_member_join_before_delay(VertxTestContext vertxTestContext)
         throws InterruptedException {
-        AtomicInteger channelEventsCount = new AtomicInteger(0);
-        // 4 checkpoints:
-        //   - 1 for channel id active
-        //   - 1 for channel id2 active
-        //   - 5 for new members
-        //   - 1 for channel id2 close
-        //   - 1 for channel id2 not active
-        Checkpoint checkpoint = vertxTestContext.checkpoint(9);
-        channelEventTopic.addMessageListener(message -> {
-            checkpoint.flag();
-            if (channelEventsCount.incrementAndGet() == 1) {
-                clusterManager.addMember(new StandaloneMember());
-                clusterManager.addMember(new StandaloneMember());
-                clusterManager.addMember(new StandaloneMember());
-                clusterManager.addMember(new StandaloneMember());
-            }
-        });
+        Checkpoint checkpoint = vertxTestContext.checkpoint(5); // 5 for new members
         memberListener = memberListener(checkpoint);
         clusterManager.addMemberListener(memberListener);
         clusterManager.addMember(new StandaloneMember());
@@ -206,7 +170,15 @@ class ControllerClusterManagerTest {
         sampleChannel.setClose(Completable.fromRunnable(checkpoint::flag));
         SampleChannel sampleChannel2 = new SampleChannel("channelId2", "targetId", true);
         sampleChannel2.setClose(Completable.fromRunnable(checkpoint::flag));
-        cut.register(sampleChannel).andThen(cut.register(sampleChannel2)).test().awaitDone(10, TimeUnit.SECONDS);
+        cut
+            .register(sampleChannel)
+            .andThen(cut.register(sampleChannel2))
+            .andThen(Completable.fromRunnable(() -> clusterManager.addMember(new StandaloneMember())))
+            .andThen(Completable.fromRunnable(() -> clusterManager.addMember(new StandaloneMember())))
+            .andThen(Completable.fromRunnable(() -> clusterManager.addMember(new StandaloneMember())))
+            .andThen(Completable.fromRunnable(() -> clusterManager.addMember(new StandaloneMember())))
+            .test()
+            .awaitDone(10, TimeUnit.SECONDS);
         assertThat(vertxTestContext.awaitCompletion(10, TimeUnit.SECONDS)).isTrue();
     }
 

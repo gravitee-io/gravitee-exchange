@@ -15,7 +15,7 @@
  */
 package io.gravitee.exchange.controller.core.channel;
 
-import static io.gravitee.exchange.controller.core.channel.ChannelManager.CHANNEL_EVENTS_TOPIC;
+import static io.gravitee.exchange.controller.core.channel.ChannelManager.CHANNEL_EVENTS_QUEUE;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import io.gravitee.exchange.api.command.Command;
@@ -40,6 +40,7 @@ import io.gravitee.exchange.controller.core.channel.primary.PrimaryChannelElecte
 import io.gravitee.exchange.controller.core.channel.primary.PrimaryChannelManager;
 import io.gravitee.node.api.cache.CacheManager;
 import io.gravitee.node.api.cluster.ClusterManager;
+import io.gravitee.node.api.cluster.messaging.Queue;
 import io.gravitee.node.api.cluster.messaging.Topic;
 import io.gravitee.node.plugin.cache.standalone.StandaloneCacheManager;
 import io.gravitee.node.plugin.cluster.standalone.StandaloneClusterManager;
@@ -74,7 +75,7 @@ class ChannelManagerTest {
     private MockEnvironment environment;
     private IdentifyConfiguration identifyConfiguration;
     private ChannelManager cut;
-    private Topic<ChannelEvent> channelEventTopic;
+    private Queue<ChannelEvent> channelEventQueue;
     private Topic<PrimaryChannelElectedEvent> primaryChannelElectedEventTopic;
 
     @BeforeEach
@@ -87,23 +88,15 @@ class ChannelManagerTest {
         clusterManager.start();
         cut = new ChannelManager(identifyConfiguration, clusterManager, cacheManager);
         cut.start();
-        channelEventTopic = clusterManager.topic(identifyConfiguration.identifyName(CHANNEL_EVENTS_TOPIC));
+        channelEventQueue = clusterManager.queue(identifyConfiguration.identifyName(CHANNEL_EVENTS_QUEUE));
         primaryChannelElectedEventTopic =
             clusterManager.topic(identifyConfiguration.identifyName(PrimaryChannelManager.PRIMARY_CHANNEL_ELECTED_EVENTS_TOPIC));
     }
 
     @Test
-    void should_register_new_channel(VertxTestContext vertxTestContext) throws InterruptedException {
+    void should_register_new_channel() throws InterruptedException {
         SampleChannel sampleChannel = new SampleChannel("channelId", "targetId");
-        Checkpoint checkpoint = vertxTestContext.checkpoint();
-        channelEventTopic.addMessageListener(message -> {
-            if (message.content().active()) {
-                checkpoint.flag();
-            }
-        });
         cut.register(sampleChannel).test().awaitDone(10, TimeUnit.SECONDS);
-        assertThat(vertxTestContext.awaitCompletion(10, TimeUnit.SECONDS)).isTrue();
-
         assertThat(cut.getChannelById("channelId")).isNotNull();
     }
 
@@ -186,7 +179,7 @@ class ChannelManagerTest {
     void should_unregister_channel(VertxTestContext vertxTestContext) throws InterruptedException {
         SampleChannel sampleChannel = new SampleChannel("channelId", "targetId");
         Checkpoint checkpoint = vertxTestContext.checkpoint();
-        channelEventTopic.addMessageListener(message -> {
+        channelEventQueue.addMessageListener(message -> {
             if (!message.content().active()) {
                 checkpoint.flag();
             }
@@ -226,8 +219,7 @@ class ChannelManagerTest {
 
     @Test
     void should_return_metrics_for_target(VertxTestContext vertxTestContext) throws InterruptedException {
-        Checkpoint checkpoint = vertxTestContext.checkpoint(6); // 3 register, 1 manuel event and 2 election
-        channelEventTopic.addMessageListener(message -> checkpoint.flag());
+        Checkpoint checkpoint = vertxTestContext.checkpoint(2); // 2 election
         primaryChannelElectedEventTopic.addMessageListener(message -> checkpoint.flag());
 
         SampleChannel sampleChannel = new SampleChannel("channelId", "targetId");
@@ -238,7 +230,7 @@ class ChannelManagerTest {
             .andThen(cut.register(sampleChannel2))
             .andThen(cut.register(sampleChannel3))
             .andThen(Completable.fromRunnable(() -> sampleChannel2.enforceActiveStatus(false)))
-            .andThen(channelEventTopic.rxPublish(ChannelEvent.builder().channelId("channelId2").targetId("targetId").active(false).build()))
+            .andThen(channelEventQueue.rxAdd(ChannelEvent.builder().channelId("channelId2").targetId("targetId").active(false).build()))
             .test()
             .awaitDone(10, TimeUnit.SECONDS);
         assertThat(vertxTestContext.awaitCompletion(10, TimeUnit.SECONDS)).isTrue();
@@ -268,8 +260,7 @@ class ChannelManagerTest {
 
     @Test
     void should_return_metrics_for_channel(VertxTestContext vertxTestContext) throws InterruptedException {
-        Checkpoint checkpoint = vertxTestContext.checkpoint(6); // 3 register, 1 manuel event and 2 election
-        channelEventTopic.addMessageListener(message -> checkpoint.flag());
+        Checkpoint checkpoint = vertxTestContext.checkpoint(2); // 2 election
         primaryChannelElectedEventTopic.addMessageListener(message -> checkpoint.flag());
 
         SampleChannel sampleChannel = new SampleChannel("channelId", "targetId");
@@ -280,7 +271,7 @@ class ChannelManagerTest {
             .andThen(cut.register(sampleChannel2))
             .andThen(cut.register(sampleChannel3))
             .andThen(Completable.fromRunnable(() -> sampleChannel2.enforceActiveStatus(false)))
-            .andThen(channelEventTopic.rxPublish(ChannelEvent.builder().channelId("channelId2").targetId("targetId").active(false).build()))
+            .andThen(channelEventQueue.rxAdd(ChannelEvent.builder().channelId("channelId2").targetId("targetId").active(false).build()))
             .test()
             .awaitDone(10, TimeUnit.SECONDS);
         assertThat(vertxTestContext.awaitCompletion(10, TimeUnit.SECONDS)).isTrue();
@@ -300,8 +291,7 @@ class ChannelManagerTest {
 
     @Test
     void should_send_command_to_channel(VertxTestContext vertxTestContext) throws InterruptedException {
-        Checkpoint checkpoint = vertxTestContext.checkpoint(2);
-        channelEventTopic.addMessageListener(message -> checkpoint.flag());
+        Checkpoint checkpoint = vertxTestContext.checkpoint();
 
         SampleChannel sampleChannel = new SampleChannel("channelId", "targetId");
         sampleChannel.addCommandHandlers(
