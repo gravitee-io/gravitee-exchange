@@ -16,7 +16,9 @@
 package io.gravitee.exchange.controller.core.channel.primary;
 
 import io.gravitee.node.api.cache.Cache;
+import io.reactivex.rxjava3.core.Flowable;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
 
@@ -24,6 +26,10 @@ import lombok.RequiredArgsConstructor;
 public class PrimaryChannelCandidateRegistry {
 
     private final Cache<String, Set<String>> store;
+
+    public Flowable<Map.Entry<String, Set<String>>> rxEntrySet() {
+        return store.rxEntrySet();
+    }
 
     public Set<String> get(final String targetId) {
         if (targetId == null) {
