@@ -1,3 +1,10 @@
+## [1.8.1](https://github.com/gravitee-io/gravitee-exchange/compare/1.8.0...1.8.1) (2024-07-26)
+
+
+### Bug Fixes
+
+* bump node version to 6.0.3 ([3aa43e6](https://github.com/gravitee-io/gravitee-exchange/commit/3aa43e6d08fbff6acfd93f53c40fd34581b89865))
+
 # [1.8.0](https://github.com/gravitee-io/gravitee-exchange/compare/1.7.5...1.8.0) (2024-07-25)
 
 
