@@ -176,7 +176,7 @@ public abstract class AbstractWebSocketChannel implements Channel {
             return;
         }
 
-        log.debug("Handling received received command '{}' of type '{}'. Ignoring", command.getId(), command.getType());
+        log.trace("Handling received command '{}' of type '{}'", command.getId(), command.getType());
         Single<? extends Command<?>> commandObs;
         CommandAdapter<Command<?>, Command<?>, Reply<?>> commandAdapter =
             (CommandAdapter<Command<?>, Command<?>, Reply<?>>) commandAdapters.get(command.getType());
@@ -228,7 +228,7 @@ public abstract class AbstractWebSocketChannel implements Channel {
     private void receiveReply(final Reply<?> reply) {
         SingleEmitter<? extends Reply<?>> replyEmitter = resultEmitters.remove(reply.getCommandId());
         if (replyEmitter != null) {
-            log.debug("Handling received received reply '{}' of type '{}'. Ignoring", reply.getCommandId(), reply.getType());
+            log.trace("Handling received reply '{}' of type '{}'", reply.getCommandId(), reply.getType());
             Single<? extends Reply<?>> replyObs;
             ReplyAdapter<Reply<?>, Reply<?>> replyAdapter = (ReplyAdapter<Reply<?>, Reply<?>>) replyAdapters.get(reply.getType());
             if (replyAdapter != null) {
@@ -471,7 +471,7 @@ public abstract class AbstractWebSocketChannel implements Channel {
             return webSocket
                 .writeBinaryMessage(protocolAdapter.write(websocketExchange))
                 .doOnComplete(() ->
-                    log.debug(
+                    log.trace(
                         "Write exchange '{}' for '{}' and id '{}' to websocket successfully",
                         websocketExchange.type(),
                         websocketExchange.exchangeType(),

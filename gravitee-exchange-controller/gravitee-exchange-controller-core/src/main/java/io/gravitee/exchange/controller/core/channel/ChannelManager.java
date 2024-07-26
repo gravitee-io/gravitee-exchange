@@ -253,7 +253,7 @@ public class ChannelManager extends AbstractService<ChannelManager> {
     }
 
     private Completable sendHealthCheckCommand() {
-        log.debug("[{}] Sending healthcheck command to all registered channels", this.identifyConfiguration.id());
+        log.trace("[{}] Sending healthcheck command to all registered channels", this.identifyConfiguration.id());
         return Flowable
             .fromIterable(localChannelRegistry.getAll())
             .flatMapCompletable(controllerChannel ->
