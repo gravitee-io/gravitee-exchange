@@ -110,13 +110,17 @@ class PrimaryChannelManagerTest {
     void should_elect_new_primary_channel(VertxTestContext vertxTestContext) throws InterruptedException {
         Checkpoint checkpoint = vertxTestContext.checkpoint();
         primaryChannelElectedEventTopic.addMessageListener(message -> checkpoint.flag());
-        cut.handleChannelCandidate(ChannelEvent.builder().channelId("channelId").targetId("targetId").active(true).build());
-        assertThat(vertxTestContext.awaitCompletion(1, TimeUnit.SECONDS)).isTrue();
+        cut
+            .handleChannelCandidate(ChannelEvent.builder().channelId("channelId").targetId("targetId").active(true).build())
+            .test()
+            .awaitDone(10, TimeUnit.SECONDS)
+            .assertComplete();
+        assertThat(vertxTestContext.awaitCompletion(10, TimeUnit.SECONDS)).isTrue();
         assertThat(primaryChannelCache.containsKey("targetId")).isTrue();
         assertThat(primaryChannelCache.get("targetId")).isEqualTo("channelId");
         assertThat(primaryChannelCandidateCache.containsKey("targetId")).isTrue();
         assertThat(primaryChannelCandidateCache.get("targetId")).containsOnly("channelId");
-        assertThat(cut.isPrimaryChannelFor("channelId", "targetId")).isTrue();
+        cut.isPrimaryChannelFor("channelId", "targetId").test().awaitDone(1, TimeUnit.SECONDS).assertValue(true);
     }
 
     @Test
@@ -124,18 +128,26 @@ class PrimaryChannelManagerTest {
         Checkpoint checkpoint = vertxTestContext.checkpoint(2);
         primaryChannelElectedEventTopic.addMessageListener(message -> {
             checkpoint.flag();
-            cut.handleChannelCandidate(ChannelEvent.builder().channelId("channelId").targetId("targetId").active(false).build());
+            cut
+                .handleChannelCandidate(ChannelEvent.builder().channelId("channelId").targetId("targetId").active(false).build())
+                .test()
+                .awaitDone(10, TimeUnit.SECONDS)
+                .assertComplete();
         });
         primaryChannelEvictedEventTopic.addMessageListener(message -> checkpoint.flag());
-        cut.handleChannelCandidate(ChannelEvent.builder().channelId("channelId").targetId("targetId").active(true).build());
+        cut
+            .handleChannelCandidate(ChannelEvent.builder().channelId("channelId").targetId("targetId").active(true).build())
+            .test()
+            .awaitDone(10, TimeUnit.SECONDS)
+            .assertComplete();
 
-        assertThat(vertxTestContext.awaitCompletion(1, TimeUnit.SECONDS)).isTrue();
+        assertThat(vertxTestContext.awaitCompletion(10, TimeUnit.SECONDS)).isTrue();
         // shouldn't contain any channel for the target
         assertThat(primaryChannelCache.containsKey("targetId")).isFalse();
         // shouldn't have any primary channel for the target
         assertThat(primaryChannelCache.containsKey("targetId")).isFalse();
         assertThat(primaryChannelCandidateCache.containsKey("targetId")).isFalse();
-        assertThat(cut.isPrimaryChannelFor("channelId", "targetId")).isFalse();
+        cut.isPrimaryChannelFor("channelId", "targetId").test().awaitDone(1, TimeUnit.SECONDS).assertValue(false);
     }
 
     @Test
@@ -144,26 +156,39 @@ class PrimaryChannelManagerTest {
         primaryChannelElectedEventTopic.addMessageListener(message -> {
             if (channelElectedEventsCount.incrementAndGet() == 1) {
                 // Make sure to election of primary is done before sending new channel event
-                cut.handleChannelCandidate(ChannelEvent.builder().channelId("channelId2").targetId("targetId").active(true).build());
+                cut
+                    .handleChannelCandidate(ChannelEvent.builder().channelId("channelId2").targetId("targetId").active(true).build())
+                    .test()
+                    .awaitDone(10, TimeUnit.SECONDS)
+                    .assertComplete();
             }
         });
-        cut.handleChannelCandidate(ChannelEvent.builder().channelId("channelId").targetId("targetId").active(true).build());
-        await()
-            .atMost(1, TimeUnit.SECONDS)
-            .untilAsserted(() -> {
-                assertThat(primaryChannelCandidateCache.get("targetId")).hasSize(2);
+        cut
+            .handleChannelCandidate(ChannelEvent.builder().channelId("channelId").targetId("targetId").active(true).build())
+            .test()
+            .awaitDone(10, TimeUnit.SECONDS)
+            .assertComplete();
+
+        primaryChannelCandidateCache
+            .rxGet("targetId")
+            .test()
+            .awaitDone(10, TimeUnit.SECONDS)
+            .assertValue(strings -> {
+                assertThat(strings).hasSize(2);
+                return true;
             });
 
-        cut.handleChannelCandidate(ChannelEvent.builder().channelId("channelId").targetId("targetId").active(false).build());
-        await()
-            .atMost(1, TimeUnit.SECONDS)
-            .untilAsserted(() -> {
-                assertThat(primaryChannelCache.containsKey("targetId")).isTrue();
-                assertThat(primaryChannelCache.get("targetId")).isEqualTo("channelId2");
-                assertThat(primaryChannelCandidateCache.containsKey("targetId")).isTrue();
-                assertThat(primaryChannelCandidateCache.get("targetId")).containsOnly("channelId2");
-                assertThat(cut.isPrimaryChannelFor("channelId2", "targetId")).isTrue();
-            });
+        cut
+            .handleChannelCandidate(ChannelEvent.builder().channelId("channelId").targetId("targetId").active(false).build())
+            .test()
+            .awaitDone(10, TimeUnit.SECONDS)
+            .assertComplete();
+
+        assertThat(primaryChannelCache.containsKey("targetId")).isTrue();
+        assertThat(primaryChannelCache.get("targetId")).isEqualTo("channelId2");
+        assertThat(primaryChannelCandidateCache.containsKey("targetId")).isTrue();
+        assertThat(primaryChannelCandidateCache.get("targetId")).containsOnly("channelId2");
+        cut.isPrimaryChannelFor("channelId2", "targetId").test().awaitDone(1, TimeUnit.SECONDS).assertValue(true);
     }
 
     @Test
