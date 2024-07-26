@@ -145,17 +145,43 @@ public class ChannelManager extends AbstractService<ChannelManager> {
                 channelEvent.targetId()
             );
 
-            if (channelEvent.closed()) {
-                channelMetricsRegistry.evict(channelEvent.channelId());
-            } else {
-                updateChannelMetric(
-                    channelEvent.channelId(),
-                    channelEvent.targetId(),
-                    channelEvent.active(),
-                    primaryChannelManager.isPrimaryChannelFor(channelEvent.channelId(), channelEvent.targetId())
-                );
-            }
-            primaryChannelManager.handleChannelCandidate(channelEvent);
+            Completable
+                .defer(() -> {
+                    if (channelEvent.closed()) {
+                        log.debug(
+                            "[{}] Removing metrics for closed channel '{}' for target '{}'",
+                            this.identifyConfiguration.id(),
+                            channelEvent.channelId(),
+                            channelEvent.targetId()
+                        );
+                        return channelMetricsRegistry.rxEvict(channelEvent.channelId()).ignoreElement();
+                    } else {
+                        return primaryChannelManager
+                            .isPrimaryChannelFor(channelEvent.channelId(), channelEvent.targetId())
+                            .flatMapCompletable(isPrimary ->
+                                updateChannelMetric(channelEvent.channelId(), channelEvent.targetId(), channelEvent.active(), isPrimary)
+                            );
+                    }
+                })
+                .andThen(Completable.defer(() -> primaryChannelManager.handleChannelCandidate(channelEvent)))
+                .doOnComplete(() ->
+                    log.debug(
+                        "[{}] ChannelEvent successfully handled for channel '{}' on target '{}'",
+                        this.identifyConfiguration.id(),
+                        channelEvent.channelId(),
+                        channelEvent.targetId()
+                    )
+                )
+                .doOnError(throwable ->
+                    log.warn(
+                        "[{}] Unable to handle ChannelEvent for channel '{}' on target '{}'",
+                        this.identifyConfiguration.id(),
+                        channelEvent.channelId(),
+                        channelEvent.targetId()
+                    )
+                )
+                .onErrorComplete()
+                .blockingAwait(); // We want this process to block in order to not consumer multiple ChannelEvent in parallel
         }
     }
 
@@ -191,21 +217,23 @@ public class ChannelManager extends AbstractService<ChannelManager> {
                             .flatMapCompletable(controllerChannel -> sendPrimaryCommand(controllerChannel, false))
                     );
             })
-            .subscribe(
-                () ->
-                    log.debug(
-                        "[{}] Primary channel elected event for target '{}' properly handled",
-                        this.identifyConfiguration.id(),
-                        event.targetId()
-                    ),
-                throwable ->
-                    log.error(
-                        "[{}] Unable to send primary commands to local registered channels for target '{}'",
-                        this.identifyConfiguration.id(),
-                        event.targetId(),
-                        throwable
-                    )
-            );
+            .doOnComplete(() ->
+                log.debug(
+                    "[{}] Primary channel elected event for target '{}' properly handled",
+                    this.identifyConfiguration.id(),
+                    event.targetId()
+                )
+            )
+            .doOnError(throwable ->
+                log.error(
+                    "[{}] Unable to send primary commands to local registered channels for target '{}'",
+                    this.identifyConfiguration.id(),
+                    event.targetId(),
+                    throwable
+                )
+            )
+            .onErrorComplete()
+            .blockingAwait();
     }
 
     private Completable sendPrimaryCommand(final ControllerChannel channel, final boolean isPrimary) {
@@ -221,35 +249,57 @@ public class ChannelManager extends AbstractService<ChannelManager> {
 
         return channel
             .<PrimaryCommand, PrimaryReply>send(new PrimaryCommand(new PrimaryCommandPayload(isPrimary)))
-            .doOnSuccess(primaryReply -> {
+            .flatMapCompletable(primaryReply -> {
                 log.debug("[{}] Primary command successfully sent to channel '{}'", this.identifyConfiguration.id(), channelId);
                 if (primaryReply.getCommandStatus() == CommandStatus.SUCCEEDED) {
                     log.debug("[{}] Channel '{}' successfully replied from primary command", this.identifyConfiguration.id(), channelId);
-                    updateChannelMetric(channel.id(), channel.targetId(), channel.isActive(), isPrimary);
-                } else if (primaryReply.getCommandStatus() == CommandStatus.ERROR) {
-                    log.warn("[{}] Channel '{}' replied in error from primary command", this.identifyConfiguration.id(), channelId);
-                    throw new PrimaryCommandException(primaryReply.getErrorDetails());
+                    return updateChannelMetric(channel.id(), channel.targetId(), channel.isActive(), isPrimary);
                 }
+                log.warn("[{}] Channel '{}' replied in error from primary command", this.identifyConfiguration.id(), channelId);
+                return Completable.error(new PrimaryCommandException(primaryReply.getErrorDetails()));
             })
-            .doOnError(throwable -> {
+            .onErrorResumeNext(throwable -> {
                 log.warn("[{}] Unable to send primary command to channel '{}'", this.identifyConfiguration.id(), channelId, throwable);
-                updateChannelMetric(channel.id(), channel.targetId(), channel.isActive(), false);
-            })
-            .ignoreElement();
+                return updateChannelMetric(channel.id(), channel.targetId(), channel.isActive(), false);
+            });
     }
 
-    private void updateChannelMetric(final String channelId, final String targetId, final boolean active, final boolean primary) {
-        channelMetricsRegistry.compute(
-            channelId,
-            (k, v) -> {
-                if (v == null) {
-                    v = ChannelMetric.builder().id(channelId).targetId(targetId).active(active).primary(primary).build();
-                } else {
-                    v = v.toBuilder().active(active).primary(primary).build();
+    private Completable updateChannelMetric(final String channelId, final String targetId, final boolean active, final boolean primary) {
+        return channelMetricsRegistry
+            .rxCompute(
+                channelId,
+                (k, v) -> {
+                    if (v == null) {
+                        v = ChannelMetric.builder().id(channelId).targetId(targetId).active(active).primary(primary).build();
+                    } else {
+                        v = v.toBuilder().active(active).primary(primary).build();
+                    }
+                    return v;
                 }
-                return v;
-            }
-        );
+            )
+            .ignoreElement()
+            .doOnComplete(() ->
+                log.debug(
+                    "[{}] Updating channel metric with [id={}, target={}, active={}, primary={}]",
+                    this.identifyConfiguration.id(),
+                    channelId,
+                    targetId,
+                    active,
+                    primary
+                )
+            )
+            .doOnError(throwable ->
+                log.warn(
+                    "[{}] Unable to update channel metric with [id={}, target={}, active={}, primary={}",
+                    this.identifyConfiguration.id(),
+                    channelId,
+                    targetId,
+                    active,
+                    primary,
+                    throwable
+                )
+            )
+            .onErrorComplete();
     }
 
     private Completable sendHealthCheckCommand() {
@@ -260,8 +310,8 @@ public class ChannelManager extends AbstractService<ChannelManager> {
                 controllerChannel
                     .send(new HealthCheckCommand(new HealthCheckCommandPayload()))
                     .cast(HealthCheckReply.class)
-                    .doOnSuccess(reply -> {
-                        log.debug(
+                    .flatMapCompletable(reply -> {
+                        log.trace(
                             "[{}] Health check command successfully sent for channel '{}' on target '{}'",
                             this.identifyConfiguration.id(),
                             controllerChannel.id(),
@@ -269,9 +319,8 @@ public class ChannelManager extends AbstractService<ChannelManager> {
                         );
                         HealthCheckReplyPayload payload = reply.getPayload();
                         controllerChannel.enforceActiveStatus(payload.healthy());
-                        publishChannelEvent(controllerChannel, reply.getPayload().healthy(), false);
+                        return publishChannelEvent(controllerChannel, reply.getPayload().healthy(), false);
                     })
-                    .ignoreElement()
                     .onErrorResumeNext(throwable -> {
                         log.debug(
                             "[{}] Unable to send health check command for channel '{}' on target '{}'",
@@ -280,8 +329,7 @@ public class ChannelManager extends AbstractService<ChannelManager> {
                             controllerChannel.targetId()
                         );
                         controllerChannel.enforceActiveStatus(false);
-                        publishChannelEvent(controllerChannel, false, false);
-                        return Completable.complete();
+                        return publishChannelEvent(controllerChannel, false, false).onErrorComplete();
                     })
             );
     }
@@ -349,15 +397,15 @@ public class ChannelManager extends AbstractService<ChannelManager> {
         return Completable
             .fromRunnable(() -> localChannelRegistry.add(controllerChannel))
             .andThen(controllerChannel.initialize())
-            .doOnComplete(() -> {
+            .andThen(publishChannelEvent(controllerChannel, true, false))
+            .doOnComplete(() ->
                 log.debug(
                     "[{}] Channel '{}' successfully register for target '{}'",
                     this.identifyConfiguration.id(),
                     controllerChannel.id(),
                     controllerChannel.targetId()
-                );
-                publishChannelEvent(controllerChannel, true, false);
-            })
+                )
+            )
             .onErrorResumeNext(throwable -> {
                 log.warn(
                     "[{}] Unable to register channel '{}' for target '{}'",
@@ -391,7 +439,22 @@ public class ChannelManager extends AbstractService<ChannelManager> {
                     throwable
                 )
             )
-            .doFinally(() -> publishChannelEvent(controllerChannel, false, true));
+            .onErrorComplete()
+            .andThen(publishChannelEvent(controllerChannel, false, true))
+            .doOnDispose(() ->
+                publishChannelEvent(controllerChannel, false, true)
+                    .doOnError(throwable ->
+                        log.warn(
+                            "[{}] Unregister process for channel '{}' for target '{}' has been cancelled but channel event wasn't properly published",
+                            this.identifyConfiguration.id(),
+                            controllerChannel.id(),
+                            controllerChannel.targetId(),
+                            throwable
+                        )
+                    )
+                    .onErrorComplete()
+                    .subscribe()
+            );
     }
 
     public <C extends Command<?>, R extends Reply<?>> Single<R> send(C command, String targetId) {
@@ -435,11 +498,13 @@ public class ChannelManager extends AbstractService<ChannelManager> {
             );
     }
 
-    public void publishChannelEvent(final String channelId, final String targetId, final boolean active, final boolean closed) {
-        channelEventQueue.add(ChannelEvent.builder().channelId(channelId).targetId(targetId).active(active).closed(closed).build());
+    public Completable publishChannelEvent(final String channelId, final String targetId, final boolean active, final boolean closed) {
+        return channelEventQueue.rxAdd(
+            ChannelEvent.builder().channelId(channelId).targetId(targetId).active(active).closed(closed).build()
+        );
     }
 
-    private void publishChannelEvent(final ControllerChannel controllerChannel, final boolean active, final boolean closed) {
-        this.publishChannelEvent(controllerChannel.id(), controllerChannel.targetId(), active, closed);
+    private Completable publishChannelEvent(final ControllerChannel controllerChannel, final boolean active, final boolean closed) {
+        return Completable.defer(() -> publishChannelEvent(controllerChannel.id(), controllerChannel.targetId(), active, closed));
     }
 }

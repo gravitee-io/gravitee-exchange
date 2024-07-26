@@ -31,6 +31,8 @@ import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Flowable;
 import io.reactivex.rxjava3.core.Maybe;
 import io.reactivex.rxjava3.core.MaybeEmitter;
+import io.reactivex.rxjava3.core.Single;
+import io.reactivex.rxjava3.schedulers.Schedulers;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Iterator;
@@ -173,8 +175,11 @@ public class PrimaryChannelManager extends AbstractService<PrimaryChannelManager
 
         MaybeEmitter<String> maybeEmitter = candidateHealthCheckResponseEmitters.remove(responseEvent.channelId());
         if (maybeEmitter != null) {
-            channelManager.publishChannelEvent(responseEvent.channelId(), responseEvent.targetId(), responseEvent.active(), false);
-            maybeEmitter.onSuccess(responseEvent.channelId());
+            channelManager
+                .publishChannelEvent(responseEvent.channelId(), responseEvent.targetId(), responseEvent.active(), false)
+                .doOnComplete(() -> maybeEmitter.onSuccess(responseEvent.channelId()))
+                .onErrorComplete()
+                .blockingAwait();
         } else {
             log.debug(
                 "[{}] Ignoring expired healthcheck response for primary channel candidate '{}' for target '{}'",
@@ -203,14 +208,14 @@ public class PrimaryChannelManager extends AbstractService<PrimaryChannelManager
                                         .timeout(
                                             PRIMARY_CHANNEL_CANDIDATE_HEALTH_CHECK_DELAY,
                                             PRIMARY_CHANNEL_CANDIDATE_HEALTH_CHECK_DELAY_UNIT,
-                                            Maybe.fromRunnable(() -> {
+                                            Maybe.defer(() -> {
                                                 log.warn(
                                                     "[{}] No healthcheck response received for primary channel candidate '{}' for target '{}'",
                                                     this.identifyConfiguration.id(),
                                                     channelId,
                                                     targetId
                                                 );
-                                                channelManager.publishChannelEvent(channelId, targetId, false, true);
+                                                return channelManager.publishChannelEvent(channelId, targetId, false, true).toMaybe();
                                             })
                                         )
                                         .ignoreElement(),
@@ -273,32 +278,35 @@ public class PrimaryChannelManager extends AbstractService<PrimaryChannelManager
         }
     }
 
-    public boolean isPrimaryChannelFor(final String channelId, final String targetId) {
-        String primaryChannelId = primaryChannelRegistry.get(targetId);
-        return channelId.equals(primaryChannelId);
+    public Single<Boolean> isPrimaryChannelFor(final String channelId, final String targetId) {
+        return primaryChannelRegistry.rxGet(targetId).map(channelId::equals).defaultIfEmpty(false);
     }
 
-    public void handleChannelCandidate(final ChannelEvent channelEvent) {
-        String targetId = channelEvent.targetId();
-        String channelId = channelEvent.channelId();
-        if (channelEvent.active()) {
-            log.debug(
-                "[{}] Adding channel '{}' as new primary candidate for target '{}'",
-                this.identifyConfiguration.id(),
-                channelId,
-                targetId
-            );
-            primaryChannelCandidateRegistry.put(targetId, channelId);
-        } else {
-            log.debug(
-                "[{}] Channel '{}' is inactive, removing it from primary candidates for target '{}'",
-                this.identifyConfiguration.id(),
-                channelId,
-                targetId
-            );
-            primaryChannelCandidateRegistry.remove(targetId, channelId);
-        }
-        electPrimaryChannel(targetId);
+    public Completable handleChannelCandidate(final ChannelEvent channelEvent) {
+        return Completable
+            .fromRunnable(() -> {
+                String targetId = channelEvent.targetId();
+                String channelId = channelEvent.channelId();
+                if (channelEvent.active()) {
+                    log.debug(
+                        "[{}] Adding channel '{}' as new primary candidate for target '{}'",
+                        this.identifyConfiguration.id(),
+                        channelId,
+                        targetId
+                    );
+                    primaryChannelCandidateRegistry.put(targetId, channelId);
+                } else {
+                    log.debug(
+                        "[{}] Channel '{}' is inactive, removing it from primary candidates for target '{}'",
+                        this.identifyConfiguration.id(),
+                        channelId,
+                        targetId
+                    );
+                    primaryChannelCandidateRegistry.remove(targetId, channelId);
+                }
+                electPrimaryChannel(targetId);
+            })
+            .subscribeOn(Schedulers.io());
     }
 
     private void electPrimaryChannel(final String targetId) {
