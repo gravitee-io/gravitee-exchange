@@ -1,3 +1,11 @@
+## [1.8.2](https://github.com/gravitee-io/gravitee-exchange/compare/1.8.1...1.8.2) (2024-07-26)
+
+
+### Bug Fixes
+
+* properly handle blocking accesses on cache and queue ([53e6f11](https://github.com/gravitee-io/gravitee-exchange/commit/53e6f11c2d9b4dc5cb81ce5699a88e44a98b8a8d))
+* put some logs on trace level ([ca81809](https://github.com/gravitee-io/gravitee-exchange/commit/ca818097de949a3b50199170b52e1d9adee5a63c))
+
 ## [1.8.1](https://github.com/gravitee-io/gravitee-exchange/compare/1.8.0...1.8.1) (2024-07-26)
 
 
