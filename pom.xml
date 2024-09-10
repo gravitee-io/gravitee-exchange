@@ -34,7 +34,7 @@
     <packaging>pom</packaging>
 
     <properties>
-        <gravitee-bom.version>8.1.8</gravitee-bom.version>
+        <gravitee-bom.version>8.1.10</gravitee-bom.version>
         <gravitee-common.version>4.5.1</gravitee-common.version>
         <gravitee-node.version>6.1.0</gravitee-node.version>
 
