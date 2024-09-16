@@ -25,6 +25,7 @@ import static org.mockito.Mockito.verify;
 
 import io.gravitee.exchange.api.configuration.IdentifyConfiguration;
 import io.gravitee.node.api.cache.Cache;
+import io.gravitee.node.api.cache.CacheConfiguration;
 import io.gravitee.node.api.cache.CacheManager;
 import io.gravitee.node.api.cluster.ClusterManager;
 import io.gravitee.node.api.cluster.Member;
@@ -68,7 +69,7 @@ class DefaultExchangeControllerTest {
         lenient().when(member.primary()).thenReturn(true);
         lenient().when(clusterManager.self()).thenReturn(member);
 
-        lenient().when(cacheManager.getOrCreateCache(any(), any())).thenReturn(mock(Cache.class));
+        lenient().when(cacheManager.getOrCreateCache(any(), any(CacheConfiguration.class))).thenReturn(mock(Cache.class));
         environment = new MockEnvironment();
         cut =
             new DefaultExchangeController(new IdentifyConfiguration(environment), clusterManager, cacheManager, managementEndpointManager);
