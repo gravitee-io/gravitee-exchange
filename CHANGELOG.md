@@ -1,3 +1,10 @@
+## [1.8.3](https://github.com/gravitee-io/gravitee-exchange/compare/1.8.2...1.8.3) (2025-02-10)
+
+
+### Bug Fixes
+
+* add trace logging the payload sent through the socket ([bd9743a](https://github.com/gravitee-io/gravitee-exchange/commit/bd9743a4eb046896ae0c4f61ef99eed16d2bc275))
+
 ## [1.8.2](https://github.com/gravitee-io/gravitee-exchange/compare/1.8.1...1.8.2) (2024-07-26)
 
 
