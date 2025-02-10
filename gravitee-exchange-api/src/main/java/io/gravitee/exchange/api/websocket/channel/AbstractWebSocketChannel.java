@@ -468,8 +468,16 @@ public abstract class AbstractWebSocketChannel implements Channel {
 
     private Completable writeToSocket(final String commandId, final ProtocolExchange websocketExchange) {
         if (!webSocket.isClosed()) {
+            Buffer payload = protocolAdapter.write(websocketExchange);
+            log.trace(
+                "Writing exchange '{}' for '{}' for command id '{}' to websocket: {}",
+                websocketExchange.type(),
+                websocketExchange.exchangeType(),
+                commandId,
+                payload
+            );
             return webSocket
-                .writeBinaryMessage(protocolAdapter.write(websocketExchange))
+                .writeBinaryMessage(payload)
                 .doOnComplete(() ->
                     log.trace(
                         "Write exchange '{}' for '{}' and id '{}' to websocket successfully",
