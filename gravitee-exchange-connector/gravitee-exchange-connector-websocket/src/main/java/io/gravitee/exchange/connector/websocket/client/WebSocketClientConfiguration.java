@@ -47,6 +47,7 @@ public class WebSocketClientConfiguration {
     public static final String MAX_WEB_SOCKET_MESSAGE_SIZE_KEY = "connector.ws.maxWebSocketMessageSize";
     public static final int MAX_WEB_SOCKET_MESSAGE_SIZE_DEFAULT = 13107200;
     public static final String ENDPOINTS_KEY = "connector.ws.endpoints";
+    public static final String AUTO_RECONNECT_KEY = "connector.ws.autoReconnect";
     private final IdentifyConfiguration identifyConfiguration;
 
     private List<WebSocketEndpoint> endpoints;
@@ -105,6 +106,14 @@ public class WebSocketClientConfiguration {
 
     public String trustStorePassword() {
         return identifyConfiguration.getProperty(TRUSTSTORE_PASSWORD_KEY);
+    }
+
+    /**
+     * Determines whether auto-reconnection is enabled for the connector.
+     * @return a boolean indicating whether auto-reconnection is enabled (true) or disabled (false)
+     */
+    public boolean autoReconnect() {
+        return identifyConfiguration.getProperty(AUTO_RECONNECT_KEY, Boolean.class, Boolean.FALSE);
     }
 
     /**
