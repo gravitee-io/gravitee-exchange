@@ -98,9 +98,8 @@ public class WebSocketExchangeConnector extends EmbeddedExchangeConnector {
                     .initialize()
                     .doOnComplete(() ->
                         webSocket.closeHandler(v -> {
-                            log.debug("Exchange Connector has been closed with status code '{}'", webSocket.closeStatusCode());
-                            if (!Objects.equals(webSocket.closeStatusCode(), (short) 1000)) {
-                                log.warn("Exchange Connector closed abnormally, reconnecting...");
+                            log.warn("Exchange Connector has been closed with status code '{}'", webSocket.closeStatusCode());
+                            if (shouldReconnect(webSocket)) {
                                 initialize().onErrorComplete().subscribeOn(Schedulers.io()).subscribe();
                             }
                         })
@@ -178,5 +177,11 @@ public class WebSocketExchangeConnector extends EmbeddedExchangeConnector {
             });
         }
         super.addCommandHandlers(commandHandlers);
+    }
+
+    private boolean shouldReconnect(WebSocket webSocket) {
+        return (
+            webSocketConnectorClientFactory.getConfiguration().autoReconnect() || !Objects.equals(webSocket.closeStatusCode(), (short) 1000)
+        );
     }
 }
