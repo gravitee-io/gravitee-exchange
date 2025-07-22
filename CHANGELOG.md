@@ -1,3 +1,10 @@
+## [1.8.4](https://github.com/gravitee-io/gravitee-exchange/compare/1.8.3...1.8.4) (2025-07-22)
+
+
+### Bug Fixes
+
+* add auto-reconnection capability to ExchangeConnector ([fc3d148](https://github.com/gravitee-io/gravitee-exchange/commit/fc3d148ad3c9591426c552f9e89de4e7926bfb67))
+
 ## [1.8.3](https://github.com/gravitee-io/gravitee-exchange/compare/1.8.2...1.8.3) (2025-02-10)
 
 
