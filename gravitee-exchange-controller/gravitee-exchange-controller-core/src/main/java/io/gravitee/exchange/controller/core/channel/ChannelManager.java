@@ -325,7 +325,7 @@ public class ChannelManager extends AbstractService<ChannelManager> {
                         return publishChannelEvent(controllerChannel, reply.getPayload().healthy(), false);
                     })
                     .onErrorResumeNext(throwable -> {
-                        log.debug(
+                        log.error(
                             "[{}] Unable to send health check command for channel '{}' on target '{}'",
                             this.identifyConfiguration.id(),
                             controllerChannel.id(),
