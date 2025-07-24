@@ -16,6 +16,7 @@
 package io.gravitee.exchange.controller.core.channel;
 
 import static io.gravitee.exchange.controller.core.channel.ChannelManager.CHANNEL_EVENTS_QUEUE;
+import static org.assertj.core.api.Assertions.as;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import io.gravitee.exchange.api.command.Command;
@@ -160,7 +161,45 @@ class ChannelManagerTest {
             cut.register(sampleChannel).test().awaitDone(10, TimeUnit.SECONDS);
             testScheduler.advanceTimeBy(30, TimeUnit.SECONDS);
             assertThat(vertxTestContext.awaitCompletion(10, TimeUnit.SECONDS)).isTrue();
-            assertThat(cut.getChannelById("channelId")).isNotNull();
+            assertThat(cut.getChannelById("channelId")).isNotEmpty();
+        } catch (Exception e) {
+            RxJavaPlugins.reset();
+        }
+    }
+
+    @Test
+    void should_unregister_receive_unhealthy_healthCheck_command(VertxTestContext vertxTestContext) {
+        try {
+            TestScheduler testScheduler = new TestScheduler();
+            RxJavaPlugins.setComputationSchedulerHandler(s -> testScheduler);
+            // Restart cut to apply test scheduler
+            cut.stop();
+            cut.start();
+
+            Checkpoint checkpoint = vertxTestContext.checkpoint();
+            SampleChannel sampleChannel = new SampleChannel("channelId", "targetId");
+            sampleChannel.addCommandHandlers(
+                List.of(
+                    new CommandHandler<>() {
+                        @Override
+                        public Single<Reply<?>> handle(final Command<?> command) {
+                            return Single.fromCallable(() -> {
+                                checkpoint.flag();
+                                return new HealthCheckReply(command.getId(), new HealthCheckReplyPayload(false, null));
+                            });
+                        }
+
+                        @Override
+                        public String supportType() {
+                            return HealthCheckCommand.COMMAND_TYPE;
+                        }
+                    }
+                )
+            );
+            cut.register(sampleChannel).test().awaitDone(10, TimeUnit.SECONDS);
+            testScheduler.advanceTimeBy(30, TimeUnit.SECONDS);
+            assertThat(vertxTestContext.awaitCompletion(10, TimeUnit.SECONDS)).isTrue();
+            assertThat(cut.getChannelById("channelId")).isEmpty();
         } catch (Exception e) {
             RxJavaPlugins.reset();
         }
