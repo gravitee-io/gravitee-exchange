@@ -150,8 +150,9 @@ public abstract class AbstractWebSocketChannel implements Channel {
                         } catch (Exception e) {
                             log.warn(
                                 String.format(
-                                    "An error occurred when trying to decode incoming websocket exchange [%s]. Closing Socket.",
-                                    websocketExchange
+                                    "An error occurred when trying to decode incoming websocket exchange [%s] for target '%s'. Closing Socket.",
+                                    websocketExchange,
+                                    targetId
                                 ),
                                 e
                             );
@@ -165,7 +166,7 @@ public abstract class AbstractWebSocketChannel implements Channel {
                     emitter.onComplete();
                 }
             })
-            .doOnComplete(() -> log.debug("Channel '{}' has been successfully initialized", id))
+            .doOnComplete(() -> log.debug("Channel '{}' for target '{}' has been successfully initialized", id, targetId))
             .doOnError(throwable -> log.error("Unable to initialize channel '{}'", id));
     }
 
@@ -176,7 +177,7 @@ public abstract class AbstractWebSocketChannel implements Channel {
             return;
         }
 
-        log.trace("Handling received command '{}' of type '{}'", command.getId(), command.getType());
+        log.trace("Handling received command '{}' of type '{}' for target '{}'", command.getId(), command.getType(), targetId);
         Single<? extends Command<?>> commandObs;
         CommandAdapter<Command<?>, Command<?>, Reply<?>> commandAdapter =
             (CommandAdapter<Command<?>, Command<?>, Reply<?>>) commandAdapters.get(command.getType());
@@ -200,7 +201,7 @@ public abstract class AbstractWebSocketChannel implements Channel {
                 } else if (commandHandler != null) {
                     return handleCommandAsync(adaptedCommand, commandHandler);
                 } else {
-                    log.info("No handler found for command type '{}'. Ignoring", adaptedCommand.getType());
+                    log.info("No handler found for command type '{}' for target '{}'. Ignoring", adaptedCommand.getType(), targetId);
                     return writeReply(
                         new NoReply(
                             adaptedCommand.getId(),
@@ -212,9 +213,10 @@ public abstract class AbstractWebSocketChannel implements Channel {
             })
             .onErrorResumeNext(throwable -> {
                 log.warn(
-                    "Unexpected internal error occurred when handling command '%s' of type '%s'".formatted(
+                    "Unexpected internal error occurred when handling command '%s' of type '%s' for target '%s'".formatted(
                             command.getId(),
-                            command.getType()
+                            command.getType(),
+                            targetId
                         ),
                     throwable
                 );
@@ -228,7 +230,7 @@ public abstract class AbstractWebSocketChannel implements Channel {
     private void receiveReply(final Reply<?> reply) {
         SingleEmitter<? extends Reply<?>> replyEmitter = resultEmitters.remove(reply.getCommandId());
         if (replyEmitter != null) {
-            log.trace("Handling received reply '{}' of type '{}'", reply.getCommandId(), reply.getType());
+            log.trace("Handling received reply '{}' of type '{}' for target '{}'", reply.getCommandId(), reply.getType(), targetId);
             Single<? extends Reply<?>> replyObs;
             ReplyAdapter<Reply<?>, Reply<?>> replyAdapter = (ReplyAdapter<Reply<?>, Reply<?>>) replyAdapters.get(reply.getType());
             if (replyAdapter != null) {
@@ -250,12 +252,22 @@ public abstract class AbstractWebSocketChannel implements Channel {
                     }
                 })
                 .doOnError(throwable -> {
-                    log.warn("Unable to handle reply '{}' for command '{}'", reply.getType(), reply.getCommandId());
+                    log.warn(
+                        "Unable to handle reply '{}' for command '{}' for target '{}'",
+                        reply.getType(),
+                        reply.getCommandId(),
+                        targetId
+                    );
                     replyEmitter.onError(new ChannelReplyException(throwable));
                 })
                 .subscribe();
         } else {
-            log.debug("No reply emitter for received reply '{}' of type '{}'. Ignoring", reply.getCommandId(), reply.getType());
+            log.debug(
+                "No reply emitter for received reply '{}' of type '{}' for target '{}'. Ignoring",
+                reply.getCommandId(),
+                reply.getType(),
+                targetId
+            );
         }
     }
 
@@ -374,7 +386,7 @@ public abstract class AbstractWebSocketChannel implements Channel {
                 return Single.just(reply);
             })
             .doOnError(throwable -> {
-                log.warn("Unable to handle command '{}' with id '{}'", command.getType(), command.getId());
+                log.warn("Unable to handle command '{}' with id '{}' for target '{}' ", command.getType(), command.getId(), targetId);
                 webSocket.close((short) 1011, "Unexpected error").subscribe();
             })
             .doFinally(() -> inflightCommandCount.decrementAndGet());
@@ -414,9 +426,10 @@ public abstract class AbstractWebSocketChannel implements Channel {
                         Single.error(() -> {
                             if (adaptedCommand.getReplyTimeoutMs() > 0) {
                                 log.warn(
-                                    "No reply received in time for command '{}' with id '{}'",
+                                    "No reply received in time for command '{}' with id '{}' for target '{}'",
                                     adaptedCommand.getType(),
-                                    adaptedCommand.getId()
+                                    adaptedCommand.getId(),
+                                    targetId
                                 );
                             }
                             throw new ChannelTimeoutException();
@@ -470,28 +483,31 @@ public abstract class AbstractWebSocketChannel implements Channel {
         if (!webSocket.isClosed()) {
             Buffer payload = protocolAdapter.write(websocketExchange);
             log.trace(
-                "Writing exchange '{}' for '{}' for command id '{}' to websocket: {}",
+                "Writing exchange '{}' for '{}' for command id '{}' for target '{}' to websocket: {}",
                 websocketExchange.type(),
                 websocketExchange.exchangeType(),
                 commandId,
+                targetId,
                 payload
             );
             return webSocket
                 .writeBinaryMessage(payload)
                 .doOnComplete(() ->
                     log.trace(
-                        "Write exchange '{}' for '{}' and id '{}' to websocket successfully",
+                        "Write exchange '{}' for '{}' and id '{}' for target '{}' to websocket successfully",
                         websocketExchange.type(),
                         websocketExchange.exchangeType(),
-                        commandId
+                        commandId,
+                        targetId
                     )
                 )
                 .onErrorResumeNext(throwable -> {
                     log.error(
-                        "An error occurred when trying to send exchange '{}' for '{}' and id '{}'",
+                        "An error occurred when trying to send exchange '{}' for '{}' and id '{}' for target '{}' ",
                         websocketExchange.type(),
                         websocketExchange.exchangeType(),
-                        commandId
+                        commandId,
+                        targetId
                     );
                     return Completable.error(new Exception("Write to socket failed"));
                 });
