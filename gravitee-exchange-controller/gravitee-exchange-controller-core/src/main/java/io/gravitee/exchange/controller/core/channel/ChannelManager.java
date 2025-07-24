@@ -319,6 +319,9 @@ public class ChannelManager extends AbstractService<ChannelManager> {
                         );
                         HealthCheckReplyPayload payload = reply.getPayload();
                         controllerChannel.enforceActiveStatus(payload.healthy());
+                        if (!payload.healthy()) {
+                            return unregister(controllerChannel);
+                        }
                         return publishChannelEvent(controllerChannel, reply.getPayload().healthy(), false);
                     })
                     .onErrorResumeNext(throwable -> {
@@ -329,7 +332,7 @@ public class ChannelManager extends AbstractService<ChannelManager> {
                             controllerChannel.targetId()
                         );
                         controllerChannel.enforceActiveStatus(false);
-                        return publishChannelEvent(controllerChannel, false, false).onErrorComplete();
+                        return unregister(controllerChannel);
                     })
             );
     }
