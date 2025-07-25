@@ -1,3 +1,12 @@
+## [1.8.5](https://github.com/gravitee-io/gravitee-exchange/compare/1.8.4...1.8.5) (2025-07-25)
+
+
+### Bug Fixes
+
+* add targetId in log messages ([f962515](https://github.com/gravitee-io/gravitee-exchange/commit/f9625158b861cd28383068a313276c0408484c0f))
+* log an error message when healthcheck can't be send ([b0c4649](https://github.com/gravitee-io/gravitee-exchange/commit/b0c4649a75d2d84493b4531a3fa3490ec2f69e76))
+* unregister channel when healthcheck reply is unhealthy ([a80d01e](https://github.com/gravitee-io/gravitee-exchange/commit/a80d01ee9d7d9be82faa1c3f69ffac7da13fd8d2))
+
 ## [1.8.4](https://github.com/gravitee-io/gravitee-exchange/compare/1.8.3...1.8.4) (2025-07-22)
 
 
