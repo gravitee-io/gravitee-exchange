@@ -48,6 +48,12 @@ public class WebSocketClientConfiguration {
     public static final int MAX_WEB_SOCKET_MESSAGE_SIZE_DEFAULT = 13107200;
     public static final String ENDPOINTS_KEY = "connector.ws.endpoints";
     public static final String AUTO_RECONNECT_KEY = "connector.ws.autoReconnect";
+    private static final String PROXY_ENABLED = "connector.ws.proxy.enabled";
+    private static final String PROXY_TYPE = "connector.ws.proxy.type";
+    private static final String PROXY_HOST = "connector.ws.proxy.host";
+    private static final String PROXY_PORT = "connector.ws.proxy.port";
+    private static final String PROXY_USERNAME = "connector.ws.proxy.username";
+    private static final String PROXY_PASSWORD = "connector.ws.proxy.password";
     private final IdentifyConfiguration identifyConfiguration;
 
     private List<WebSocketEndpoint> endpoints;
@@ -106,6 +112,30 @@ public class WebSocketClientConfiguration {
 
     public String trustStorePassword() {
         return identifyConfiguration.getProperty(TRUSTSTORE_PASSWORD_KEY);
+    }
+
+    public String proxyType() {
+        return identifyConfiguration.getProperty(PROXY_TYPE, String.class, "HTTP");
+    }
+
+    public String proxyHost() {
+        return identifyConfiguration.getProperty(PROXY_HOST);
+    }
+
+    public Integer proxyPort() {
+        return identifyConfiguration.getProperty(PROXY_PORT, Integer.class, 3128);
+    }
+
+    public String proxyUsername() {
+        return identifyConfiguration.getProperty(PROXY_USERNAME);
+    }
+
+    public String proxyPassword() {
+        return identifyConfiguration.getProperty(PROXY_PASSWORD);
+    }
+
+    public Boolean isProxyConfigured() {
+        return identifyConfiguration.getProperty(PROXY_ENABLED, Boolean.class, Boolean.FALSE);
     }
 
     /**

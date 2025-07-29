@@ -194,6 +194,28 @@ class WebSocketClientConfigurationTest {
         void should_return_empty_endpoints_without_configuration() {
             assertThat(cut.endpoints()).isEmpty();
         }
+
+        @Test
+        void should_return_http_client_no_proxy_configuration() {
+            assertThat(cut.isProxyConfigured()).isFalse();
+        }
+
+        @Test
+        void should_return_http_client_proxy_configuration() {
+            environment
+                .withProperty("%s.connector.ws.proxy.enabled".formatted(prefix), "true")
+                .withProperty("%s.connector.ws.proxy.type".formatted(prefix), "HTTP")
+                .withProperty("%s.connector.ws.proxy.host".formatted(prefix), "proxy.tld")
+                .withProperty("%s.connector.ws.proxy.port".formatted(prefix), "123")
+                .withProperty("%s.connector.ws.proxy.username".formatted(prefix), "bob")
+                .withProperty("%s.connector.ws.proxy.password".formatted(prefix), "bob_pwd");
+            assertThat(cut.isProxyConfigured()).isTrue();
+            assertThat(cut.proxyType()).isEqualTo("HTTP");
+            assertThat(cut.proxyHost()).isEqualTo("proxy.tld");
+            assertThat(cut.proxyPort()).isEqualTo(123);
+            assertThat(cut.proxyUsername()).isEqualTo("bob");
+            assertThat(cut.proxyPassword()).isEqualTo("bob_pwd");
+        }
     }
 
     @Nested
