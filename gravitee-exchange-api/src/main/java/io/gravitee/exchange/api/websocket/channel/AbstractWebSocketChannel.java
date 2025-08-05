@@ -329,7 +329,7 @@ public abstract class AbstractWebSocketChannel implements Channel {
         }
     }
 
-    private void startPingTask() {
+    protected void startPingTask() {
         this.pingTaskId =
             this.vertx.setPeriodic(
                     PING_DELAY,
