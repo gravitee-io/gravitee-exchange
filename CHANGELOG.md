@@ -1,3 +1,11 @@
+## [1.8.6](https://github.com/gravitee-io/gravitee-exchange/compare/1.8.5...1.8.6) (2025-08-06)
+
+
+### Bug Fixes
+
+* set tcpKeepAlive for httpClient used by Connector ([d74cced](https://github.com/gravitee-io/gravitee-exchange/commit/d74cced357c9041700ef2c279159fbb634deccab))
+* start pingTask on Connector side once HelloReply received ([d7618f6](https://github.com/gravitee-io/gravitee-exchange/commit/d7618f6b2c36abf4b7156eea1a3e14a929ff2856))
+
 ## [1.8.5](https://github.com/gravitee-io/gravitee-exchange/compare/1.8.4...1.8.5) (2025-07-25)
 
 
