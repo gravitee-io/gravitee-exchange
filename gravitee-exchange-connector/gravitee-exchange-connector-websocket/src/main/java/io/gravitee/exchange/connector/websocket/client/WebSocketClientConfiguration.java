@@ -48,6 +48,12 @@ public class WebSocketClientConfiguration {
     public static final int MAX_WEB_SOCKET_MESSAGE_SIZE_DEFAULT = 13107200;
     public static final String ENDPOINTS_KEY = "connector.ws.endpoints";
     public static final String AUTO_RECONNECT_KEY = "connector.ws.autoReconnect";
+    private static final String HTTP_CLIENT_PROXY_ENABLED = "connector.http.client.proxy.enabled";
+    private static final String HTTP_CLIENT_PROXY_TYPE = "connector.http.client.proxy.type";
+    private static final String HTTP_CLIENT_PROXY_HOST = "connector.http.client.proxy.host";
+    private static final String HTTP_CLIENT_PROXY_PORT = "connector.http.client.proxy.port";
+    private static final String HTTP_CLIENT_PROXY_USERNAME = "connector.http.client.proxy.username";
+    private static final String HTTP_CLIENT_PROXY_PASSWORD = "connector.http.client.proxy.password";
     private final IdentifyConfiguration identifyConfiguration;
 
     private List<WebSocketEndpoint> endpoints;
@@ -106,6 +112,30 @@ public class WebSocketClientConfiguration {
 
     public String trustStorePassword() {
         return identifyConfiguration.getProperty(TRUSTSTORE_PASSWORD_KEY);
+    }
+
+    public String httpClientProxyType() {
+        return identifyConfiguration.getProperty(HTTP_CLIENT_PROXY_TYPE, String.class, "HTTP");
+    }
+
+    public String httpClientProxyHost() {
+        return identifyConfiguration.getProperty(HTTP_CLIENT_PROXY_HOST);
+    }
+
+    public Integer httpClientProxyPort() {
+        return identifyConfiguration.getProperty(HTTP_CLIENT_PROXY_PORT, Integer.class, 3128);
+    }
+
+    public String httpClientProxyUsername() {
+        return identifyConfiguration.getProperty(HTTP_CLIENT_PROXY_USERNAME);
+    }
+
+    public String httpClientProxyPassword() {
+        return identifyConfiguration.getProperty(HTTP_CLIENT_PROXY_PASSWORD);
+    }
+
+    public Boolean isProxyConfigured() {
+        return identifyConfiguration.getProperty(HTTP_CLIENT_PROXY_ENABLED, Boolean.class, Boolean.FALSE);
     }
 
     /**
