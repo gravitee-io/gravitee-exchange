@@ -80,6 +80,7 @@ public class WebSocketConnectorChannel extends AbstractWebSocketChannel implemen
                             if (reply.getCommandStatus() == CommandStatus.SUCCEEDED) {
                                 this.targetId = reply.getPayload().getTargetId();
                                 this.active = true;
+                                startPingTask();
                                 log.debug("Hello Handshake succeed for channel '{}' on target '{}'", this.id, this.targetId);
                             } else {
                                 throw new WebSocketConnectorException(

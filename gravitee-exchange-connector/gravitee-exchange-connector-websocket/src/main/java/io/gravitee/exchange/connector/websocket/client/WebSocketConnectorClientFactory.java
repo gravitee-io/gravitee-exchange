@@ -119,6 +119,7 @@ public class WebSocketConnectorClientFactory {
 
         options.setMaxWebSocketFrameSize(configuration.maxWebSocketFrameSize());
         options.setMaxWebSocketMessageSize(configuration.maxWebSocketMessageSize());
+        options.setTcpKeepAlive(true);
 
         return vertx.createHttpClient(options);
     }
