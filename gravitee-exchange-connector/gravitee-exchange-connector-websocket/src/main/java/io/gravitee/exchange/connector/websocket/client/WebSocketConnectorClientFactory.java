@@ -20,6 +20,8 @@ import io.vertx.core.http.HttpClientOptions;
 import io.vertx.core.net.JksOptions;
 import io.vertx.core.net.PemTrustOptions;
 import io.vertx.core.net.PfxOptions;
+import io.vertx.core.net.ProxyOptions;
+import io.vertx.core.net.ProxyType;
 import io.vertx.rxjava3.core.Vertx;
 import io.vertx.rxjava3.core.http.HttpClient;
 import java.net.URL;
@@ -103,6 +105,16 @@ public class WebSocketConnectorClientFactory {
             } else {
                 throw new WebSocketConnectorException("Unsupported truststore type", false);
             }
+        }
+
+        if (configuration.isProxyConfigured()) {
+            ProxyOptions proxyOptions = new ProxyOptions();
+            proxyOptions.setType(ProxyType.valueOf(configuration.httpClientProxyType()));
+            proxyOptions.setHost(configuration.httpClientProxyHost());
+            proxyOptions.setPort(configuration.httpClientProxyPort());
+            proxyOptions.setUsername(configuration.httpClientProxyUsername());
+            proxyOptions.setPassword(configuration.httpClientProxyPassword());
+            options.setProxyOptions(proxyOptions);
         }
 
         options.setMaxWebSocketFrameSize(configuration.maxWebSocketFrameSize());
