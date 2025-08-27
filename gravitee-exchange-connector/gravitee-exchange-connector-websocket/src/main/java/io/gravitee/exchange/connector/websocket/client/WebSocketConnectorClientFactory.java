@@ -109,11 +109,11 @@ public class WebSocketConnectorClientFactory {
 
         if (configuration.isProxyConfigured()) {
             ProxyOptions proxyOptions = new ProxyOptions();
-            proxyOptions.setType(ProxyType.valueOf(configuration.httpClientProxyType()));
-            proxyOptions.setHost(configuration.httpClientProxyHost());
-            proxyOptions.setPort(configuration.httpClientProxyPort());
-            proxyOptions.setUsername(configuration.httpClientProxyUsername());
-            proxyOptions.setPassword(configuration.httpClientProxyPassword());
+            proxyOptions.setType(ProxyType.valueOf(configuration.proxyType()));
+            proxyOptions.setHost(configuration.proxyHost());
+            proxyOptions.setPort(configuration.proxyPort());
+            proxyOptions.setUsername(configuration.proxyUsername());
+            proxyOptions.setPassword(configuration.proxyPassword());
             options.setProxyOptions(proxyOptions);
         }
 

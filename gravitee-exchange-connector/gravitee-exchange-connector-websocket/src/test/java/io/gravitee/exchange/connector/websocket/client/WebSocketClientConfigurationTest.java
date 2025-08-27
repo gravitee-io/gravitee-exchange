@@ -203,18 +203,18 @@ class WebSocketClientConfigurationTest {
         @Test
         void should_return_http_client_proxy_configuration() {
             environment
-                .withProperty("%s.connector.http.client.proxy.enabled".formatted(prefix), "true")
-                .withProperty("%s.connector.http.client.proxy.type".formatted(prefix), "HTTP")
-                .withProperty("%s.connector.http.client.proxy.host".formatted(prefix), "proxy.tld")
-                .withProperty("%s.connector.http.client.proxy.port".formatted(prefix), "123")
-                .withProperty("%s.connector.http.client.proxy.username".formatted(prefix), "bob")
-                .withProperty("%s.connector.http.client.proxy.password".formatted(prefix), "bob_pwd");
+                .withProperty("%s.connector.ws.proxy.enabled".formatted(prefix), "true")
+                .withProperty("%s.connector.ws.proxy.type".formatted(prefix), "HTTP")
+                .withProperty("%s.connector.ws.proxy.host".formatted(prefix), "proxy.tld")
+                .withProperty("%s.connector.ws.proxy.port".formatted(prefix), "123")
+                .withProperty("%s.connector.ws.proxy.username".formatted(prefix), "bob")
+                .withProperty("%s.connector.ws.proxy.password".formatted(prefix), "bob_pwd");
             assertThat(cut.isProxyConfigured()).isTrue();
-            assertThat(cut.httpClientProxyType()).isEqualTo("HTTP");
-            assertThat(cut.httpClientProxyHost()).isEqualTo("proxy.tld");
-            assertThat(cut.httpClientProxyPort()).isEqualTo(123);
-            assertThat(cut.httpClientProxyUsername()).isEqualTo("bob");
-            assertThat(cut.httpClientProxyPassword()).isEqualTo("bob_pwd");
+            assertThat(cut.proxyType()).isEqualTo("HTTP");
+            assertThat(cut.proxyHost()).isEqualTo("proxy.tld");
+            assertThat(cut.proxyPort()).isEqualTo(123);
+            assertThat(cut.proxyUsername()).isEqualTo("bob");
+            assertThat(cut.proxyPassword()).isEqualTo("bob_pwd");
         }
     }
 
