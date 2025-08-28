@@ -1,3 +1,10 @@
+# [1.9.0](https://github.com/gravitee-io/gravitee-exchange/compare/1.8.6...1.9.0) (2025-08-28)
+
+
+### Features
+
+* websocket client proxy configuration ([cb762eb](https://github.com/gravitee-io/gravitee-exchange/commit/cb762ebb55bed8898fd2cd378f8220662d4a42d6))
+
 ## [1.8.6](https://github.com/gravitee-io/gravitee-exchange/compare/1.8.5...1.8.6) (2025-08-06)
 
 
