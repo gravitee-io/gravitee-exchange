@@ -1,3 +1,11 @@
+## [1.9.1](https://github.com/gravitee-io/gravitee-exchange/compare/1.9.0...1.9.1) (2025-10-21)
+
+
+### Bug Fixes
+
+* **controller:** handle WebSocket authentication asynchronously ([6a316f8](https://github.com/gravitee-io/gravitee-exchange/commit/6a316f8f02c042be4d2f4c8c912f30d820ded81e))
+* **controller:** improve logging by prefixing with the identifyConfig id ([244a1fd](https://github.com/gravitee-io/gravitee-exchange/commit/244a1fd68289e671376c55ee340508c6f82c5bce))
+
 # [1.9.0](https://github.com/gravitee-io/gravitee-exchange/compare/1.8.6...1.9.0) (2025-08-28)
 
 
