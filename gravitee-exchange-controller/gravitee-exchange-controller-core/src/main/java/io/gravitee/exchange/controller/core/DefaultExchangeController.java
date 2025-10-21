@@ -438,6 +438,11 @@ public class DefaultExchangeController extends AbstractService<ExchangeControlle
             .doOnError(throwable -> this.idBasedBatchObservers.remove(batch.id()));
     }
 
+    @Override
+    public IdentifyConfiguration identifyConfiguration() {
+        return identifyConfiguration;
+    }
+
     private Single<Batch> sendBatchCommands(final Batch batch) {
         return this.updateBatch(batch.start())
             .filter(a -> a.status().equals(BatchStatus.IN_PROGRESS))

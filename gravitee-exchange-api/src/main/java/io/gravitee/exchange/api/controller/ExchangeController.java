@@ -21,6 +21,7 @@ import io.gravitee.exchange.api.batch.BatchObserver;
 import io.gravitee.exchange.api.batch.KeyBatchObserver;
 import io.gravitee.exchange.api.command.Command;
 import io.gravitee.exchange.api.command.Reply;
+import io.gravitee.exchange.api.configuration.IdentifyConfiguration;
 import io.gravitee.exchange.api.controller.listeners.TargetListener;
 import io.gravitee.exchange.api.controller.metrics.BatchMetric;
 import io.gravitee.exchange.api.controller.metrics.ChannelMetric;
@@ -149,4 +150,12 @@ public interface ExchangeController extends Service<ExchangeController> {
      * @param keyBasedObserver the observer to unregister
      */
     void removeKeyBasedBatchObserver(final KeyBatchObserver keyBasedObserver);
+
+    /**
+     * Retrieves the {@link IdentifyConfiguration} associated with the current exchange controller.
+     *
+     * @return the {@link IdentifyConfiguration} representing the identification and configuration
+     * details used by the exchange controller.
+     */
+    IdentifyConfiguration identifyConfiguration();
 }

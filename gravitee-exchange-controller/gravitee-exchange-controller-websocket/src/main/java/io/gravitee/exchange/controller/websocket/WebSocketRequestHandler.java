@@ -39,6 +39,7 @@ import io.vertx.rxjava3.core.Vertx;
 import io.vertx.rxjava3.core.http.HttpServerRequest;
 import io.vertx.rxjava3.ext.web.RoutingContext;
 import java.util.List;
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -51,7 +52,10 @@ import lombok.extern.slf4j.Slf4j;
 public class WebSocketRequestHandler implements io.vertx.core.Handler<io.vertx.rxjava3.ext.web.RoutingContext> {
 
     private final Vertx vertx;
+
+    @Getter
     private final ExchangeController exchangeController;
+
     private final WebSocketControllerAuthentication<?> controllerAuthentication;
     private final ControllerCommandHandlersFactory controllerCommandHandlersFactory;
     private final ExchangeSerDe commandSerDe;
@@ -59,11 +63,14 @@ public class WebSocketRequestHandler implements io.vertx.core.Handler<io.vertx.r
     @Override
     public void handle(final RoutingContext routingContext) {
         if (exchangeController.lifecycleState() != Lifecycle.State.STARTED) {
-            log.warn("Incoming connection rejected because Websocket Controller is stopping");
+            log.warn(
+                "[{}] Incoming connection rejected because Websocket Controller is stopping",
+                exchangeController.identifyConfiguration().id()
+            );
             routingContext.fail(HttpStatusCode.GONE_410);
         }
 
-        log.debug("Incoming connection on Websocket Controller");
+        log.debug("[{}] Incoming connection on Websocket Controller", exchangeController.identifyConfiguration().id());
         HttpServerRequest request = routingContext.request();
         request.pause();
 
@@ -77,14 +84,11 @@ public class WebSocketRequestHandler implements io.vertx.core.Handler<io.vertx.r
                         handleValidConnection(routingContext, request, controllerContext);
                     } else {
                         // Authentication failed so reject the request
-                        log.debug("Unauthorized request on Websocket Controller");
+                        log.debug("[{}] Unauthorized request on Websocket Controller", exchangeController.identifyConfiguration().id());
                         routingContext.fail(HttpStatusCode.UNAUTHORIZED_401);
                     }
                 },
-                throwable -> {
-                    log.error("Unexpected error when authenticating incoming connection", throwable);
-                    routingContext.fail(HttpStatusCode.INTERNAL_SERVER_ERROR_500);
-                }
+                throwable -> routingContext.fail(HttpStatusCode.INTERNAL_SERVER_ERROR_500, throwable)
             );
     }
 
@@ -126,7 +130,7 @@ public class WebSocketRequestHandler implements io.vertx.core.Handler<io.vertx.r
                     })
                     .onErrorComplete();
             })
-            .doOnError(throwable -> routingContext.fail(HttpStatusCode.INTERNAL_SERVER_ERROR_500))
+            .doOnError(throwable -> routingContext.fail(HttpStatusCode.INTERNAL_SERVER_ERROR_500, throwable))
             .subscribe();
     }
 }

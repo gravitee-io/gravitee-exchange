@@ -51,6 +51,17 @@ public class WebSocketControllerServerVerticle extends AbstractVerticle {
             });
         // Default non-handled requests:
         router.route().handler(ctx -> ctx.fail(404));
+        // Failure handler
+        router
+            .route()
+            .failureHandler(ctx -> {
+                log.error(
+                    "[{}] An error occurred while processing websocket request",
+                    webSocketRequestHandler.getExchangeController().identifyConfiguration().id(),
+                    ctx.failure()
+                );
+                ctx.response().setStatusCode(ctx.statusCode()).end();
+            });
 
         return controllerWebSocketHttpServer
             .requestHandler(router)
