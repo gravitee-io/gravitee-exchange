@@ -28,6 +28,8 @@ import io.vertx.junit5.VertxExtension;
 import io.vertx.rxjava3.core.http.HttpClient;
 import io.vertx.rxjava3.core.http.HttpClientRequest;
 import java.io.File;
+import java.nio.file.Files;
+import java.util.Base64;
 import java.util.concurrent.TimeUnit;
 import javax.net.ssl.SSLHandshakeException;
 import org.junit.jupiter.api.AfterAll;
@@ -215,6 +217,28 @@ class WebSocketConnectorClientFactoryTest {
                 .awaitDone(30, TimeUnit.SECONDS)
                 .assertComplete();
         }
+
+        @Test
+        void should_create_http_client_with_trust_store_content_as_base64() throws Exception {
+            // Read the truststore file and encode it to base64
+            File truststoreFile = new File(Resources.getResource("truststore.jks").toURI());
+            byte[] truststoreBytes = Files.readAllBytes(truststoreFile.toPath());
+            String base64Content = Base64.getEncoder().encodeToString(truststoreBytes);
+
+            environment
+                .withProperty("exchange.connector.ws.ssl.truststore.type", "JKS")
+                .withProperty("exchange.connector.ws.ssl.truststore.content", base64Content)
+                .withProperty("exchange.connector.ws.ssl.truststore.password", "password");
+
+            HttpClient httpClient = cut.createHttpClient(webSocketEndpoint);
+            assertThat(httpClient).isNotNull();
+            httpClient
+                .rxRequest(HttpMethod.GET, "/test")
+                .flatMap(HttpClientRequest::rxSend)
+                .test()
+                .awaitDone(30, TimeUnit.SECONDS)
+                .assertComplete();
+        }
     }
 
     @Nested
@@ -275,6 +299,68 @@ class WebSocketConnectorClientFactoryTest {
                 .withProperty("exchange.connector.ws.ssl.keystore.password", "password");
             HttpClient httpClient = cut.createHttpClient(webSocketEndpoint);
             assertThat(httpClient).isNotNull();
+            httpClient
+                .rxRequest(HttpMethod.GET, "/test")
+                .flatMap(HttpClientRequest::rxSend)
+                .test()
+                .awaitDone(30, TimeUnit.SECONDS)
+                .assertComplete();
+        }
+    }
+
+    @Nested
+    class CreateHttpClient_Proxy {
+
+        private static WireMockServer wireMockServer;
+        private static WebSocketEndpoint webSocketEndpoint;
+
+        @BeforeAll
+        static void setup() {
+            // WireMock will act as the proxy server
+            wireMockServer = new WireMockServer(wireMockConfig().dynamicPort().enableBrowserProxying(true));
+            wireMockServer.start();
+
+            // Endpoint points to an INVALID port: if connection succeeds, it means proxy is used
+            webSocketEndpoint = WebSocketEndpoint.newEndpoint("http://localhost:19999").orElseThrow();
+        }
+
+        @AfterAll
+        static void tearDown() {
+            wireMockServer.stop();
+            wireMockServer.shutdownServer();
+        }
+
+        @Test
+        void should_connect_through_connector_proxy() {
+            environment
+                .withProperty("exchange.connector.ws.proxy.enabled", "true")
+                .withProperty("exchange.connector.ws.proxy.type", "HTTP")
+                .withProperty("exchange.connector.ws.proxy.host", "localhost")
+                .withProperty("exchange.connector.ws.proxy.port", String.valueOf(wireMockServer.port()));
+
+            HttpClient httpClient = cut.createHttpClient(webSocketEndpoint);
+            assertThat(httpClient).isNotNull();
+
+            httpClient
+                .rxRequest(HttpMethod.GET, "/test")
+                .flatMap(HttpClientRequest::rxSend)
+                .test()
+                .awaitDone(30, TimeUnit.SECONDS)
+                .assertComplete();
+        }
+
+        @Test
+        void should_connect_through_system_proxy() {
+            environment
+                .withProperty("exchange.connector.ws.proxy.enabled", "true")
+                .withProperty("exchange.connector.ws.proxy.useSystemProxy", "true")
+                .withProperty("system.proxy.type", "HTTP")
+                .withProperty("system.proxy.host", "localhost")
+                .withProperty("system.proxy.port", String.valueOf(wireMockServer.port()));
+
+            HttpClient httpClient = cut.createHttpClient(webSocketEndpoint);
+            assertThat(httpClient).isNotNull();
+
             httpClient
                 .rxRequest(HttpMethod.GET, "/test")
                 .flatMap(HttpClientRequest::rxSend)
