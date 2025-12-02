@@ -15,6 +15,8 @@
  */
 package io.gravitee.exchange.connector.websocket.client;
 
+import static io.gravitee.node.vertx.client.http.VertxHttpClientOptions.DEFAULT_KEEP_ALIVE;
+
 import io.gravitee.exchange.api.configuration.IdentifyConfiguration;
 import io.vertx.core.http.HttpServerOptions;
 import java.util.ArrayList;
@@ -23,6 +25,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 
 /**
  * @author Guillaume LAMIRAND (guillaume.lamirand at graviteesource.com)
@@ -41,19 +44,28 @@ public class WebSocketClientConfiguration {
     public static final String KEYSTORE_PASSWORD_KEY = "connector.ws.ssl.keystore.password";
     public static final String TRUSTSTORE_TYPE_KEY = "connector.ws.ssl.truststore.type";
     public static final String TRUSTSTORE_PATH_KEY = "connector.ws.ssl.truststore.path";
+    public static final String TRUSTSTORE_CONTENT_KEY = "connector.ws.ssl.truststore.content";
     public static final String TRUSTSTORE_PASSWORD_KEY = "connector.ws.ssl.truststore.password";
+    public static final String TRUSTSTORE_ALIAS_KEY = "connector.ws.ssl.truststore.alias";
     public static final String MAX_WEB_SOCKET_FRAME_SIZE_KEY = "connector.ws.maxWebSocketFrameSize";
     public static final int MAX_WEB_SOCKET_FRAME_SIZE_DEFAULT = 65536;
     public static final String MAX_WEB_SOCKET_MESSAGE_SIZE_KEY = "connector.ws.maxWebSocketMessageSize";
     public static final int MAX_WEB_SOCKET_MESSAGE_SIZE_DEFAULT = 13107200;
     public static final String ENDPOINTS_KEY = "connector.ws.endpoints";
     public static final String AUTO_RECONNECT_KEY = "connector.ws.autoReconnect";
+    private static final String KEEP_ALIVE = "connector.ws.keepAlive";
     private static final String PROXY_ENABLED = "connector.ws.proxy.enabled";
     private static final String PROXY_TYPE = "connector.ws.proxy.type";
     private static final String PROXY_HOST = "connector.ws.proxy.host";
     private static final String PROXY_PORT = "connector.ws.proxy.port";
     private static final String PROXY_USERNAME = "connector.ws.proxy.username";
     private static final String PROXY_PASSWORD = "connector.ws.proxy.password";
+    private static final String PROXY_USE_SYSTEM_PROXY = "connector.ws.proxy.useSystemProxy";
+    private static final String SYSTEM_PROXY_HOST = "system.proxy.host";
+    private static final String SYSTEM_PROXY_PORT = "system.proxy.port";
+    private static final String SYSTEM_PROXY_TYPE = "system.proxy.type";
+    private static final String SYSTEM_PROXY_USERNAME = "system.proxy.username";
+    private static final String SYSTEM_PROXY_PASSWORD = "system.proxy.password";
     private final IdentifyConfiguration identifyConfiguration;
 
     private List<WebSocketEndpoint> endpoints;
@@ -114,6 +126,14 @@ public class WebSocketClientConfiguration {
         return identifyConfiguration.getProperty(TRUSTSTORE_PASSWORD_KEY);
     }
 
+    public String trustStoreContent() {
+        return identifyConfiguration.getProperty(TRUSTSTORE_CONTENT_KEY);
+    }
+
+    public String trustStoreAlias() {
+        return identifyConfiguration.getProperty(TRUSTSTORE_ALIAS_KEY);
+    }
+
     public String proxyType() {
         return identifyConfiguration.getProperty(PROXY_TYPE, String.class, "HTTP");
     }
@@ -134,8 +154,32 @@ public class WebSocketClientConfiguration {
         return identifyConfiguration.getProperty(PROXY_PASSWORD);
     }
 
+    public String systemProxyType() {
+        return identifyConfiguration.environment().getProperty(SYSTEM_PROXY_TYPE, "HTTP");
+    }
+
+    public String systemProxyHost() {
+        return identifyConfiguration.environment().getProperty(SYSTEM_PROXY_HOST);
+    }
+
+    public Integer systemProxyPort() {
+        return identifyConfiguration.environment().getProperty(SYSTEM_PROXY_PORT, Integer.class, 3128);
+    }
+
+    public String systemProxyUsername() {
+        return identifyConfiguration.environment().getProperty(SYSTEM_PROXY_USERNAME);
+    }
+
+    public String systemProxyPassword() {
+        return identifyConfiguration.environment().getProperty(SYSTEM_PROXY_PASSWORD);
+    }
+
     public Boolean isProxyConfigured() {
         return identifyConfiguration.getProperty(PROXY_ENABLED, Boolean.class, Boolean.FALSE);
+    }
+
+    public Boolean proxyUseSystemProxy() {
+        return identifyConfiguration.getProperty(PROXY_USE_SYSTEM_PROXY, Boolean.class, Boolean.FALSE);
     }
 
     /**
@@ -144,6 +188,10 @@ public class WebSocketClientConfiguration {
      */
     public boolean autoReconnect() {
         return identifyConfiguration.getProperty(AUTO_RECONNECT_KEY, Boolean.class, Boolean.FALSE);
+    }
+
+    public boolean keepAlive() {
+        return identifyConfiguration.getProperty(KEEP_ALIVE, Boolean.class, Boolean.TRUE);
     }
 
     /**

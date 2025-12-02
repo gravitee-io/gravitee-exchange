@@ -16,16 +16,24 @@
 package io.gravitee.exchange.connector.websocket.client;
 
 import io.gravitee.exchange.connector.websocket.exception.WebSocketConnectorException;
+import io.gravitee.node.vertx.client.ssl.KeyStore;
+import io.gravitee.node.vertx.client.ssl.KeyStoreType;
+import io.gravitee.node.vertx.client.ssl.TrustStore;
+import io.gravitee.node.vertx.client.ssl.TrustStoreType;
+import io.gravitee.node.vertx.client.ssl.jks.JKSKeyStore;
+import io.gravitee.node.vertx.client.ssl.jks.JKSTrustStore;
+import io.gravitee.node.vertx.client.ssl.none.NoneKeyStore;
+import io.gravitee.node.vertx.client.ssl.none.NoneTrustStore;
+import io.gravitee.node.vertx.client.ssl.pem.PEMTrustStore;
+import io.gravitee.node.vertx.client.ssl.pkcs12.PKCS12KeyStore;
+import io.gravitee.node.vertx.client.ssl.pkcs12.PKCS12TrustStore;
 import io.vertx.core.http.HttpClientOptions;
-import io.vertx.core.net.JksOptions;
-import io.vertx.core.net.PemTrustOptions;
-import io.vertx.core.net.PfxOptions;
-import io.vertx.core.net.ProxyOptions;
-import io.vertx.core.net.ProxyType;
+import io.vertx.core.net.*;
 import io.vertx.rxjava3.core.Vertx;
 import io.vertx.rxjava3.core.http.HttpClient;
 import java.net.URL;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -38,10 +46,6 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @RequiredArgsConstructor
 public class WebSocketConnectorClientFactory {
-
-    private static final String KEYSTORE_FORMAT_JKS = "JKS";
-    private static final String KEYSTORE_FORMAT_PEM = "PEM";
-    private static final String KEYSTORE_FORMAT_PKCS12 = "PKCS12";
 
     private final AtomicInteger counter = new AtomicInteger(0);
     private final Vertx vertx;
@@ -72,56 +76,114 @@ public class WebSocketConnectorClientFactory {
         options.setDefaultHost(websocketEndpoint.getHost());
         options.setDefaultPort(websocketEndpoint.getPort());
 
+        configureSSL(options, target);
+        configureKeyStore(options);
+        configureTrustStore(options);
+        configureProxy(options);
+
+        options.setMaxWebSocketFrameSize(configuration.maxWebSocketFrameSize());
+        options.setMaxWebSocketMessageSize(configuration.maxWebSocketMessageSize());
+        options.setTcpKeepAlive(configuration.keepAlive());
+
+        return vertx.createHttpClient(options);
+    }
+
+    private void configureSSL(HttpClientOptions options, URL target) {
         if (isSecureProtocol(target.getProtocol())) {
             options.setSsl(true);
             options.setTrustAll(configuration.trustAll());
             options.setVerifyHost(configuration.verifyHost());
         }
-        if (configuration.keyStoreType() != null) {
-            if (configuration.keyStoreType().equalsIgnoreCase(KEYSTORE_FORMAT_JKS)) {
-                options.setKeyStoreOptions(
-                    new JksOptions().setPath(configuration.keyStorePath()).setPassword(configuration.keyStorePassword())
-                );
-            } else if (configuration.keyStoreType().equalsIgnoreCase(KEYSTORE_FORMAT_PKCS12)) {
-                options.setPfxKeyCertOptions(
-                    new PfxOptions().setPath(configuration.keyStorePath()).setPassword(configuration.keyStorePassword())
-                );
-            } else {
-                throw new WebSocketConnectorException("Unsupported keystore type", false);
-            }
+    }
+
+    private void configureKeyStore(HttpClientOptions options) {
+        if (configuration.keyStoreType() == null) {
+            return;
         }
 
-        if (configuration.trustStoreType() != null) {
-            if (configuration.trustStoreType().equalsIgnoreCase(KEYSTORE_FORMAT_JKS)) {
-                options.setTrustStoreOptions(
-                    new JksOptions().setPath(configuration.trustStorePath()).setPassword(configuration.trustStorePassword())
-                );
-            } else if (configuration.trustStoreType().equalsIgnoreCase(KEYSTORE_FORMAT_PKCS12)) {
-                options.setPfxTrustOptions(
-                    new PfxOptions().setPath(configuration.trustStorePath()).setPassword(configuration.trustStorePassword())
-                );
-            } else if (configuration.trustStoreType().equalsIgnoreCase(KEYSTORE_FORMAT_PEM)) {
-                options.setPemTrustOptions(new PemTrustOptions().addCertPath(configuration.trustStorePath()));
-            } else {
-                throw new WebSocketConnectorException("Unsupported truststore type", false);
+        try {
+            createKeystore().flatMap(KeyStore::keyCertOptions).ifPresent(options::setKeyCertOptions);
+        } catch (KeyStore.KeyStoreCertOptionsException e) {
+            throw new WebSocketConnectorException(e.getMessage(), false);
+        }
+    }
+
+    private Optional<KeyStore> createKeystore() {
+        String type = configuration.keyStoreType();
+        String path = configuration.keyStorePath();
+        String password = configuration.keyStorePassword();
+
+        try {
+            KeyStore keyStore = null;
+            switch (KeyStoreType.valueOf(type.toUpperCase())) {
+                case PKCS12 -> keyStore = PKCS12KeyStore.builder().path(path).password(password).build();
+                case JKS -> keyStore = JKSKeyStore.builder().path(path).password(password).build();
+                case NONE -> keyStore = NoneKeyStore.builder().build();
+                default -> throw new WebSocketConnectorException("Invalid truststore type: " + type, false);
             }
+            return Optional.of(keyStore);
+        } catch (IllegalArgumentException e) {
+            throw new WebSocketConnectorException("Invalid truststore type: " + type, false);
+        }
+    }
+
+    private void configureTrustStore(HttpClientOptions options) {
+        if (configuration.trustStoreType() == null) {
+            return;
         }
 
-        if (configuration.isProxyConfigured()) {
-            ProxyOptions proxyOptions = new ProxyOptions();
+        try {
+            createTrustStore().flatMap(TrustStore::trustOptions).ifPresent(options::setTrustOptions);
+        } catch (TrustStore.TrustOptionsException e) {
+            throw new WebSocketConnectorException(e.getMessage(), false);
+        }
+    }
+
+    private Optional<TrustStore> createTrustStore() {
+        String type = configuration.trustStoreType();
+        String path = configuration.trustStorePath();
+        String content = configuration.trustStoreContent();
+        String password = configuration.trustStorePassword();
+        String alias = configuration.trustStoreAlias();
+
+        if (type == null) {
+            return Optional.empty();
+        }
+
+        TrustStore trustStore = null;
+        try {
+            switch (TrustStoreType.valueOf(type.toUpperCase())) {
+                case PEM -> trustStore = PEMTrustStore.builder().path(path).content(content).build();
+                case PKCS12 -> trustStore = PKCS12TrustStore.builder().path(path).content(content).password(password).alias(alias).build();
+                case JKS -> trustStore = JKSTrustStore.builder().path(path).content(content).password(password).alias(alias).build();
+                case NONE -> trustStore = NoneTrustStore.builder().build();
+            }
+            return Optional.of(trustStore);
+        } catch (IllegalArgumentException e) {
+            throw new WebSocketConnectorException("Invalid truststore type: " + type, false);
+        }
+    }
+
+    private void configureProxy(HttpClientOptions options) {
+        if (!configuration.isProxyConfigured()) {
+            return;
+        }
+        ProxyOptions proxyOptions = new ProxyOptions();
+        if (configuration.proxyUseSystemProxy()) {
+            proxyOptions.setType(ProxyType.valueOf(configuration.systemProxyType()));
+            proxyOptions.setHost(configuration.systemProxyHost());
+            proxyOptions.setPort(configuration.systemProxyPort());
+            proxyOptions.setUsername(configuration.systemProxyUsername());
+            proxyOptions.setPassword(configuration.systemProxyPassword());
+        } else {
             proxyOptions.setType(ProxyType.valueOf(configuration.proxyType()));
             proxyOptions.setHost(configuration.proxyHost());
             proxyOptions.setPort(configuration.proxyPort());
             proxyOptions.setUsername(configuration.proxyUsername());
             proxyOptions.setPassword(configuration.proxyPassword());
-            options.setProxyOptions(proxyOptions);
         }
 
-        options.setMaxWebSocketFrameSize(configuration.maxWebSocketFrameSize());
-        options.setMaxWebSocketMessageSize(configuration.maxWebSocketMessageSize());
-        options.setTcpKeepAlive(true);
-
-        return vertx.createHttpClient(options);
+        options.setProxyOptions(proxyOptions);
     }
 
     private boolean isSecureProtocol(String scheme) {

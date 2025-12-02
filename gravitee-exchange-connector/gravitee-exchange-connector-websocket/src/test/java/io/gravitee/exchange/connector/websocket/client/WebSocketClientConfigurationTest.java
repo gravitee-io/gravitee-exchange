@@ -1,4 +1,4 @@
-package io.gravitee.exchange.connector.websocket.client;/*
+/*
  * Copyright © 2015 The Gravitee team (http://gravitee.io)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,6 +13,7 @@ package io.gravitee.exchange.connector.websocket.client;/*
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package io.gravitee.exchange.connector.websocket.client;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.entry;
@@ -161,6 +162,28 @@ class WebSocketClientConfigurationTest {
         }
 
         @Test
+        void should_return_trust_store_content() {
+            environment.withProperty("%s.connector.ws.ssl.truststore.content".formatted(prefix), "YWJjZGVm");
+            assertThat(cut.trustStoreContent()).isEqualTo("YWJjZGVm");
+        }
+
+        @Test
+        void should_return_null_trust_store_content_without_configuration() {
+            assertThat(cut.trustStoreContent()).isNull();
+        }
+
+        @Test
+        void should_return_trust_store_alias() {
+            environment.withProperty("%s.connector.ws.ssl.truststore.alias".formatted(prefix), "my-alias");
+            assertThat(cut.trustStoreAlias()).isEqualTo("my-alias");
+        }
+
+        @Test
+        void should_return_null_trust_store_alias_without_configuration() {
+            assertThat(cut.trustStoreAlias()).isNull();
+        }
+
+        @Test
         void should_return_max_web_socket_frame_size() {
             environment.withProperty("%s.connector.ws.maxWebSocketFrameSize".formatted(prefix), "123456");
             assertThat(cut.maxWebSocketFrameSize()).isEqualTo(123456);
@@ -215,6 +238,48 @@ class WebSocketClientConfigurationTest {
             assertThat(cut.proxyPort()).isEqualTo(123);
             assertThat(cut.proxyUsername()).isEqualTo("bob");
             assertThat(cut.proxyPassword()).isEqualTo("bob_pwd");
+        }
+
+        @Test
+        void should_return_default_useSystemProxy_without_configuration() {
+            assertThat(cut.proxyUseSystemProxy()).isFalse();
+        }
+
+        @Test
+        void should_return_useSystemProxy_when_configured() {
+            environment.withProperty("%s.connector.ws.proxy.useSystemProxy".formatted(prefix), "true");
+            assertThat(cut.proxyUseSystemProxy()).isTrue();
+        }
+
+        @Test
+        void should_use_system_proxy_configuration_when_enabled() {
+            environment
+                .withProperty("%s.connector.ws.proxy.enabled".formatted(prefix), "true")
+                .withProperty("%s.connector.ws.proxy.useSystemProxy".formatted(prefix), "true")
+                .withProperty("system.proxy.type", "SOCKS5")
+                .withProperty("system.proxy.host", "system-proxy.tld")
+                .withProperty("system.proxy.port", "9999")
+                .withProperty("system.proxy.username", "system-user")
+                .withProperty("system.proxy.password", "system-pwd");
+
+            assertThat(cut.isProxyConfigured()).isTrue();
+            assertThat(cut.proxyUseSystemProxy()).isTrue();
+            assertThat(cut.systemProxyType()).isEqualTo("SOCKS5");
+            assertThat(cut.systemProxyHost()).isEqualTo("system-proxy.tld");
+            assertThat(cut.systemProxyPort()).isEqualTo(9999);
+            assertThat(cut.systemProxyUsername()).isEqualTo("system-user");
+            assertThat(cut.systemProxyPassword()).isEqualTo("system-pwd");
+        }
+
+        @Test
+        void should_return_default_keepAlive_without_configuration() {
+            assertThat(cut.keepAlive()).isTrue();
+        }
+
+        @Test
+        void should_return_keepAlive_when_configured() {
+            environment.withProperty("%s.connector.ws.keepAlive".formatted(prefix), "false");
+            assertThat(cut.keepAlive()).isFalse();
         }
     }
 
