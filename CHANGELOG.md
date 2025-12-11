@@ -1,3 +1,10 @@
+# [1.10.0](https://github.com/gravitee-io/gravitee-exchange/compare/1.9.1...1.10.0) (2025-12-11)
+
+
+### Features
+
+* **config:** update config with truststore content in base64 and handle system proxy ([e24c90d](https://github.com/gravitee-io/gravitee-exchange/commit/e24c90de9eeaab74740386c3fd74dc7354cef3cb))
+
 ## [1.9.1](https://github.com/gravitee-io/gravitee-exchange/compare/1.9.0...1.9.1) (2025-10-21)
 
 
