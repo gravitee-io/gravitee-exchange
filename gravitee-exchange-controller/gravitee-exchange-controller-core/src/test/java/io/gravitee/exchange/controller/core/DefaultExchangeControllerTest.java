@@ -17,14 +17,19 @@ package io.gravitee.exchange.controller.core;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
+import io.gravitee.exchange.api.batch.Batch;
 import io.gravitee.exchange.api.configuration.IdentifyConfiguration;
+import io.gravitee.exchange.controller.core.channel.primary.PrimaryChannelCandidateHealthcheckEvent;
+import io.gravitee.exchange.controller.core.channel.primary.PrimaryChannelEvictedEvent;
 import io.gravitee.node.api.cache.Cache;
+import io.gravitee.node.api.cache.CacheConfiguration;
 import io.gravitee.node.api.cache.CacheManager;
 import io.gravitee.node.api.cluster.ClusterManager;
 import io.gravitee.node.api.cluster.Member;
@@ -57,18 +62,27 @@ class DefaultExchangeControllerTest {
     @Mock
     private ManagementEndpointManager managementEndpointManager;
 
+    @Mock
+    private Cache<String, Batch> cache;
+
+    @Mock
+    private Topic<PrimaryChannelEvictedEvent> topic;
+
+    @Mock
+    private Queue<PrimaryChannelCandidateHealthcheckEvent.Response> queue;
+
     private MockEnvironment environment;
     private DefaultExchangeController cut;
 
     @BeforeEach
     public void beforeEach() {
-        lenient().when(clusterManager.topic(any())).thenReturn(mock(Topic.class));
-        lenient().when(clusterManager.queue(any())).thenReturn(mock(Queue.class));
+        lenient().when(clusterManager.<PrimaryChannelEvictedEvent>topic(anyString())).thenReturn(topic);
+        lenient().when(clusterManager.<PrimaryChannelCandidateHealthcheckEvent.Response>queue(anyString())).thenReturn(queue);
         Member member = mock(Member.class);
         lenient().when(member.primary()).thenReturn(true);
         lenient().when(clusterManager.self()).thenReturn(member);
 
-        lenient().when(cacheManager.getOrCreateCache(any(), any())).thenReturn(mock(Cache.class));
+        lenient().when(cacheManager.<String, Batch>getOrCreateCache(anyString(), any(CacheConfiguration.class))).thenReturn(cache);
         environment = new MockEnvironment();
         cut =
             new DefaultExchangeController(new IdentifyConfiguration(environment), clusterManager, cacheManager, managementEndpointManager);
