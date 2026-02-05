@@ -152,8 +152,8 @@ public class WebSocketExchangeController extends DefaultExchangeController imple
         VertxHttpServerOptions.VertxHttpServerOptionsBuilder<?, ?> builder = VertxHttpServerOptions
             .builder()
             .prefix(identifyConfiguration.identifyProperty(HTTP_PREFIX))
-            .environment(identifyConfiguration.environment())
             .defaultPort(serverConfiguration.port())
+            .environment(identifyConfiguration.environment())
             .host(serverConfiguration.host())
             .alpn(serverConfiguration.alpn());
         if (serverConfiguration.secured()) {
