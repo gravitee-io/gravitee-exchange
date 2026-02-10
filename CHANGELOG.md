@@ -1,3 +1,10 @@
+## [2.0.1](https://github.com/gravitee-io/gravitee-exchange/compare/2.0.0...2.0.1) (2026-02-10)
+
+
+### Bug Fixes
+
+* handle case where connectorChannel is null ([61edad6](https://github.com/gravitee-io/gravitee-exchange/commit/61edad6aee01b6e752bc2daad8f1811e1a27c884))
+
 # [2.0.0](https://github.com/gravitee-io/gravitee-exchange/compare/1.10.0...2.0.0) (2026-02-10)
 
 
