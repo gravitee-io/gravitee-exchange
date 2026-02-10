@@ -20,6 +20,7 @@ import io.gravitee.exchange.api.command.CommandHandler;
 import io.gravitee.exchange.api.command.Reply;
 import io.gravitee.exchange.api.connector.ConnectorChannel;
 import io.gravitee.exchange.api.connector.ExchangeConnector;
+import io.reactivex.rxjava3.annotations.Nullable;
 import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Single;
 import java.util.List;
@@ -37,6 +38,9 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class EmbeddedExchangeConnector implements ExchangeConnector {
 
+    public static final String CONNECTOR_CHANNEL_IS_NOT_INITIALIZED = "Connector channel is not initialized";
+
+    @Nullable
     protected ConnectorChannel connectorChannel;
 
     @Builder.Default
@@ -44,22 +48,27 @@ public class EmbeddedExchangeConnector implements ExchangeConnector {
 
     @Override
     public Completable initialize() {
-        return connectorChannel.initialize();
+        return connectorChannel != null
+            ? connectorChannel.initialize()
+            : Completable.error(new IllegalStateException(CONNECTOR_CHANNEL_IS_NOT_INITIALIZED));
     }
 
     @Override
     public Completable close() {
-        return connectorChannel.close();
+        return connectorChannel != null ? connectorChannel.close() : Completable.complete();
     }
 
     @Override
     public String targetId() {
+        if (connectorChannel == null) {
+            throw new IllegalStateException(CONNECTOR_CHANNEL_IS_NOT_INITIALIZED);
+        }
         return connectorChannel.targetId();
     }
 
     @Override
     public boolean isActive() {
-        return connectorChannel.isActive();
+        return connectorChannel != null && connectorChannel.isActive();
     }
 
     @Override
@@ -75,7 +84,9 @@ public class EmbeddedExchangeConnector implements ExchangeConnector {
 
     @Override
     public Single<Reply<?>> sendCommand(final Command<?> command) {
-        return connectorChannel.send(command);
+        return connectorChannel != null
+            ? connectorChannel.send(command)
+            : Single.error(new IllegalStateException(CONNECTOR_CHANNEL_IS_NOT_INITIALIZED));
     }
 
     @Override
