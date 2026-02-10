@@ -1,3 +1,22 @@
+# [2.0.0](https://github.com/gravitee-io/gravitee-exchange/compare/1.10.0...2.0.0) (2026-02-10)
+
+
+### Bug Fixes
+
+* update websocket options creation to set default port befor env ([5b1e303](https://github.com/gravitee-io/gravitee-exchange/commit/5b1e303e47cd165a44c024421c5ca2b6fafb88a3))
+
+
+### chore
+
+* update gravitee-node version to 7.19.1 ([43036f2](https://github.com/gravitee-io/gravitee-exchange/commit/43036f20ff8062f97f6cccf6fc7e1236542fb775))
+
+
+### BREAKING CHANGES
+
+* this dependances is a breaking change
+
+https://gravitee.atlassian.net/browse/APIM-12639
+
 # [1.10.0](https://github.com/gravitee-io/gravitee-exchange/compare/1.9.1...1.10.0) (2025-12-11)
 
 
