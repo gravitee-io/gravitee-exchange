@@ -17,8 +17,7 @@ package io.gravitee.exchange.connector.embedded;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 import io.gravitee.exchange.api.command.Command;
 import io.gravitee.exchange.api.command.CommandHandler;
@@ -29,7 +28,6 @@ import io.reactivex.rxjava3.core.Single;
 import io.reactivex.rxjava3.plugins.RxJavaPlugins;
 import io.reactivex.rxjava3.schedulers.TestScheduler;
 import java.util.List;
-import java.util.Map;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayNameGeneration;
@@ -147,6 +145,45 @@ class EmbeddedExchangeConnectorTest {
             cut.sendCommand(command).test().assertValue(reply);
 
             verify(connectorChannel).send(command);
+        }
+    }
+
+    @Nested
+    class NonInitialisedHandlingTest {
+
+        @BeforeEach
+        public void beforeEach() {
+            cut = EmbeddedExchangeConnector.builder().build();
+        }
+
+        @Test
+        void should_not_throw_npe_when_sending_commands_before_initialization() {
+            var cmd = mock(Command.class);
+
+            cut
+                .sendCommand(cmd)
+                .test()
+                .assertError(IllegalStateException.class)
+                .assertError(th -> th.getMessage().contains("Connector channel is not initialized"));
+        }
+
+        @Test
+        void should_return_false_when_is_active_before_initialization() {
+            assertThat(cut.isActive()).isFalse();
+        }
+
+        @Test
+        void should_not_throw_exception_when_close_before_initialization() {
+            cut.close().test().assertNoErrors().assertComplete();
+        }
+
+        @Test
+        void should_not_throw_exception_when_initialize_before_channel_initialization() {
+            cut
+                .initialize()
+                .test()
+                .assertError(IllegalStateException.class)
+                .assertError(th -> th.getMessage().contains("Connector channel is not initialized"));
         }
     }
 }
