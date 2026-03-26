@@ -65,8 +65,7 @@ public class ControllerChannelMetricsEndpoint implements ManagementEndpoint {
                 );
                 write(
                     ctx,
-                    ManagementError
-                        .builder()
+                    ManagementError.builder()
                         .code(500)
                         .message("Unable to retrieve channel metrics for the given id [%s]".formatted(channelId))
                         .build()

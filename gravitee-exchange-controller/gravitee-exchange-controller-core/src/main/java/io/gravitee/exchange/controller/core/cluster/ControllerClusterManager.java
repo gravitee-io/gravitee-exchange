@@ -120,14 +120,13 @@ public class ControllerClusterManager extends AbstractService<ControllerClusterM
          */
         if (Boolean.TRUE.equals(rebalancingEnabled)) {
             rebalancingExecutorService = Executors.newSingleThreadScheduledExecutor(r -> new Thread(r, "gio-exchange-rebalancing"));
-            memberListener =
-                new MemberListener() {
-                    @Override
-                    public void onMemberAdded(final Member member) {
-                        lastMemberAddedTime = LocalDateTime.now();
-                        rebalancingExecutorService.schedule(() -> executeChannelsRebalancing(), rebalancingDelay, rebalancingUnit);
-                    }
-                };
+            memberListener = new MemberListener() {
+                @Override
+                public void onMemberAdded(final Member member) {
+                    lastMemberAddedTime = LocalDateTime.now();
+                    rebalancingExecutorService.schedule(() -> executeChannelsRebalancing(), rebalancingDelay, rebalancingUnit);
+                }
+            };
             clusterManager.addMemberListener(memberListener);
         }
     }
@@ -150,8 +149,7 @@ public class ControllerClusterManager extends AbstractService<ControllerClusterM
         if (lastMemberAddedTime.plus(rebalancingDelay, rebalancingUnit.toChronoUnit()).isBefore(LocalDateTime.now())) {
             int clusterSize = clusterManager.members().size();
             if (clusterSize > 1) {
-                Flowable
-                    .fromIterable(channelManager.getChannels())
+                Flowable.fromIterable(channelManager.getChannels())
                     .groupBy(Channel::targetId)
                     .flatMap(group ->
                         group
@@ -322,13 +320,12 @@ public class ControllerClusterManager extends AbstractService<ControllerClusterM
             .isEmpty()
             .flatMap(isEmpty -> {
                 if (Boolean.TRUE.equals(isEmpty)) {
-                    String errorMsg =
-                        "[%s] No channel available for the target [%s] to send command [%s, %s]".formatted(
-                                this.identifyConfiguration.id(),
-                                targetId,
-                                command.getType(),
-                                command.getId()
-                            );
+                    String errorMsg = "[%s] No channel available for the target [%s] to send command [%s, %s]".formatted(
+                        this.identifyConfiguration.id(),
+                        targetId,
+                        command.getType(),
+                        command.getId()
+                    );
                     return Single.error(new ControllerClusterNoChannelException(errorMsg));
                 } else {
                     return Single.<Reply<?>>create(emitter -> sendClusteredCommand(clusteredCommand, emitter));
@@ -338,12 +335,11 @@ public class ControllerClusterManager extends AbstractService<ControllerClusterM
                 command.getReplyTimeoutMs(),
                 TimeUnit.MILLISECONDS,
                 Single.error(() -> {
-                    String errorMsg =
-                        "[%s] No reply received in time from cluster manager for command [%s, %s]".formatted(
-                                this.identifyConfiguration.id(),
-                                command.getType(),
-                                command.getId()
-                            );
+                    String errorMsg = "[%s] No reply received in time from cluster manager for command [%s, %s]".formatted(
+                        this.identifyConfiguration.id(),
+                        command.getType(),
+                        command.getId()
+                    );
                     log.warn(errorMsg);
                     return new ControllerClusterTimeoutException(errorMsg);
                 })

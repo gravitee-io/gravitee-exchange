@@ -50,12 +50,14 @@ public class ControllerBatchsMetricsEndpoint implements ManagementEndpoint {
         var targetId = ctx.request().getParam("targetId");
         exchangeController
             .batchsMetricsByTarget()
-            .filter(targetBatchsMetric ->
-                (targetId == null || targetId.equals(targetBatchsMetric.id())) &&
-                (
-                    status == null ||
-                    targetBatchsMetric.batchs().stream().anyMatch(batchMetric -> batchMetric.status().name().equalsIgnoreCase(status))
-                )
+            .filter(
+                targetBatchsMetric ->
+                    (targetId == null || targetId.equals(targetBatchsMetric.id())) &&
+                    (status == null ||
+                        targetBatchsMetric
+                            .batchs()
+                            .stream()
+                            .anyMatch(batchMetric -> batchMetric.status().name().equalsIgnoreCase(status)))
             )
             .flatMapStream(targetBatchsMetric -> targetBatchsMetric.batchs().stream())
             .toList()

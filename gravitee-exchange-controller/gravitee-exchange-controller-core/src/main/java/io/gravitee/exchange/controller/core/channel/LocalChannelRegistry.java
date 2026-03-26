@@ -44,7 +44,11 @@ public class LocalChannelRegistry {
     }
 
     public List<ControllerChannel> getAllByTargetId(String targetId) {
-        return channels.values().stream().filter(channel -> Objects.equals(targetId, channel.targetId())).toList();
+        return channels
+            .values()
+            .stream()
+            .filter(channel -> Objects.equals(targetId, channel.targetId()))
+            .toList();
     }
 
     public List<ControllerChannel> getAll() {

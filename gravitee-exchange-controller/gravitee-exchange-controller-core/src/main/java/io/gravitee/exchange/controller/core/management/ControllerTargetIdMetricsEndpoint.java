@@ -65,8 +65,7 @@ public class ControllerTargetIdMetricsEndpoint implements ManagementEndpoint {
                 if (result.channels.isEmpty() && result.batchs.isEmpty()) {
                     write(
                         ctx,
-                        ManagementError
-                            .builder()
+                        ManagementError.builder()
                             .code(404)
                             .message("No metrics found for the given target [%s]".formatted(targetId))
                             .build()
@@ -84,8 +83,7 @@ public class ControllerTargetIdMetricsEndpoint implements ManagementEndpoint {
                 );
                 write(
                     ctx,
-                    ManagementError
-                        .builder()
+                    ManagementError.builder()
                         .code(500)
                         .message("Unable to retrieve target metrics for the given target [%s]".formatted(targetId))
                         .build()

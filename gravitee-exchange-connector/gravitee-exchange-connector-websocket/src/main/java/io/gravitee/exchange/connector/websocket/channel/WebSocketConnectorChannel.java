@@ -85,10 +85,10 @@ public class WebSocketConnectorChannel extends AbstractWebSocketChannel implemen
                             } else {
                                 throw new WebSocketConnectorException(
                                     "Hello handshake failed for channel [%s] on target [%s]: %s".formatted(
-                                            this.id,
-                                            this.targetId,
-                                            reply.getErrorDetails()
-                                        ),
+                                        this.id,
+                                        this.targetId,
+                                        reply.getErrorDetails()
+                                    ),
                                     false
                                 );
                             }

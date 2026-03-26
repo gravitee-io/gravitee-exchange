@@ -149,34 +149,30 @@ public class WebSocketExchangeController extends DefaultExchangeController imple
     }
 
     private VertxHttpServerOptions createVertxHttpServerOptions() {
-        VertxHttpServerOptions.VertxHttpServerOptionsBuilder<?, ?> builder = VertxHttpServerOptions
-            .builder()
+        VertxHttpServerOptions.VertxHttpServerOptionsBuilder<?, ?> builder = VertxHttpServerOptions.builder()
             .prefix(identifyConfiguration.identifyProperty(HTTP_PREFIX))
             .defaultPort(serverConfiguration.port())
             .environment(identifyConfiguration.environment())
             .host(serverConfiguration.host())
             .alpn(serverConfiguration.alpn());
         if (serverConfiguration.secured()) {
-            builder =
-                builder
-                    .secured(true)
-                    .keyStoreLoaderOptions(
-                        KeyStoreLoaderOptions
-                            .builder()
-                            .type(serverConfiguration.keyStoreType())
-                            .paths(List.of(serverConfiguration.keyStorePath()))
-                            .password(serverConfiguration.keyStorePassword())
-                            .build()
-                    )
-                    .trustStoreLoaderOptions(
-                        TrustStoreLoaderOptions
-                            .builder()
-                            .type(serverConfiguration.trustStoreType())
-                            .paths(List.of(serverConfiguration.trustStorePath()))
-                            .password(serverConfiguration.trustStorePassword())
-                            .build()
-                    )
-                    .clientAuth(serverConfiguration.clientAuth());
+            builder = builder
+                .secured(true)
+                .keyStoreLoaderOptions(
+                    KeyStoreLoaderOptions.builder()
+                        .type(serverConfiguration.keyStoreType())
+                        .paths(List.of(serverConfiguration.keyStorePath()))
+                        .password(serverConfiguration.keyStorePassword())
+                        .build()
+                )
+                .trustStoreLoaderOptions(
+                    TrustStoreLoaderOptions.builder()
+                        .type(serverConfiguration.trustStoreType())
+                        .paths(List.of(serverConfiguration.trustStorePath()))
+                        .password(serverConfiguration.trustStorePassword())
+                        .build()
+                )
+                .clientAuth(serverConfiguration.clientAuth());
         }
         return builder
             .compressionSupported(serverConfiguration.compressionSupported())

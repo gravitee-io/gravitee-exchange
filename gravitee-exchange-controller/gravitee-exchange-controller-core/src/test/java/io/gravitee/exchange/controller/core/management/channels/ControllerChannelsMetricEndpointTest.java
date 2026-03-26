@@ -101,8 +101,9 @@ class ControllerChannelsMetricEndpointTest extends AbstractMetricEndpointTest {
     @Test
     void should_return_channels_metrics(Vertx vertx, VertxTestContext context) {
         ChannelMetric channelMetric = ChannelMetric.builder().id("id").targetId("target").active(true).primary(true).build();
-        when(exchangeController.channelsMetricsByTarget())
-            .thenReturn(Flowable.just(TargetChannelsMetric.builder().id("target").channels(List.of(channelMetric)).build()));
+        when(exchangeController.channelsMetricsByTarget()).thenReturn(
+            Flowable.just(TargetChannelsMetric.builder().id("target").channels(List.of(channelMetric)).build())
+        );
         HttpClient httpClient = vertx.createHttpClient();
         httpClient
             .request(HttpMethod.GET, serverPort, "localhost", "/exchange/channels")
@@ -131,17 +132,15 @@ class ControllerChannelsMetricEndpointTest extends AbstractMetricEndpointTest {
         ChannelMetric inactiveChannelMetric = ChannelMetric.builder().id("id2").targetId("target1").active(false).primary(true).build();
         ChannelMetric activeChannelMetric2 = ChannelMetric.builder().id("id2").targetId("target2").active(true).primary(true).build();
 
-        when(exchangeController.channelsMetricsByTarget())
-            .thenReturn(
-                Flowable.just(
-                    TargetChannelsMetric
-                        .builder()
-                        .id(activeChannelMetric.targetId())
-                        .channels(List.of(activeChannelMetric, inactiveChannelMetric))
-                        .build(),
-                    TargetChannelsMetric.builder().id(inactiveChannelMetric.targetId()).channels(List.of(activeChannelMetric2)).build()
-                )
-            );
+        when(exchangeController.channelsMetricsByTarget()).thenReturn(
+            Flowable.just(
+                TargetChannelsMetric.builder()
+                    .id(activeChannelMetric.targetId())
+                    .channels(List.of(activeChannelMetric, inactiveChannelMetric))
+                    .build(),
+                TargetChannelsMetric.builder().id(inactiveChannelMetric.targetId()).channels(List.of(activeChannelMetric2)).build()
+            )
+        );
 
         HttpClient httpClient = vertx.createHttpClient();
         httpClient
