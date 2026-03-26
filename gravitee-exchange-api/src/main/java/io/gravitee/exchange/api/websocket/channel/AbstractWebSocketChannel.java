@@ -48,7 +48,7 @@ import io.reactivex.rxjava3.core.CompletableEmitter;
 import io.reactivex.rxjava3.core.Single;
 import io.reactivex.rxjava3.core.SingleEmitter;
 import io.vertx.rxjava3.core.Vertx;
-import io.vertx.rxjava3.core.buffer.Buffer;
+import io.vertx.core.buffer.Buffer;
 import io.vertx.rxjava3.core.http.WebSocketBase;
 import java.util.List;
 import java.util.Map;

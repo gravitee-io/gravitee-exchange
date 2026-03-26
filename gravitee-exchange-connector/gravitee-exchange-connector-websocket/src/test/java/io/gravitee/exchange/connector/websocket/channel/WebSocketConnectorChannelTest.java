@@ -37,8 +37,8 @@ import io.vertx.core.http.WebSocketConnectOptions;
 import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
-import io.vertx.rxjava3.core.buffer.Buffer;
-import io.vertx.rxjava3.core.http.HttpClient;
+import io.vertx.core.buffer.Buffer;
+import io.vertx.rxjava3.core.http.WebSocketClient;
 import io.vertx.rxjava3.core.http.ServerWebSocket;
 import java.util.List;
 import java.util.Map;
@@ -65,14 +65,14 @@ class WebSocketConnectorChannelTest extends AbstractWebSocketConnectorTest {
     @EnumSource(ProtocolVersion.class)
     void should_initialize_with_hello_reply(ProtocolVersion protocolVersion) {
         ProtocolAdapter protocolAdapter = protocolAdapter(protocolVersion);
-        HttpClient httpClient = AbstractWebSocketTest.vertx.createHttpClient();
+        WebSocketClient webSocketClient = AbstractWebSocketTest.vertx.createWebSocketClient();
         WebSocketConnectOptions webSocketConnectOptions = new WebSocketConnectOptions()
             .setHost("localhost")
             .setPort(AbstractWebSocketTest.serverPort)
             .setURI(WebsocketControllerConstants.EXCHANGE_CONTROLLER_PATH);
         AbstractWebSocketTest.websocketServerHandler = ws -> this.replyHello(ws, protocolAdapter);
-        httpClient
-            .rxWebSocket(webSocketConnectOptions)
+        webSocketClient
+            .rxConnect(webSocketConnectOptions)
             .flatMapCompletable(webSocket -> {
                 WebSocketConnectorChannel webSocketConnectorChannel = new WebSocketConnectorChannel(
                     List.of(),
@@ -93,7 +93,7 @@ class WebSocketConnectorChannelTest extends AbstractWebSocketConnectorTest {
     @EnumSource(ProtocolVersion.class)
     void should_failed_to_initialize_after_time_out_without_hello_reply(ProtocolVersion protocolVersion) {
         ProtocolAdapter protocolAdapter = protocolAdapter(protocolVersion);
-        HttpClient httpClient = AbstractWebSocketTest.vertx.createHttpClient();
+        WebSocketClient webSocketClient = AbstractWebSocketTest.vertx.createWebSocketClient();
         WebSocketConnectOptions webSocketConnectOptions = new WebSocketConnectOptions()
             .setHost("localhost")
             .setPort(AbstractWebSocketTest.serverPort)
@@ -105,8 +105,8 @@ class WebSocketConnectorChannelTest extends AbstractWebSocketConnectorTest {
         AbstractWebSocketTest.websocketServerHandler =
             ws -> ws.binaryMessageHandler(event -> testScheduler.advanceTimeBy(60, TimeUnit.SECONDS));
 
-        TestObserver<Void> testObserver = httpClient
-            .rxWebSocket(webSocketConnectOptions)
+        TestObserver<Void> testObserver = webSocketClient
+            .rxConnect(webSocketConnectOptions)
             .flatMapCompletable(webSocket -> {
                 WebSocketConnectorChannel webSocketConnectorChannel = new WebSocketConnectorChannel(
                     List.of(),
@@ -289,7 +289,7 @@ class WebSocketConnectorChannelTest extends AbstractWebSocketConnectorTest {
     void should_have_pending_command_during_hello_handshake(ProtocolVersion protocolVersion, VertxTestContext vertxTestContext) {
         Checkpoint checkpoint = vertxTestContext.checkpoint(1);
         ProtocolAdapter protocolAdapter = protocolAdapter(protocolVersion);
-        HttpClient httpClient = AbstractWebSocketTest.vertx.createHttpClient();
+        WebSocketClient webSocketClient = AbstractWebSocketTest.vertx.createWebSocketClient();
         WebSocketConnectOptions webSocketConnectOptions = new WebSocketConnectOptions()
             .setHost("localhost")
             .setPort(AbstractWebSocketTest.serverPort)
@@ -315,8 +315,8 @@ class WebSocketConnectorChannelTest extends AbstractWebSocketConnectorTest {
                             }
                         )
                     );
-        httpClient
-            .rxWebSocket(webSocketConnectOptions)
+        webSocketClient
+            .rxConnect(webSocketConnectOptions)
             .flatMapCompletable(webSocket -> {
                 webSocketConnectorChannel.set(
                     new WebSocketConnectorChannel(List.of(), List.of(), List.of(), AbstractWebSocketTest.vertx, webSocket, protocolAdapter)
