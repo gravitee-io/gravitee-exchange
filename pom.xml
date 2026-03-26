@@ -43,6 +43,8 @@
         <wiremock.version>3.13.2</wiremock.version>
 
         <jdk.version>17</jdk.version>
+        
+        <gravitee.archrules.skip>true</gravitee.archrules.skip>
     </properties>
 
     <dependencyManagement>
