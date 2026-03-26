@@ -27,10 +27,10 @@ import io.gravitee.node.vertx.client.ssl.none.NoneTrustStore;
 import io.gravitee.node.vertx.client.ssl.pem.PEMTrustStore;
 import io.gravitee.node.vertx.client.ssl.pkcs12.PKCS12KeyStore;
 import io.gravitee.node.vertx.client.ssl.pkcs12.PKCS12TrustStore;
-import io.vertx.core.http.HttpClientOptions;
+import io.vertx.core.http.WebSocketClientOptions;
 import io.vertx.core.net.*;
 import io.vertx.rxjava3.core.Vertx;
-import io.vertx.rxjava3.core.http.HttpClient;
+import io.vertx.rxjava3.core.http.WebSocketClient;
 import java.net.URL;
 import java.util.List;
 import java.util.Optional;
@@ -70,9 +70,9 @@ public class WebSocketConnectorClientFactory {
         return counter.get();
     }
 
-    public HttpClient createHttpClient(WebSocketEndpoint websocketEndpoint) {
+    public WebSocketClient createWebSocketClient(WebSocketEndpoint websocketEndpoint) {
         URL target = websocketEndpoint.getUrl();
-        HttpClientOptions options = new HttpClientOptions();
+        WebSocketClientOptions options = new WebSocketClientOptions();
         options.setDefaultHost(websocketEndpoint.getHost());
         options.setDefaultPort(websocketEndpoint.getPort());
 
@@ -81,14 +81,14 @@ public class WebSocketConnectorClientFactory {
         configureTrustStore(options);
         configureProxy(options);
 
-        options.setMaxWebSocketFrameSize(configuration.maxWebSocketFrameSize());
-        options.setMaxWebSocketMessageSize(configuration.maxWebSocketMessageSize());
+        options.setMaxFrameSize(configuration.maxWebSocketFrameSize());
+        options.setMaxMessageSize(configuration.maxWebSocketMessageSize());
         options.setTcpKeepAlive(configuration.keepAlive());
 
-        return vertx.createHttpClient(options);
+        return vertx.createWebSocketClient(options);
     }
 
-    private void configureSSL(HttpClientOptions options, URL target) {
+    private void configureSSL(WebSocketClientOptions options, URL target) {
         if (isSecureProtocol(target.getProtocol())) {
             options.setSsl(true);
             options.setTrustAll(configuration.trustAll());
@@ -96,7 +96,7 @@ public class WebSocketConnectorClientFactory {
         }
     }
 
-    private void configureKeyStore(HttpClientOptions options) {
+    private void configureKeyStore(WebSocketClientOptions options) {
         if (configuration.keyStoreType() == null) {
             return;
         }
@@ -127,7 +127,7 @@ public class WebSocketConnectorClientFactory {
         }
     }
 
-    private void configureTrustStore(HttpClientOptions options) {
+    private void configureTrustStore(WebSocketClientOptions options) {
         if (configuration.trustStoreType() == null) {
             return;
         }
@@ -164,7 +164,7 @@ public class WebSocketConnectorClientFactory {
         }
     }
 
-    private void configureProxy(HttpClientOptions options) {
+    private void configureProxy(WebSocketClientOptions options) {
         if (!configuration.isProxyConfigured()) {
             return;
         }

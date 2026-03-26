@@ -36,8 +36,8 @@ import io.reactivex.rxjava3.core.Single;
 import io.reactivex.rxjava3.schedulers.Schedulers;
 import io.vertx.core.http.WebSocketConnectOptions;
 import io.vertx.rxjava3.core.Vertx;
-import io.vertx.rxjava3.core.http.HttpClient;
 import io.vertx.rxjava3.core.http.WebSocket;
+import io.vertx.rxjava3.core.http.WebSocketClient;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -132,7 +132,7 @@ public class WebSocketExchangeConnector extends EmbeddedExchangeConnector {
             .toSingle()
             .flatMap(webSocketEndpoint -> {
                 log.debug("Trying to connect to the Exchange Controller WebSocket '{}'", webSocketEndpoint.getUrl());
-                HttpClient httpClient = webSocketConnectorClientFactory.createHttpClient(webSocketEndpoint);
+                WebSocketClient webSocketClient = webSocketConnectorClientFactory.createWebSocketClient(webSocketEndpoint);
                 WebSocketConnectOptions webSocketConnectOptions = new WebSocketConnectOptions()
                     .setURI(webSocketEndpoint.resolvePath(WebsocketControllerConstants.EXCHANGE_CONTROLLER_PATH))
                     .addHeader(EXCHANGE_PROTOCOL_HEADER, protocolVersion.version());
@@ -140,8 +140,8 @@ public class WebSocketExchangeConnector extends EmbeddedExchangeConnector {
                 if (webSocketConnectorClientFactory.getConfiguration().headers() != null) {
                     webSocketConnectorClientFactory.getConfiguration().headers().forEach(webSocketConnectOptions::addHeader);
                 }
-                return httpClient
-                    .rxWebSocket(webSocketConnectOptions)
+                return webSocketClient
+                    .rxConnect(webSocketConnectOptions)
                     .doOnSuccess(webSocket -> {
                         webSocketConnectorClientFactory.resetEndpointRetries();
                         log.debug("Exchange Connector has successfully connected to the Exchange Controller WebSocket");
@@ -152,8 +152,8 @@ public class WebSocketExchangeConnector extends EmbeddedExchangeConnector {
                             webSocketConnectorClientFactory.endpointRetries(),
                             throwable
                         );
-                        // Force the HTTP client to close after a defect.
-                        return httpClient
+                        // Force the WebSocket client to close after a defect.
+                        return webSocketClient
                             .close()
                             .andThen(
                                 Single.error(

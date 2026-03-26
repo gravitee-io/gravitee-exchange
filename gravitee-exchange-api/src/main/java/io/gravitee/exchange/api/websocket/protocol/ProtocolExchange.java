@@ -18,7 +18,7 @@ package io.gravitee.exchange.api.websocket.protocol;
 import io.gravitee.exchange.api.command.Command;
 import io.gravitee.exchange.api.command.Exchange;
 import io.gravitee.exchange.api.command.Reply;
-import javax.annotation.Nullable;
+import jakarta.annotation.Nullable;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.experimental.Accessors;

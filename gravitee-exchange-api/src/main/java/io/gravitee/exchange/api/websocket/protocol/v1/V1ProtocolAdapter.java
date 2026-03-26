@@ -19,7 +19,7 @@ import io.gravitee.exchange.api.websocket.command.ExchangeSerDe;
 import io.gravitee.exchange.api.websocket.protocol.ProtocolAdapter;
 import io.gravitee.exchange.api.websocket.protocol.ProtocolExchange;
 import io.gravitee.exchange.api.websocket.protocol.ProtocolVersion;
-import io.vertx.rxjava3.core.buffer.Buffer;
+import io.vertx.core.buffer.Buffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;

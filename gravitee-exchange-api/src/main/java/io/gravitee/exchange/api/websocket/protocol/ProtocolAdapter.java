@@ -20,7 +20,7 @@ import io.gravitee.exchange.api.command.CommandAdapter;
 import io.gravitee.exchange.api.command.CommandHandler;
 import io.gravitee.exchange.api.command.Reply;
 import io.gravitee.exchange.api.command.ReplyAdapter;
-import io.vertx.rxjava3.core.buffer.Buffer;
+import io.vertx.core.buffer.Buffer;
 import java.util.List;
 
 /**
