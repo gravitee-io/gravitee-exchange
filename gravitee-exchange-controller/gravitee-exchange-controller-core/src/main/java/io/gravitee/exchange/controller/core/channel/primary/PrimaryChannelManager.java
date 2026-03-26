@@ -83,12 +83,13 @@ public class PrimaryChannelManager extends AbstractService<PrimaryChannelManager
         super.doStart();
         log.debug("[{}] Starting primary channel manager", this.identifyConfiguration.id());
         CacheConfiguration cacheConfiguration = CacheConfiguration.builder().distributed(true).build();
-        primaryChannelCandidateRegistry =
-            new PrimaryChannelCandidateRegistry(
-                cacheManager.getOrCreateCache(identifyConfiguration.identifyName(PRIMARY_CHANNEL_CANDIDATE_CACHE), cacheConfiguration)
-            );
-        primaryChannelRegistry =
-            cacheManager.getOrCreateCache(identifyConfiguration.identifyName(PRIMARY_CHANNEL_CACHE), cacheConfiguration);
+        primaryChannelCandidateRegistry = new PrimaryChannelCandidateRegistry(
+            cacheManager.getOrCreateCache(identifyConfiguration.identifyName(PRIMARY_CHANNEL_CANDIDATE_CACHE), cacheConfiguration)
+        );
+        primaryChannelRegistry = cacheManager.getOrCreateCache(
+            identifyConfiguration.identifyName(PRIMARY_CHANNEL_CACHE),
+            cacheConfiguration
+        );
         primaryChannelElectedEventTopic = clusterManager.topic(identifyConfiguration.identifyName(PRIMARY_CHANNEL_ELECTED_EVENTS_TOPIC));
         primaryChannelEvictedEventTopic = clusterManager.topic(identifyConfiguration.identifyName(PRIMARY_CHANNEL_EVICTED_EVENTS_TOPIC));
 
@@ -102,26 +103,25 @@ public class PrimaryChannelManager extends AbstractService<PrimaryChannelManager
          *   - the node at the original of the healthCheck event will publish a ChannelEvent message accordingly
          *   - if no response is received before the defined delay, the channel is discarded from the candidate list
          */
-        primaryChannelHealthcheckEventTopic =
-            clusterManager.topic(identifyConfiguration.identifyName(PRIMARY_CHANNEL_CANDIDATE_HEALTHCHECK_EVENTS_TOPIC));
-        primaryChannelHealthcheckSubscriptionId =
-            primaryChannelHealthcheckEventTopic.addMessageListener(message ->
-                handlePrimaryChannelCandidateHealthcheckEvent(message.content())
-            );
-        primaryChannelCandidatesHealthcheckResponseQueueName =
-            this.identifyConfiguration.identifyName("controller-primary-channel-candidates-healthcheck-response-" + UUID.randomUUID());
+        primaryChannelHealthcheckEventTopic = clusterManager.topic(
+            identifyConfiguration.identifyName(PRIMARY_CHANNEL_CANDIDATE_HEALTHCHECK_EVENTS_TOPIC)
+        );
+        primaryChannelHealthcheckSubscriptionId = primaryChannelHealthcheckEventTopic.addMessageListener(message ->
+            handlePrimaryChannelCandidateHealthcheckEvent(message.content())
+        );
+        primaryChannelCandidatesHealthcheckResponseQueueName = this.identifyConfiguration.identifyName(
+            "controller-primary-channel-candidates-healthcheck-response-" + UUID.randomUUID()
+        );
         primaryChannelCandidatesHealthcheckResponseQueue = clusterManager.queue(primaryChannelCandidatesHealthcheckResponseQueueName);
-        primaryChannelCandidatesHealthcheckResponseEventListenerId =
-            primaryChannelCandidatesHealthcheckResponseQueue.addMessageListener(message ->
-                handlePrimaryChannelCandidateHealthcheckResponse(message.content())
-            );
-        primaryChannelHealthCheckListener =
-            new MemberListener() {
-                @Override
-                public void onMemberRemoved(final Member member) {
-                    sendPrimaryChannelCandidatesHealthCheck();
-                }
-            };
+        primaryChannelCandidatesHealthcheckResponseEventListenerId = primaryChannelCandidatesHealthcheckResponseQueue.addMessageListener(
+            message -> handlePrimaryChannelCandidateHealthcheckResponse(message.content())
+        );
+        primaryChannelHealthCheckListener = new MemberListener() {
+            @Override
+            public void onMemberRemoved(final Member member) {
+                sendPrimaryChannelCandidatesHealthCheck();
+            }
+        };
         clusterManager.addMemberListener(primaryChannelHealthCheckListener);
     }
 
@@ -141,8 +141,7 @@ public class PrimaryChannelManager extends AbstractService<PrimaryChannelManager
                     controllerChannel.id(),
                     controllerChannel.targetId()
                 );
-                PrimaryChannelCandidateHealthcheckEvent.Response responseEvent = PrimaryChannelCandidateHealthcheckEvent.Response
-                    .builder()
+                PrimaryChannelCandidateHealthcheckEvent.Response responseEvent = PrimaryChannelCandidateHealthcheckEvent.Response.builder()
                     .requestEventTime(event.eventTime())
                     .channelId(controllerChannel.id())
                     .targetId(controllerChannel.targetId())
@@ -197,48 +196,42 @@ public class PrimaryChannelManager extends AbstractService<PrimaryChannelManager
                 .rxEntrySet()
                 .flatMapCompletable(entry -> {
                     String targetId = entry.getKey();
-                    return Flowable
-                        .fromIterable(entry.getValue())
+                    return Flowable.fromIterable(entry.getValue())
                         .filter(channelId -> !candidateHealthCheckResponseEmitters.containsKey(channelId))
                         .flatMapCompletable(channelId ->
-                            Completable
-                                .mergeArray(
-                                    Maybe
-                                        .<String>create(emitter -> candidateHealthCheckResponseEmitters.put(channelId, emitter))
-                                        .timeout(
-                                            PRIMARY_CHANNEL_CANDIDATE_HEALTH_CHECK_DELAY,
-                                            PRIMARY_CHANNEL_CANDIDATE_HEALTH_CHECK_DELAY_UNIT,
-                                            Maybe.defer(() -> {
-                                                log.warn(
-                                                    "[{}] No healthcheck response received for primary channel candidate '{}' for target '{}'",
-                                                    this.identifyConfiguration.id(),
-                                                    channelId,
-                                                    targetId
-                                                );
-                                                return channelManager.publishChannelEvent(channelId, targetId, false, true).toMaybe();
-                                            })
-                                        )
-                                        .ignoreElement(),
-                                    Completable
-                                        .fromRunnable(() ->
-                                            log.debug(
-                                                "[{}] Sending primary channel candidate healthcheck for channel '{}' on target '{}'",
+                            Completable.mergeArray(
+                                Maybe.<String>create(emitter -> candidateHealthCheckResponseEmitters.put(channelId, emitter))
+                                    .timeout(
+                                        PRIMARY_CHANNEL_CANDIDATE_HEALTH_CHECK_DELAY,
+                                        PRIMARY_CHANNEL_CANDIDATE_HEALTH_CHECK_DELAY_UNIT,
+                                        Maybe.defer(() -> {
+                                            log.warn(
+                                                "[{}] No healthcheck response received for primary channel candidate '{}' for target '{}'",
                                                 this.identifyConfiguration.id(),
                                                 channelId,
                                                 targetId
-                                            )
-                                        )
-                                        .andThen(
-                                            primaryChannelHealthcheckEventTopic.rxPublish(
-                                                PrimaryChannelCandidateHealthcheckEvent
-                                                    .builder()
-                                                    .eventTime(Instant.now())
-                                                    .channelId(channelId)
-                                                    .responseQueue(primaryChannelCandidatesHealthcheckResponseQueueName)
-                                                    .build()
-                                            )
-                                        )
+                                            );
+                                            return channelManager.publishChannelEvent(channelId, targetId, false, true).toMaybe();
+                                        })
+                                    )
+                                    .ignoreElement(),
+                                Completable.fromRunnable(() ->
+                                    log.debug(
+                                        "[{}] Sending primary channel candidate healthcheck for channel '{}' on target '{}'",
+                                        this.identifyConfiguration.id(),
+                                        channelId,
+                                        targetId
+                                    )
+                                ).andThen(
+                                    primaryChannelHealthcheckEventTopic.rxPublish(
+                                        PrimaryChannelCandidateHealthcheckEvent.builder()
+                                            .eventTime(Instant.now())
+                                            .channelId(channelId)
+                                            .responseQueue(primaryChannelCandidatesHealthcheckResponseQueueName)
+                                            .build()
+                                    )
                                 )
+                            )
                                 .onErrorResumeNext(throwable -> {
                                     log.warn(
                                         "[{}] Unable to check primary channel candidate health '{}' for target '{}'",
@@ -283,30 +276,28 @@ public class PrimaryChannelManager extends AbstractService<PrimaryChannelManager
     }
 
     public Completable handleChannelCandidate(final ChannelEvent channelEvent) {
-        return Completable
-            .fromRunnable(() -> {
-                String targetId = channelEvent.targetId();
-                String channelId = channelEvent.channelId();
-                if (channelEvent.active()) {
-                    log.debug(
-                        "[{}] Adding channel '{}' as new primary candidate for target '{}'",
-                        this.identifyConfiguration.id(),
-                        channelId,
-                        targetId
-                    );
-                    primaryChannelCandidateRegistry.put(targetId, channelId);
-                } else {
-                    log.debug(
-                        "[{}] Channel '{}' is inactive, removing it from primary candidates for target '{}'",
-                        this.identifyConfiguration.id(),
-                        channelId,
-                        targetId
-                    );
-                    primaryChannelCandidateRegistry.remove(targetId, channelId);
-                }
-                electPrimaryChannel(targetId);
-            })
-            .subscribeOn(Schedulers.io());
+        return Completable.fromRunnable(() -> {
+            String targetId = channelEvent.targetId();
+            String channelId = channelEvent.channelId();
+            if (channelEvent.active()) {
+                log.debug(
+                    "[{}] Adding channel '{}' as new primary candidate for target '{}'",
+                    this.identifyConfiguration.id(),
+                    channelId,
+                    targetId
+                );
+                primaryChannelCandidateRegistry.put(targetId, channelId);
+            } else {
+                log.debug(
+                    "[{}] Channel '{}' is inactive, removing it from primary candidates for target '{}'",
+                    this.identifyConfiguration.id(),
+                    channelId,
+                    targetId
+                );
+                primaryChannelCandidateRegistry.remove(targetId, channelId);
+            }
+            electPrimaryChannel(targetId);
+        }).subscribeOn(Schedulers.io());
     }
 
     private void electPrimaryChannel(final String targetId) {

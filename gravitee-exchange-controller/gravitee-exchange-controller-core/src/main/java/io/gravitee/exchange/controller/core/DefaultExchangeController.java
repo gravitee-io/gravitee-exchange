@@ -132,14 +132,14 @@ public class DefaultExchangeController extends AbstractService<ExchangeControlle
         controllerClusterManager.start();
         startBatchFeature();
 
-        primaryChannelEvictedTopic =
-            clusterManager.topic(identifyConfiguration.identifyName(PrimaryChannelManager.PRIMARY_CHANNEL_EVICTED_EVENTS_TOPIC));
-        primaryChannelEvictedSubscriptionId =
-            primaryChannelEvictedTopic.addMessageListener(message -> {
-                if (clusterManager.self().primary()) {
-                    targetListeners.forEach(listener -> listener.onPrimaryChannelEvicted(message.content().targetId()));
-                }
-            });
+        primaryChannelEvictedTopic = clusterManager.topic(
+            identifyConfiguration.identifyName(PrimaryChannelManager.PRIMARY_CHANNEL_EVICTED_EVENTS_TOPIC)
+        );
+        primaryChannelEvictedSubscriptionId = primaryChannelEvictedTopic.addMessageListener(message -> {
+            if (clusterManager.self().primary()) {
+                targetListeners.forEach(listener -> listener.onPrimaryChannelEvicted(message.content().targetId()));
+            }
+        });
 
         if (managementEndpointManager != null && managementEndpoints != null) {
             log.debug("[{}] Registering controller management endpoints", this.identifyConfiguration.id());
@@ -152,13 +152,12 @@ public class DefaultExchangeController extends AbstractService<ExchangeControlle
         if (enabled) {
             log.debug("[{}] Starting controller batch feature", this.identifyConfiguration.id());
             if (batchStore == null) {
-                batchStore =
-                    new BatchStore(
-                        cacheManager.getOrCreateCache(
-                            identifyConfiguration.identifyName("controller-batch-store"),
-                            CacheConfiguration.builder().timeToLiveInMs(3600000).distributed(true).build()
-                        )
-                    );
+                batchStore = new BatchStore(
+                    cacheManager.getOrCreateCache(
+                        identifyConfiguration.identifyName("controller-batch-store"),
+                        CacheConfiguration.builder().timeToLiveInMs(3600000).distributed(true).build()
+                    )
+                );
             }
             resetPendingBatches();
             startBatchScheduler();
@@ -172,54 +171,52 @@ public class DefaultExchangeController extends AbstractService<ExchangeControlle
             DEFAULT_BATCH_RETRY_SCHEDULER_PERIOD_IN_SECONDS * 1000
         );
         log.debug("[{}] Starting batch scheduler with delay [{}ms]", this.identifyConfiguration.id(), batchRetryDelayMs);
-        batchSchedulerDisposable =
-            Flowable
-                .<Long, Long>generate(
-                    () -> 0L,
-                    (state, emitter) -> {
-                        emitter.onNext(state);
-                        return state + 1;
-                    }
-                )
-                .delay(batchRetryDelayMs, TimeUnit.MILLISECONDS)
-                .rebatchRequests(1)
-                .flatMapCompletable(interval -> {
-                    if (clusterManager.self().primary()) {
-                        log.debug("[{}] Executing Batch scheduled tasks", this.identifyConfiguration.id());
-                        return this.batchStore.findByStatus(BatchStatus.PENDING)
-                            .filter(batch -> batch.shouldRetryNow(batchRetryDelayMs))
-                            .doOnNext(batch ->
-                                log.info(
-                                    "[{}] Retrying batch '{}' with key '{}' and target '{}'",
-                                    this.identifyConfiguration.id(),
-                                    batch.id(),
-                                    batch.key(),
-                                    batch.targetId()
-                                )
+        batchSchedulerDisposable = Flowable.<Long, Long>generate(
+            () -> 0L,
+            (state, emitter) -> {
+                emitter.onNext(state);
+                return state + 1;
+            }
+        )
+            .delay(batchRetryDelayMs, TimeUnit.MILLISECONDS)
+            .rebatchRequests(1)
+            .flatMapCompletable(interval -> {
+                if (clusterManager.self().primary()) {
+                    log.debug("[{}] Executing Batch scheduled tasks", this.identifyConfiguration.id());
+                    return this.batchStore.findByStatus(BatchStatus.PENDING)
+                        .filter(batch -> batch.shouldRetryNow(batchRetryDelayMs))
+                        .doOnNext(batch ->
+                            log.info(
+                                "[{}] Retrying batch '{}' with key '{}' and target '{}'",
+                                this.identifyConfiguration.id(),
+                                batch.id(),
+                                batch.key(),
+                                batch.targetId()
                             )
-                            .flatMapCompletable(batch ->
-                                sendBatchCommands(batch)
-                                    .onErrorComplete(throwable -> {
-                                        log.error(
-                                            "[{}] Unable to retry batch '{}' with key '{}' and target '{}'",
-                                            this.identifyConfiguration.id(),
-                                            batch.id(),
-                                            batch.key(),
-                                            batch.targetId(),
-                                            throwable
-                                        );
-                                        return true;
-                                    })
-                                    .ignoreElement()
-                            );
-                    }
-                    return Completable.complete();
-                })
-                .onErrorComplete(throwable -> {
-                    log.debug("Unable to find batch to retry", throwable);
-                    return true;
-                })
-                .subscribe();
+                        )
+                        .flatMapCompletable(batch ->
+                            sendBatchCommands(batch)
+                                .onErrorComplete(throwable -> {
+                                    log.error(
+                                        "[{}] Unable to retry batch '{}' with key '{}' and target '{}'",
+                                        this.identifyConfiguration.id(),
+                                        batch.id(),
+                                        batch.key(),
+                                        batch.targetId(),
+                                        throwable
+                                    );
+                                    return true;
+                                })
+                                .ignoreElement()
+                        );
+                }
+                return Completable.complete();
+            })
+            .onErrorComplete(throwable -> {
+                log.debug("Unable to find batch to retry", throwable);
+                return true;
+            })
+            .subscribe();
     }
 
     private void resetPendingBatches() {
@@ -295,7 +292,10 @@ public class DefaultExchangeController extends AbstractService<ExchangeControlle
     @Override
     public Flowable<BatchMetric> batchsMetricsForTarget(final String targetId) {
         if (isBatchFeatureEnabled()) {
-            return batchStore.getAll().filter(batch -> targetId.equals(batch.targetId())).map(BatchMetric::new);
+            return batchStore
+                .getAll()
+                .filter(batch -> targetId.equals(batch.targetId()))
+                .map(BatchMetric::new);
         } else {
             return Flowable.empty();
         }
@@ -396,27 +396,21 @@ public class DefaultExchangeController extends AbstractService<ExchangeControlle
 
     @Override
     public void addKeyBasedBatchObserver(final KeyBatchObserver keyBasedObserver) {
-        this.keyBasedBatchObservers.compute(
-                keyBasedObserver.batchKey(),
-                (k, v) -> {
-                    if (v == null) {
-                        v = new ArrayList<>();
-                    }
-                    v.add(keyBasedObserver);
-                    return v;
-                }
-            );
+        this.keyBasedBatchObservers.compute(keyBasedObserver.batchKey(), (k, v) -> {
+            if (v == null) {
+                v = new ArrayList<>();
+            }
+            v.add(keyBasedObserver);
+            return v;
+        });
     }
 
     @Override
     public void removeKeyBasedBatchObserver(final KeyBatchObserver keyBasedObserver) {
-        this.keyBasedBatchObservers.computeIfPresent(
-                keyBasedObserver.batchKey(),
-                (k, v) -> {
-                    v.remove(keyBasedObserver);
-                    return v;
-                }
-            );
+        this.keyBasedBatchObservers.computeIfPresent(keyBasedObserver.batchKey(), (k, v) -> {
+            v.remove(keyBasedObserver);
+            return v;
+        });
     }
 
     @Override
@@ -432,8 +426,7 @@ public class DefaultExchangeController extends AbstractService<ExchangeControlle
 
     @Override
     public Completable executeBatch(final Batch batch, final BatchObserver batchObserver) {
-        return Completable
-            .fromRunnable(() -> this.idBasedBatchObservers.put(batch.id(), batchObserver))
+        return Completable.fromRunnable(() -> this.idBasedBatchObservers.put(batch.id(), batchObserver))
             .andThen(executeBatch(batch).ignoreElement())
             .doOnError(throwable -> this.idBasedBatchObservers.remove(batch.id()));
     }
@@ -505,8 +498,7 @@ public class DefaultExchangeController extends AbstractService<ExchangeControlle
         if (keyBasedBatchObservers.containsKey(batch.key())) {
             batchObservers.addAll(keyBasedBatchObservers.get(batch.key()));
         }
-        Flowable
-            .fromIterable(batchObservers)
+        Flowable.fromIterable(batchObservers)
             .flatMapCompletable(batchObserver ->
                 batchObserver
                     .notify(batch)
@@ -540,11 +532,9 @@ public class DefaultExchangeController extends AbstractService<ExchangeControlle
             return Single.just(batch);
         }
 
-        return Flowable
-            .fromIterable(batchCommands)
+        return Flowable.fromIterable(batchCommands)
             .concatMapSingle(batchCommand ->
-                Single
-                    .just(batch.markCommandInProgress(batchCommand.command().getId()))
+                Single.just(batch.markCommandInProgress(batchCommand.command().getId()))
                     .flatMap(this::updateBatch)
                     .flatMap(updatedBatch ->
                         sendCommand(batchCommand.command(), updatedBatch.targetId())

@@ -119,17 +119,16 @@ public class SampleChannel implements ControllerChannel {
     public <C extends Command<?>, R extends Reply<?>> Single<R> send(final C command) {
         CommandHandler<?, ?> commandHandler = commandHandlers.get(command.getType());
         if (commandHandler != null) {
-            return Single
-                .defer(() -> {
-                    CommandAdapter<C, Command<?>, Reply<?>> commandAdapter = (CommandAdapter<C, Command<?>, Reply<?>>) commandAdapters.get(
-                        command.getType()
-                    );
-                    if (commandAdapter != null) {
-                        return commandAdapter.adapt(targetId, command);
-                    } else {
-                        return Single.just(command);
-                    }
-                })
+            return Single.defer(() -> {
+                CommandAdapter<C, Command<?>, Reply<?>> commandAdapter = (CommandAdapter<C, Command<?>, Reply<?>>) commandAdapters.get(
+                    command.getType()
+                );
+                if (commandAdapter != null) {
+                    return commandAdapter.adapt(targetId, command);
+                } else {
+                    return Single.just(command);
+                }
+            })
                 .flatMap(single -> {
                     CommandHandler<Command<?>, Reply<?>> castHandler = (CommandHandler<Command<?>, Reply<?>>) commandHandler;
                     return castHandler.handle(command);

@@ -84,15 +84,23 @@ class DefaultExchangeControllerTest {
 
         lenient().when(cacheManager.<String, Batch>getOrCreateCache(anyString(), any(CacheConfiguration.class))).thenReturn(cache);
         environment = new MockEnvironment();
-        cut =
-            new DefaultExchangeController(new IdentifyConfiguration(environment), clusterManager, cacheManager, managementEndpointManager);
+        cut = new DefaultExchangeController(
+            new IdentifyConfiguration(environment),
+            clusterManager,
+            cacheManager,
+            managementEndpointManager
+        );
     }
 
     @Test
     void should_not_register_any_endpoints_management_when_disabled() throws Exception {
         environment.withProperty("exchange.controller.management.enabled", "false");
-        cut =
-            new DefaultExchangeController(new IdentifyConfiguration(environment), clusterManager, cacheManager, managementEndpointManager);
+        cut = new DefaultExchangeController(
+            new IdentifyConfiguration(environment),
+            clusterManager,
+            cacheManager,
+            managementEndpointManager
+        );
         cut.start();
         verify(managementEndpointManager, never()).register(any());
     }
@@ -112,8 +120,12 @@ class DefaultExchangeControllerTest {
     @Test
     void should_register_only_channels_endpoints_management_when_batch_feature_is_disabled() throws Exception {
         environment.withProperty("exchange.controller.batch.enabled", "false");
-        cut =
-            new DefaultExchangeController(new IdentifyConfiguration(environment), clusterManager, cacheManager, managementEndpointManager);
+        cut = new DefaultExchangeController(
+            new IdentifyConfiguration(environment),
+            clusterManager,
+            cacheManager,
+            managementEndpointManager
+        );
         cut.start();
         verify(managementEndpointManager, times(5)).register(any());
     }

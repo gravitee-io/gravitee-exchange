@@ -66,8 +66,7 @@ public abstract class AbstractWebSocketConnectorTest extends AbstractWebSocketTe
                     serverWebSocket
                         .writeBinaryMessage(
                             protocolAdapter.write(
-                                ProtocolExchange
-                                    .builder()
+                                ProtocolExchange.builder()
                                     .type(ProtocolExchange.Type.REPLY)
                                     .exchangeType(helloReply.getType())
                                     .exchange(helloReply)
@@ -85,8 +84,7 @@ public abstract class AbstractWebSocketConnectorTest extends AbstractWebSocketTe
                     serverWebSocket
                         .writeBinaryMessage(
                             protocolAdapter.write(
-                                ProtocolExchange
-                                    .builder()
+                                ProtocolExchange.builder()
                                     .type(ProtocolExchange.Type.REPLY)
                                     .exchangeType(helloReply.getType())
                                     .exchange(helloReply)

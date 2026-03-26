@@ -45,49 +45,46 @@ public class BatchStore {
     }
 
     public Maybe<Batch> getById(String id) {
-        return Maybe
-            .fromCallable(() -> {
-                if (id == null) {
-                    throw new IllegalArgumentException("Batch id cannot be null");
-                }
-                return store.get(id);
-            })
-            .subscribeOn(Schedulers.io());
+        return Maybe.fromCallable(() -> {
+            if (id == null) {
+                throw new IllegalArgumentException("Batch id cannot be null");
+            }
+            return store.get(id);
+        }).subscribeOn(Schedulers.io());
     }
 
     public Flowable<Batch> findByStatus(final BatchStatus status) {
-        return Flowable
-            .fromStream(store.values().stream().filter(batch -> Objects.equals(batch.status(), status)))
-            .subscribeOn(Schedulers.io());
+        return Flowable.fromStream(
+            store
+                .values()
+                .stream()
+                .filter(batch -> Objects.equals(batch.status(), status))
+        ).subscribeOn(Schedulers.io());
     }
 
     public Single<Batch> add(Batch batch) {
-        return Single
-            .fromCallable(() -> {
-                if (batch.id() == null) {
-                    throw new IllegalArgumentException("Batch id cannot be null");
-                }
-                if (store.containsKey(batch.id())) {
-                    throw new BatchAlreadyExistsException();
-                }
-                store.put(batch.id(), batch);
-                return batch;
-            })
-            .subscribeOn(Schedulers.io());
+        return Single.fromCallable(() -> {
+            if (batch.id() == null) {
+                throw new IllegalArgumentException("Batch id cannot be null");
+            }
+            if (store.containsKey(batch.id())) {
+                throw new BatchAlreadyExistsException();
+            }
+            store.put(batch.id(), batch);
+            return batch;
+        }).subscribeOn(Schedulers.io());
     }
 
     public Single<Batch> update(Batch batch) {
-        return Single
-            .fromCallable(() -> {
-                if (batch.id() == null) {
-                    throw new IllegalArgumentException("Batch id cannot be null");
-                }
-                if (!store.containsKey(batch.id())) {
-                    throw new BatchNotExistException();
-                }
-                store.put(batch.id(), batch);
-                return batch;
-            })
-            .subscribeOn(Schedulers.io());
+        return Single.fromCallable(() -> {
+            if (batch.id() == null) {
+                throw new IllegalArgumentException("Batch id cannot be null");
+            }
+            if (!store.containsKey(batch.id())) {
+                throw new BatchNotExistException();
+            }
+            store.put(batch.id(), batch);
+            return batch;
+        }).subscribeOn(Schedulers.io());
     }
 }

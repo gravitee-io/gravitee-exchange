@@ -90,8 +90,9 @@ class ChannelManagerTest {
         cut = new ChannelManager(identifyConfiguration, clusterManager, cacheManager);
         cut.start();
         channelEventQueue = clusterManager.queue(identifyConfiguration.identifyName(CHANNEL_EVENTS_QUEUE));
-        primaryChannelElectedEventTopic =
-            clusterManager.topic(identifyConfiguration.identifyName(PrimaryChannelManager.PRIMARY_CHANNEL_ELECTED_EVENTS_TOPIC));
+        primaryChannelElectedEventTopic = clusterManager.topic(
+            identifyConfiguration.identifyName(PrimaryChannelManager.PRIMARY_CHANNEL_ELECTED_EVENTS_TOPIC)
+        );
     }
 
     @Test

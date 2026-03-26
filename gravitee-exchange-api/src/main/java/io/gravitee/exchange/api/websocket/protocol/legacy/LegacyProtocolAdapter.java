@@ -85,30 +85,26 @@ public class LegacyProtocolAdapter implements ProtocolAdapter {
     public ProtocolExchange read(final Buffer buffer) {
         String incoming = buffer.toString();
         if (incoming.startsWith(PRIMARY_MESSAGE)) {
-            return ProtocolExchange
-                .builder()
+            return ProtocolExchange.builder()
                 .type(ProtocolExchange.Type.COMMAND)
                 .exchangeType(PrimaryCommand.COMMAND_TYPE)
                 .exchange(new PrimaryCommand(new PrimaryCommandPayload(true)))
                 .build();
         } else if (incoming.startsWith(REPLICA_MESSAGE)) {
-            return ProtocolExchange
-                .builder()
+            return ProtocolExchange.builder()
                 .type(ProtocolExchange.Type.COMMAND)
                 .exchangeType(PrimaryCommand.COMMAND_TYPE)
                 .exchange(new PrimaryCommand(new PrimaryCommandPayload(false)))
                 .build();
         } else if (incoming.startsWith(COMMAND_PREFIX)) {
             String exchange = incoming.replace(COMMAND_PREFIX, "");
-            return ProtocolExchange
-                .builder()
+            return ProtocolExchange.builder()
                 .type(ProtocolExchange.Type.COMMAND)
                 .exchange(exchangeSerDe.deserializeAsCommand(ProtocolVersion.LEGACY, null, exchange))
                 .build();
         } else if (incoming.startsWith(REPLY_PREFIX)) {
             String exchange = incoming.replace(REPLY_PREFIX, "");
-            return ProtocolExchange
-                .builder()
+            return ProtocolExchange.builder()
                 .type(ProtocolExchange.Type.REPLY)
                 .exchange(exchangeSerDe.deserializeAsReply(ProtocolVersion.LEGACY, null, exchange))
                 .build();

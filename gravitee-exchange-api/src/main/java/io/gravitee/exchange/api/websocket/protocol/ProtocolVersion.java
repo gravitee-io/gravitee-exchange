@@ -43,8 +43,7 @@ public enum ProtocolVersion {
         if (version == null) {
             return LEGACY;
         }
-        return Arrays
-            .stream(ProtocolVersion.values())
+        return Arrays.stream(ProtocolVersion.values())
             .filter(protocolVersion -> Objects.equals(protocolVersion.version, version))
             .findFirst()
             .orElse(ProtocolVersion.LEGACY);
