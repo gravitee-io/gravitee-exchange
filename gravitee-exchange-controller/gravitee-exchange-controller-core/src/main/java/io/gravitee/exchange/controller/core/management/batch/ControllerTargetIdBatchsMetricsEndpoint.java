@@ -60,8 +60,7 @@ public class ControllerTargetIdBatchsMetricsEndpoint implements ManagementEndpoi
                 );
                 write(
                     ctx,
-                    ManagementError
-                        .builder()
+                    ManagementError.builder()
                         .code(500)
                         .message("Unable to retrieve batchs metrics for the given target [%s]".formatted(targetId))
                         .build()

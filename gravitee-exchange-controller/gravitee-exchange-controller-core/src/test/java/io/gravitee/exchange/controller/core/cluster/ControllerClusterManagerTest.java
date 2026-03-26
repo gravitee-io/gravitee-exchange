@@ -59,11 +59,10 @@ class ControllerClusterManagerTest {
 
     @BeforeEach
     public void beforeEach(Vertx vertx) throws Exception {
-        environment =
-            new MockEnvironment()
-                .withProperty("exchange.controller.auto-rebalancing.enabled", "true")
-                .withProperty("exchange.controller.auto-rebalancing.delay", "1000")
-                .withProperty("exchange.controller.auto-rebalancing.unit", "MILLISECONDS");
+        environment = new MockEnvironment()
+            .withProperty("exchange.controller.auto-rebalancing.enabled", "true")
+            .withProperty("exchange.controller.auto-rebalancing.delay", "1000")
+            .withProperty("exchange.controller.auto-rebalancing.unit", "MILLISECONDS");
         identifyConfiguration = new IdentifyConfiguration(environment);
         cacheManager = new StandaloneCacheManager();
         cacheManager.start();

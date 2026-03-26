@@ -53,14 +53,12 @@ class EmbeddedChannelTest {
 
     @BeforeEach
     public void beforeEach() {
-        cut =
-            EmbeddedChannel
-                .builder()
-                .commandHandlers(new ArrayList<>())
-                .commandAdapters(new ArrayList<>())
-                .replyAdapters(new ArrayList<>())
-                .targetId("targetId")
-                .build();
+        cut = EmbeddedChannel.builder()
+            .commandHandlers(new ArrayList<>())
+            .commandAdapters(new ArrayList<>())
+            .replyAdapters(new ArrayList<>())
+            .targetId("targetId")
+            .build();
     }
 
     @Test
@@ -124,7 +122,11 @@ class EmbeddedChannelTest {
         cut.initialize().test().assertComplete();
 
         PrimaryCommand command = new PrimaryCommand(new PrimaryCommandPayload(true));
-        cut.send(command).test().assertValue(reply -> reply.getCommandId().equals(command.getId())).assertComplete();
+        cut
+            .send(command)
+            .test()
+            .assertValue(reply -> reply.getCommandId().equals(command.getId()))
+            .assertComplete();
 
         assertThat(vertxTestContext.awaitCompletion(10, TimeUnit.SECONDS)).isTrue();
     }
@@ -132,64 +134,66 @@ class EmbeddedChannelTest {
     @Test
     void should_decorate_command_and_reply_to_internal_handlers(VertxTestContext vertxTestContext) throws InterruptedException {
         Checkpoint checkpoint = vertxTestContext.checkpoint(3);
-        cut =
-            EmbeddedChannel
-                .builder()
-                .commandHandlers(
-                    List.of(
-                        new CommandHandler<>() {
-                            @Override
-                            public String supportType() {
-                                return PrimaryCommand.COMMAND_TYPE;
-                            }
-
-                            @Override
-                            public Single<Reply<?>> handle(final Command<?> command) {
-                                checkpoint.flag();
-                                return Single.just(new PrimaryReply(command.getId(), new PrimaryReplyPayload()));
-                            }
+        cut = EmbeddedChannel.builder()
+            .commandHandlers(
+                List.of(
+                    new CommandHandler<>() {
+                        @Override
+                        public String supportType() {
+                            return PrimaryCommand.COMMAND_TYPE;
                         }
-                    )
-                )
-                .commandAdapters(
-                    List.of(
-                        new CommandAdapter<>() {
-                            @Override
-                            public String supportType() {
-                                return PrimaryCommand.COMMAND_TYPE;
-                            }
 
-                            @Override
-                            public Single<Command<?>> adapt(final String targetId, final Command<?> command) {
-                                checkpoint.flag();
-                                return Single.just(command);
-                            }
+                        @Override
+                        public Single<Reply<?>> handle(final Command<?> command) {
+                            checkpoint.flag();
+                            return Single.just(new PrimaryReply(command.getId(), new PrimaryReplyPayload()));
                         }
-                    )
+                    }
                 )
-                .replyAdapters(
-                    List.of(
-                        new ReplyAdapter<>() {
-                            @Override
-                            public String supportType() {
-                                return PrimaryCommand.COMMAND_TYPE;
-                            }
+            )
+            .commandAdapters(
+                List.of(
+                    new CommandAdapter<>() {
+                        @Override
+                        public String supportType() {
+                            return PrimaryCommand.COMMAND_TYPE;
+                        }
 
-                            @Override
-                            public Single<Reply<?>> adapt(final String targetId, final Reply<?> reply) {
-                                checkpoint.flag();
-                                return Single.just(reply);
-                            }
+                        @Override
+                        public Single<Command<?>> adapt(final String targetId, final Command<?> command) {
+                            checkpoint.flag();
+                            return Single.just(command);
                         }
-                    )
+                    }
                 )
-                .targetId("targetId")
-                .build();
+            )
+            .replyAdapters(
+                List.of(
+                    new ReplyAdapter<>() {
+                        @Override
+                        public String supportType() {
+                            return PrimaryCommand.COMMAND_TYPE;
+                        }
+
+                        @Override
+                        public Single<Reply<?>> adapt(final String targetId, final Reply<?> reply) {
+                            checkpoint.flag();
+                            return Single.just(reply);
+                        }
+                    }
+                )
+            )
+            .targetId("targetId")
+            .build();
 
         cut.initialize().test().assertComplete();
 
         PrimaryCommand command = new PrimaryCommand(new PrimaryCommandPayload(true));
-        cut.send(command).test().assertValue(reply -> reply.getCommandId().equals(command.getId())).assertComplete();
+        cut
+            .send(command)
+            .test()
+            .assertValue(reply -> reply.getCommandId().equals(command.getId()))
+            .assertComplete();
 
         assertThat(vertxTestContext.awaitCompletion(10, TimeUnit.SECONDS)).isTrue();
     }

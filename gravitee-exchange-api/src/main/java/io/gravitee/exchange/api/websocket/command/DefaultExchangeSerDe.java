@@ -99,12 +99,11 @@ public class DefaultExchangeSerDe implements ExchangeSerDe {
         final Map<String, Class<? extends Command<?>>> customCommandTypes,
         final Map<String, Class<? extends Reply<?>>> customReplyTypes
     ) {
-        this.objectMapper =
-            objectMapper
-                .enable(DeserializationFeature.READ_UNKNOWN_ENUM_VALUES_USING_DEFAULT_VALUE)
-                .disable(DeserializationFeature.FAIL_ON_IGNORED_PROPERTIES)
-                .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
-                .setSerializationInclusion(JsonInclude.Include.NON_NULL);
+        this.objectMapper = objectMapper
+            .enable(DeserializationFeature.READ_UNKNOWN_ENUM_VALUES_USING_DEFAULT_VALUE)
+            .disable(DeserializationFeature.FAIL_ON_IGNORED_PROPERTIES)
+            .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
+            .setSerializationInclusion(JsonInclude.Include.NON_NULL);
 
         registerCommandTypes(objectMapper, customCommandTypes);
         registerReplyTypes(objectMapper, customReplyTypes);

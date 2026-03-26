@@ -52,10 +52,9 @@ public class ControllerChannelsMetricsEndpoint implements ManagementEndpoint {
         var targetId = ctx.request().getParam("targetId");
         Flowable<ChannelMetric> obs;
         if (targetId == null) {
-            obs =
-                exchangeController
-                    .channelsMetricsByTarget()
-                    .flatMapStream(targetChannelsMetric -> targetChannelsMetric.channels().stream());
+            obs = exchangeController
+                .channelsMetricsByTarget()
+                .flatMapStream(targetChannelsMetric -> targetChannelsMetric.channels().stream());
         } else {
             obs = exchangeController.channelsMetricsForTarget(targetId);
         }

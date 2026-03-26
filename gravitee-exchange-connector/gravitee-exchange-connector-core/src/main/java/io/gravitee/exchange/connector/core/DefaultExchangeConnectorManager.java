@@ -43,18 +43,17 @@ public class DefaultExchangeConnectorManager implements ExchangeConnectorManager
 
     @Override
     public Completable register(final ExchangeConnector exchangeConnector) {
-        return Completable
-            .fromRunnable(() -> {
-                log.debug("Registering new connector");
-                // Add custom handlers to deal with healthcheck and primary commands
-                exchangeConnector.addCommandHandlers(
-                    List.of(
-                        new GoodByeCommandHandler(exchangeConnector),
-                        new HealthCheckCommandHandler(exchangeConnector),
-                        new PrimaryCommandHandler(exchangeConnector)
-                    )
-                );
-            })
+        return Completable.fromRunnable(() -> {
+            log.debug("Registering new connector");
+            // Add custom handlers to deal with healthcheck and primary commands
+            exchangeConnector.addCommandHandlers(
+                List.of(
+                    new GoodByeCommandHandler(exchangeConnector),
+                    new HealthCheckCommandHandler(exchangeConnector),
+                    new PrimaryCommandHandler(exchangeConnector)
+                )
+            );
+        })
             .andThen(exchangeConnector.initialize())
             .doOnComplete(() -> {
                 log.debug("New connector successfully register for target '{}'", exchangeConnector.targetId());
@@ -68,13 +67,12 @@ public class DefaultExchangeConnectorManager implements ExchangeConnectorManager
 
     @Override
     public Completable unregister(final ExchangeConnector exchangeConnector) {
-        return Completable
-            .defer(() -> {
-                if (exchangeConnector.targetId() != null) {
-                    exchangeConnectors.remove(exchangeConnector.targetId(), exchangeConnector);
-                }
-                return exchangeConnector.close();
-            })
+        return Completable.defer(() -> {
+            if (exchangeConnector.targetId() != null) {
+                exchangeConnectors.remove(exchangeConnector.targetId(), exchangeConnector);
+            }
+            return exchangeConnector.close();
+        })
             .doOnComplete(() -> log.debug("Connector successfully unregister for target '{}'", exchangeConnector.targetId()))
             .doOnError(throwable -> log.warn("Unable to unregister connector for target '{}'", exchangeConnector.targetId(), throwable));
     }

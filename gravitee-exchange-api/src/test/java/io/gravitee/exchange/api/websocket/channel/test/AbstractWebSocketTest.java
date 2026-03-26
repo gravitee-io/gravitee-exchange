@@ -60,22 +60,21 @@ public abstract class AbstractWebSocketTest {
         final HttpServerOptions httpServerOptions = new HttpServerOptions();
         serverPort = TestSocketUtils.findAvailableTcpPort();
         httpServerOptions.setPort(serverPort);
-        serverDispose =
-            AbstractWebSocketTest.vertx
-                .createHttpServer(httpServerOptions)
-                .webSocketHandler(serverWebSocket -> {
-                    if (null != websocketServerHandler) {
-                        websocketServerHandler.handle(serverWebSocket);
-                    }
-                })
-                .listen(serverPort)
-                .subscribe(
-                    server -> {
-                        httpServer = server;
-                        context.completeNow();
-                    },
-                    context::failNow
-                );
+        serverDispose = AbstractWebSocketTest.vertx
+            .createHttpServer(httpServerOptions)
+            .webSocketHandler(serverWebSocket -> {
+                if (null != websocketServerHandler) {
+                    websocketServerHandler.handle(serverWebSocket);
+                }
+            })
+            .listen(serverPort)
+            .subscribe(
+                server -> {
+                    httpServer = server;
+                    context.completeNow();
+                },
+                context::failNow
+            );
     }
 
     @BeforeEach

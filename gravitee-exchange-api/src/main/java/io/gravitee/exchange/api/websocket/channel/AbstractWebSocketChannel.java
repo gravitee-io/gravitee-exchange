@@ -47,8 +47,8 @@ import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.CompletableEmitter;
 import io.reactivex.rxjava3.core.Single;
 import io.reactivex.rxjava3.core.SingleEmitter;
-import io.vertx.rxjava3.core.Vertx;
 import io.vertx.core.buffer.Buffer;
+import io.vertx.rxjava3.core.Vertx;
 import io.vertx.rxjava3.core.http.WebSocketBase;
 import java.util.List;
 import java.util.Map;
@@ -123,49 +123,48 @@ public abstract class AbstractWebSocketChannel implements Channel {
 
     @Override
     public Completable initialize() {
-        return Completable
-            .create(emitter -> {
-                webSocket.closeHandler(v -> {
-                    log.warn("Channel '{}' for target '{}' is closing", id, targetId);
-                    active = false;
-                    cleanChannel();
-                });
+        return Completable.create(emitter -> {
+            webSocket.closeHandler(v -> {
+                log.warn("Channel '{}' for target '{}' is closing", id, targetId);
+                active = false;
+                cleanChannel();
+            });
 
-                webSocket.pongHandler(buffer -> log.trace("Receiving pong frame from channel '{}' for target '{}'", id, targetId));
+            webSocket.pongHandler(buffer -> log.trace("Receiving pong frame from channel '{}' for target '{}'", id, targetId));
 
-                webSocket.textMessageHandler(buffer -> webSocket.close((short) 1003, "Unsupported text frame").subscribe());
+            webSocket.textMessageHandler(buffer -> webSocket.close((short) 1003, "Unsupported text frame").subscribe());
 
-                webSocket.binaryMessageHandler(buffer -> {
-                    if (buffer.length() > 0) {
-                        ProtocolExchange websocketExchange = protocolAdapter.read(buffer);
+            webSocket.binaryMessageHandler(buffer -> {
+                if (buffer.length() > 0) {
+                    ProtocolExchange websocketExchange = protocolAdapter.read(buffer);
 
-                        try {
-                            if (ProtocolExchange.Type.COMMAND == websocketExchange.type()) {
-                                receiveCommand(emitter, websocketExchange.asCommand());
-                            } else if (ProtocolExchange.Type.REPLY == websocketExchange.type()) {
-                                receiveReply(websocketExchange.asReply());
-                            } else {
-                                webSocket.close((short) 1002, "Exchange message unknown").subscribe();
-                            }
-                        } catch (Exception e) {
-                            log.warn(
-                                String.format(
-                                    "An error occurred when trying to decode incoming websocket exchange [%s] for target '%s'. Closing Socket.",
-                                    websocketExchange,
-                                    targetId
-                                ),
-                                e
-                            );
-                            webSocket.close((short) 1011, "Unexpected error while handling incoming websocket exchange").subscribe();
+                    try {
+                        if (ProtocolExchange.Type.COMMAND == websocketExchange.type()) {
+                            receiveCommand(emitter, websocketExchange.asCommand());
+                        } else if (ProtocolExchange.Type.REPLY == websocketExchange.type()) {
+                            receiveReply(websocketExchange.asReply());
+                        } else {
+                            webSocket.close((short) 1002, "Exchange message unknown").subscribe();
                         }
+                    } catch (Exception e) {
+                        log.warn(
+                            String.format(
+                                "An error occurred when trying to decode incoming websocket exchange [%s] for target '%s'. Closing Socket.",
+                                websocketExchange,
+                                targetId
+                            ),
+                            e
+                        );
+                        webSocket.close((short) 1011, "Unexpected error while handling incoming websocket exchange").subscribe();
                     }
-                });
-
-                if (!expectHelloCommand()) {
-                    this.active = true;
-                    emitter.onComplete();
                 }
-            })
+            });
+
+            if (!expectHelloCommand()) {
+                this.active = true;
+                emitter.onComplete();
+            }
+        })
             .doOnComplete(() -> log.debug("Channel '{}' for target '{}' has been successfully initialized", id, targetId))
             .doOnError(throwable -> log.error("Unable to initialize channel '{}'", id));
     }
@@ -179,8 +178,11 @@ public abstract class AbstractWebSocketChannel implements Channel {
 
         log.trace("Handling received command '{}' of type '{}' for target '{}'", command.getId(), command.getType(), targetId);
         Single<? extends Command<?>> commandObs;
-        CommandAdapter<Command<?>, Command<?>, Reply<?>> commandAdapter =
-            (CommandAdapter<Command<?>, Command<?>, Reply<?>>) commandAdapters.get(command.getType());
+        CommandAdapter<Command<?>, Command<?>, Reply<?>> commandAdapter = (CommandAdapter<
+            Command<?>,
+            Command<?>,
+            Reply<?>
+        >) commandAdapters.get(command.getType());
         if (commandAdapter != null) {
             commandObs = commandAdapter.adapt(targetId, command);
         } else {
@@ -214,10 +216,10 @@ public abstract class AbstractWebSocketChannel implements Channel {
             .onErrorResumeNext(throwable -> {
                 log.warn(
                     "Unexpected internal error occurred when handling command '%s' of type '%s' for target '%s'".formatted(
-                            command.getId(),
-                            command.getType(),
-                            targetId
-                        ),
+                        command.getId(),
+                        command.getType(),
+                        targetId
+                    ),
                     throwable
                 );
                 return writeReply(new NoReply(command.getId(), "Unexpected internal error occurred"));
@@ -282,10 +284,10 @@ public abstract class AbstractWebSocketChannel implements Channel {
     protected void cleanChannel() {
         this.active = false;
         this.resultEmitters.forEach((type, emitter) -> {
-                if (!emitter.isDisposed()) {
-                    emitter.onError(new ChannelClosedException());
-                }
-            });
+            if (!emitter.isDisposed()) {
+                emitter.onError(new ChannelClosedException());
+            }
+        });
         this.resultEmitters.clear();
 
         if (pingTaskId != -1) {
@@ -330,15 +332,11 @@ public abstract class AbstractWebSocketChannel implements Channel {
     }
 
     protected void startPingTask() {
-        this.pingTaskId =
-            this.vertx.setPeriodic(
-                    PING_DELAY,
-                    timerId -> {
-                        if (!this.webSocket.isClosed()) {
-                            this.webSocket.writePing(Buffer.buffer()).subscribe();
-                        }
-                    }
-                );
+        this.pingTaskId = this.vertx.setPeriodic(PING_DELAY, timerId -> {
+            if (!this.webSocket.isClosed()) {
+                this.webSocket.writePing(Buffer.buffer()).subscribe();
+            }
+        });
     }
 
     /**
@@ -376,8 +374,7 @@ public abstract class AbstractWebSocketChannel implements Channel {
         final CommandHandler<Command<?>, Reply<?>> commandHandler,
         boolean dontReply
     ) {
-        return Completable
-            .fromRunnable(() -> inflightCommandCount.incrementAndGet())
+        return Completable.fromRunnable(() -> inflightCommandCount.incrementAndGet())
             .andThen(Single.defer(() -> commandHandler.handle(command)))
             .flatMap(reply -> {
                 if (!dontReply) {
@@ -402,39 +399,36 @@ public abstract class AbstractWebSocketChannel implements Channel {
     }
 
     protected <C extends Command<?>, R extends Reply<?>> Single<R> send(final C command, final boolean ignoreActiveStatus) {
-        return Single
-            .defer(() -> {
-                if (!ignoreActiveStatus && !active) {
-                    return Single.error(new ChannelInactiveException());
-                }
-                CommandAdapter<C, Command<?>, R> commandAdapter = (CommandAdapter<C, Command<?>, R>) commandAdapters.get(command.getType());
-                if (commandAdapter != null) {
-                    return commandAdapter.adapt(targetId, command);
-                } else {
-                    return Single.just(command);
-                }
-            })
+        return Single.defer(() -> {
+            if (!ignoreActiveStatus && !active) {
+                return Single.error(new ChannelInactiveException());
+            }
+            CommandAdapter<C, Command<?>, R> commandAdapter = (CommandAdapter<C, Command<?>, R>) commandAdapters.get(command.getType());
+            if (commandAdapter != null) {
+                return commandAdapter.adapt(targetId, command);
+            } else {
+                return Single.just(command);
+            }
+        })
             .flatMap(adaptedCommand ->
-                Single
-                    .<R>create(emitter -> {
-                        resultEmitters.put(adaptedCommand.getId(), emitter);
-                        writeCommand(adaptedCommand).doOnError(emitter::onError).onErrorComplete().subscribe();
+                Single.<R>create(emitter -> {
+                    resultEmitters.put(adaptedCommand.getId(), emitter);
+                    writeCommand(adaptedCommand).doOnError(emitter::onError).onErrorComplete().subscribe();
+                }).timeout(
+                    adaptedCommand.getReplyTimeoutMs(),
+                    TimeUnit.MILLISECONDS,
+                    Single.error(() -> {
+                        if (adaptedCommand.getReplyTimeoutMs() > 0) {
+                            log.warn(
+                                "No reply received in time for command '{}' with id '{}' for target '{}'",
+                                adaptedCommand.getType(),
+                                adaptedCommand.getId(),
+                                targetId
+                            );
+                        }
+                        throw new ChannelTimeoutException();
                     })
-                    .timeout(
-                        adaptedCommand.getReplyTimeoutMs(),
-                        TimeUnit.MILLISECONDS,
-                        Single.error(() -> {
-                            if (adaptedCommand.getReplyTimeoutMs() > 0) {
-                                log.warn(
-                                    "No reply received in time for command '{}' with id '{}' for target '{}'",
-                                    adaptedCommand.getType(),
-                                    adaptedCommand.getId(),
-                                    targetId
-                                );
-                            }
-                            throw new ChannelTimeoutException();
-                        })
-                    )
+                )
             )
             .onErrorResumeNext(throwable -> {
                 CommandAdapter<C, Command<?>, R> commandAdapter = (CommandAdapter<C, Command<?>, R>) commandAdapters.get(command.getType());
@@ -449,8 +443,7 @@ public abstract class AbstractWebSocketChannel implements Channel {
     }
 
     protected <C extends Command<?>> Completable writeCommand(C command) {
-        ProtocolExchange protocolExchange = ProtocolExchange
-            .builder()
+        ProtocolExchange protocolExchange = ProtocolExchange.builder()
             .type(ProtocolExchange.Type.COMMAND)
             .exchangeType(command.getType())
             .exchange(command)
@@ -459,24 +452,21 @@ public abstract class AbstractWebSocketChannel implements Channel {
     }
 
     protected <R extends Reply<?>> Completable writeReply(R reply) {
-        return Single
-            .defer(() -> {
-                ReplyAdapter<R, Reply<?>> replyAdapter = (ReplyAdapter<R, Reply<?>>) replyAdapters.get(reply.getType());
-                if (replyAdapter != null) {
-                    return replyAdapter.adapt(targetId, reply);
-                } else {
-                    return Single.just(reply);
-                }
-            })
-            .flatMapCompletable(adaptedReply -> {
-                ProtocolExchange protocolExchange = ProtocolExchange
-                    .builder()
-                    .type(ProtocolExchange.Type.REPLY)
-                    .exchangeType(adaptedReply.getType())
-                    .exchange(adaptedReply)
-                    .build();
-                return writeToSocket(adaptedReply.getCommandId(), protocolExchange);
-            });
+        return Single.defer(() -> {
+            ReplyAdapter<R, Reply<?>> replyAdapter = (ReplyAdapter<R, Reply<?>>) replyAdapters.get(reply.getType());
+            if (replyAdapter != null) {
+                return replyAdapter.adapt(targetId, reply);
+            } else {
+                return Single.just(reply);
+            }
+        }).flatMapCompletable(adaptedReply -> {
+            ProtocolExchange protocolExchange = ProtocolExchange.builder()
+                .type(ProtocolExchange.Type.REPLY)
+                .exchangeType(adaptedReply.getType())
+                .exchange(adaptedReply)
+                .build();
+            return writeToSocket(adaptedReply.getCommandId(), protocolExchange);
+        });
     }
 
     private Completable writeToSocket(final String commandId, final ProtocolExchange websocketExchange) {

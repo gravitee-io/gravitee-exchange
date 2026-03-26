@@ -63,27 +63,26 @@ public class WebSocketControllerChannel extends AbstractWebSocketChannel impleme
 
     @Override
     public Completable close() {
-        return Completable
-            .defer(() -> {
-                if (!webSocket.isClosed()) {
-                    return send(new GoodByeCommand(new GoodByeCommandPayload(targetId, true)), true)
-                        .ignoreElement()
-                        .onErrorResumeNext(throwable -> {
-                            if (throwable instanceof ChannelClosedException) {
-                                log.debug(
-                                    "GoodBye command successfully sent for channel '{}' for target '{}' got closed normally",
-                                    id,
-                                    targetId
-                                );
-                                return Completable.complete();
-                            } else {
-                                log.debug("Unable to send GoodBye command for channel '{}' for target '{}'", id, targetId);
-                                return Completable.error(throwable);
-                            }
-                        });
-                }
-                return Completable.complete();
-            })
+        return Completable.defer(() -> {
+            if (!webSocket.isClosed()) {
+                return send(new GoodByeCommand(new GoodByeCommandPayload(targetId, true)), true)
+                    .ignoreElement()
+                    .onErrorResumeNext(throwable -> {
+                        if (throwable instanceof ChannelClosedException) {
+                            log.debug(
+                                "GoodBye command successfully sent for channel '{}' for target '{}' got closed normally",
+                                id,
+                                targetId
+                            );
+                            return Completable.complete();
+                        } else {
+                            log.debug("Unable to send GoodBye command for channel '{}' for target '{}'", id, targetId);
+                            return Completable.error(throwable);
+                        }
+                    });
+            }
+            return Completable.complete();
+        })
             .onErrorComplete()
             .doFinally(this::cleanChannel);
     }

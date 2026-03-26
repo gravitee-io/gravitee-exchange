@@ -130,8 +130,7 @@ class ControllerTargetsMetricsEndpointTest extends AbstractMetricEndpointTest {
     @Test
     void should_return_empty_array_when_no_metrics_even_with_orphan_batch(Vertx vertx, VertxTestContext context) {
         when(exchangeController.channelsMetricsByTarget()).thenReturn(Flowable.empty());
-        BatchMetric orphanBatch = BatchMetric
-            .builder()
+        BatchMetric orphanBatch = BatchMetric.builder()
             .id("id1")
             .key("key1")
             .status(BatchStatus.SUCCEEDED)
@@ -140,8 +139,9 @@ class ControllerTargetsMetricsEndpointTest extends AbstractMetricEndpointTest {
             .maxRetry(2)
             .lastRetryAt(Instant.now())
             .build();
-        when(exchangeController.batchsMetricsByTarget())
-            .thenReturn(Flowable.just(TargetBatchsMetric.builder().id("orphan").batchs(List.of(orphanBatch)).build()));
+        when(exchangeController.batchsMetricsByTarget()).thenReturn(
+            Flowable.just(TargetBatchsMetric.builder().id("orphan").batchs(List.of(orphanBatch)).build())
+        );
 
         HttpClient httpClient = vertx.createHttpClient();
         httpClient
@@ -166,8 +166,7 @@ class ControllerTargetsMetricsEndpointTest extends AbstractMetricEndpointTest {
         ChannelMetric channelMetric2 = ChannelMetric.builder().id("id2").active(true).primary(true).build();
         TargetChannelsMetric targetChannelsMetric2 = TargetChannelsMetric.builder().id("target2").channels(List.of(channelMetric2)).build();
         when(exchangeController.channelsMetricsByTarget()).thenReturn(Flowable.just(targetChannelsMetric1, targetChannelsMetric2));
-        BatchMetric batchMetric1 = BatchMetric
-            .builder()
+        BatchMetric batchMetric1 = BatchMetric.builder()
             .id("id1")
             .key("key1")
             .status(BatchStatus.SUCCEEDED)
@@ -176,8 +175,7 @@ class ControllerTargetsMetricsEndpointTest extends AbstractMetricEndpointTest {
             .maxRetry(2)
             .lastRetryAt(Instant.now())
             .build();
-        BatchMetric batchMetric2 = BatchMetric
-            .builder()
+        BatchMetric batchMetric2 = BatchMetric.builder()
             .id("id2")
             .key("key2")
             .status(BatchStatus.PENDING)
@@ -186,13 +184,12 @@ class ControllerTargetsMetricsEndpointTest extends AbstractMetricEndpointTest {
             .maxRetry(10)
             .lastRetryAt(Instant.now())
             .build();
-        when(exchangeController.batchsMetricsByTarget())
-            .thenReturn(
-                Flowable.just(
-                    TargetBatchsMetric.builder().id("target").batchs(List.of(batchMetric1)).build(),
-                    TargetBatchsMetric.builder().id("target2").batchs(List.of(batchMetric2)).build()
-                )
-            );
+        when(exchangeController.batchsMetricsByTarget()).thenReturn(
+            Flowable.just(
+                TargetBatchsMetric.builder().id("target").batchs(List.of(batchMetric1)).build(),
+                TargetBatchsMetric.builder().id("target2").batchs(List.of(batchMetric2)).build()
+            )
+        );
 
         HttpClient httpClient = vertx.createHttpClient();
         httpClient

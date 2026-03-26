@@ -90,12 +90,15 @@ class PrimaryChannelManagerTest {
 
         CacheConfiguration cacheConfiguration = CacheConfiguration.builder().distributed(true).build();
         primaryChannelCache = cacheManager.getOrCreateCache(identifyConfiguration.identifyName(PRIMARY_CHANNEL_CACHE), cacheConfiguration);
-        primaryChannelCandidateCache =
-            cacheManager.getOrCreateCache(identifyConfiguration.identifyName(PRIMARY_CHANNEL_CANDIDATE_CACHE), cacheConfiguration);
+        primaryChannelCandidateCache = cacheManager.getOrCreateCache(
+            identifyConfiguration.identifyName(PRIMARY_CHANNEL_CANDIDATE_CACHE),
+            cacheConfiguration
+        );
         primaryChannelElectedEventTopic = clusterManager.topic(identifyConfiguration.identifyName(PRIMARY_CHANNEL_ELECTED_EVENTS_TOPIC));
         primaryChannelEvictedEventTopic = clusterManager.topic(identifyConfiguration.identifyName(PRIMARY_CHANNEL_EVICTED_EVENTS_TOPIC));
-        primaryChannelHealthcheckEventTopic =
-            clusterManager.topic(identifyConfiguration.identifyName(PRIMARY_CHANNEL_CANDIDATE_HEALTHCHECK_EVENTS_TOPIC));
+        primaryChannelHealthcheckEventTopic = clusterManager.topic(
+            identifyConfiguration.identifyName(PRIMARY_CHANNEL_CANDIDATE_HEALTHCHECK_EVENTS_TOPIC)
+        );
     }
 
     @AfterEach
@@ -206,8 +209,7 @@ class PrimaryChannelManagerTest {
                 clusterManager
                     .queue(content.responseQueue())
                     .add(
-                        PrimaryChannelCandidateHealthcheckEvent.Response
-                            .builder()
+                        PrimaryChannelCandidateHealthcheckEvent.Response.builder()
                             .requestEventTime(content.eventTime())
                             .channelId("channelId")
                             .targetId("targetId")
@@ -234,12 +236,13 @@ class PrimaryChannelManagerTest {
         primaryChannelHealthcheckEventTopic.addMessageListener(message -> {
             checkpoint.flag();
             PrimaryChannelCandidateHealthcheckEvent content = message.content();
-            await().atLeast(1000, TimeUnit.MILLISECONDS).until(() -> true);
+            await()
+                .atLeast(1000, TimeUnit.MILLISECONDS)
+                .until(() -> true);
             clusterManager
                 .queue(content.responseQueue())
                 .add(
-                    PrimaryChannelCandidateHealthcheckEvent.Response
-                        .builder()
+                    PrimaryChannelCandidateHealthcheckEvent.Response.builder()
                         .requestEventTime(Instant.MIN)
                         .channelId("channelId")
                         .targetId("targetId")
