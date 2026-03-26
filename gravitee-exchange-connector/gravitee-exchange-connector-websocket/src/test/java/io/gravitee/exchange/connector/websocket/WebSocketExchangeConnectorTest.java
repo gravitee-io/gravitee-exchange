@@ -54,16 +54,15 @@ class WebSocketExchangeConnectorTest extends AbstractWebSocketConnectorTest {
             vertx,
             new WebSocketClientConfiguration(new IdentifyConfiguration(environment))
         );
-        this.websocketExchangeConnector =
-            new WebSocketExchangeConnector(
-                ProtocolVersion.V1,
-                List.of(),
-                List.of(),
-                List.of(),
-                vertx,
-                webSocketConnectorClientFactory,
-                exchangeSerDe
-            );
+        this.websocketExchangeConnector = new WebSocketExchangeConnector(
+            ProtocolVersion.V1,
+            List.of(),
+            List.of(),
+            List.of(),
+            vertx,
+            webSocketConnectorClientFactory,
+            exchangeSerDe
+        );
     }
 
     @AfterEach
@@ -92,29 +91,27 @@ class WebSocketExchangeConnectorTest extends AbstractWebSocketConnectorTest {
     void should_not_reconnect_after_hello_handshake_failure(VertxTestContext testContext) throws InterruptedException {
         AtomicReference<ServerWebSocket> ws = new AtomicReference<>();
         Checkpoint checkpoint = testContext.checkpoint(1);
-        websocketServerHandler =
-            serverWebSocket -> {
-                ProtocolAdapter protocolAdapter = protocolAdapter(ProtocolVersion.V1);
-                serverWebSocket.binaryMessageHandler(buffer -> {
-                    ProtocolExchange websocketExchange = protocolAdapter.read(buffer);
-                    Command<?> command = websocketExchange.asCommand();
-                    HelloReply helloReply = new HelloReply(command.getId(), "onError");
-                    serverWebSocket
-                        .writeBinaryMessage(
-                            protocolAdapter.write(
-                                ProtocolExchange
-                                    .builder()
-                                    .type(ProtocolExchange.Type.REPLY)
-                                    .exchangeType(helloReply.getType())
-                                    .exchange(helloReply)
-                                    .build()
-                            )
+        websocketServerHandler = serverWebSocket -> {
+            ProtocolAdapter protocolAdapter = protocolAdapter(ProtocolVersion.V1);
+            serverWebSocket.binaryMessageHandler(buffer -> {
+                ProtocolExchange websocketExchange = protocolAdapter.read(buffer);
+                Command<?> command = websocketExchange.asCommand();
+                HelloReply helloReply = new HelloReply(command.getId(), "onError");
+                serverWebSocket
+                    .writeBinaryMessage(
+                        protocolAdapter.write(
+                            ProtocolExchange.builder()
+                                .type(ProtocolExchange.Type.REPLY)
+                                .exchangeType(helloReply.getType())
+                                .exchange(helloReply)
+                                .build()
                         )
-                        .subscribe();
-                });
-                ws.set(serverWebSocket);
-                checkpoint.flag();
-            };
+                    )
+                    .subscribe();
+            });
+            ws.set(serverWebSocket);
+            checkpoint.flag();
+        };
         // Initialize first
         websocketExchangeConnector.initialize().test().awaitDone(10, TimeUnit.SECONDS).assertError(WebSocketConnectorException.class);
 
@@ -125,12 +122,11 @@ class WebSocketExchangeConnectorTest extends AbstractWebSocketConnectorTest {
     void should_retry_initialize_on_retryable_exception(VertxTestContext testContext) throws InterruptedException {
         AtomicReference<ServerWebSocket> ws = new AtomicReference<>();
         Checkpoint checkpoint = testContext.checkpoint(2);
-        websocketServerHandler =
-            serverWebSocket -> {
-                replyHello(serverWebSocket, protocolAdapter(ProtocolVersion.V1));
-                ws.set(serverWebSocket);
-                checkpoint.flag();
-            };
+        websocketServerHandler = serverWebSocket -> {
+            replyHello(serverWebSocket, protocolAdapter(ProtocolVersion.V1));
+            ws.set(serverWebSocket);
+            checkpoint.flag();
+        };
         // Initialize first
         websocketExchangeConnector.initialize().test().awaitDone(10, TimeUnit.SECONDS).assertComplete();
 

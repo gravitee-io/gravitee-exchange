@@ -33,13 +33,13 @@ import io.gravitee.exchange.connector.websocket.exception.WebSocketConnectorExce
 import io.reactivex.rxjava3.observers.TestObserver;
 import io.reactivex.rxjava3.plugins.RxJavaPlugins;
 import io.reactivex.rxjava3.schedulers.TestScheduler;
+import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.WebSocketConnectOptions;
 import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
-import io.vertx.core.buffer.Buffer;
-import io.vertx.rxjava3.core.http.WebSocketClient;
 import io.vertx.rxjava3.core.http.ServerWebSocket;
+import io.vertx.rxjava3.core.http.WebSocketClient;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -102,8 +102,8 @@ class WebSocketConnectorChannelTest extends AbstractWebSocketConnectorTest {
         // set calls to Schedulers.computation() to use our test scheduler
         RxJavaPlugins.setComputationSchedulerHandler(ignore -> testScheduler);
         // Advance in time when hello command is received so reply will timeout
-        AbstractWebSocketTest.websocketServerHandler =
-            ws -> ws.binaryMessageHandler(event -> testScheduler.advanceTimeBy(60, TimeUnit.SECONDS));
+        AbstractWebSocketTest.websocketServerHandler = ws ->
+            ws.binaryMessageHandler(event -> testScheduler.advanceTimeBy(60, TimeUnit.SECONDS));
 
         TestObserver<Void> testObserver = webSocketClient
             .rxConnect(webSocketConnectOptions)
@@ -126,33 +126,27 @@ class WebSocketConnectorChannelTest extends AbstractWebSocketConnectorTest {
     @EnumSource(ProtocolVersion.class)
     void should_send_command_and_receive_reply(ProtocolVersion protocolVersion) {
         ProtocolAdapter protocolAdapter = protocolAdapter(protocolVersion);
-        AbstractWebSocketTest.websocketServerHandler =
-            serverWebSocket ->
-                this.replyHello(
-                        serverWebSocket,
-                        protocolAdapter,
-                        Map.of(
-                            DummyCommand.COMMAND_TYPE,
-                            command -> {
-                                DummyReply dummyReply = new DummyReply(command.getId(), new DummyPayload());
-                                serverWebSocket
-                                    .writeBinaryMessage(
-                                        protocolAdapter.write(
-                                            ProtocolExchange
-                                                .builder()
-                                                .type(ProtocolExchange.Type.REPLY)
-                                                .exchangeType(dummyReply.getType())
-                                                .exchange(dummyReply)
-                                                .build()
-                                        )
-                                    )
-                                    .subscribe();
-                            }
+        AbstractWebSocketTest.websocketServerHandler = serverWebSocket ->
+            this.replyHello(
+                serverWebSocket,
+                protocolAdapter,
+                Map.of(DummyCommand.COMMAND_TYPE, command -> {
+                    DummyReply dummyReply = new DummyReply(command.getId(), new DummyPayload());
+                    serverWebSocket
+                        .writeBinaryMessage(
+                            protocolAdapter.write(
+                                ProtocolExchange.builder()
+                                    .type(ProtocolExchange.Type.REPLY)
+                                    .exchangeType(dummyReply.getType())
+                                    .exchange(dummyReply)
+                                    .build()
+                            )
                         )
-                    );
+                        .subscribe();
+                })
+            );
         DummyCommand command = new DummyCommand(new DummyPayload());
-        AbstractWebSocketTest
-            .rxWebSocket()
+        AbstractWebSocketTest.rxWebSocket()
             .flatMap(webSocket -> {
                 WebSocketConnectorChannel webSocketConnectorChannel = new WebSocketConnectorChannel(
                     List.of(),
@@ -181,17 +175,15 @@ class WebSocketConnectorChannelTest extends AbstractWebSocketConnectorTest {
         // set calls to Schedulers.computation() to use our test scheduler
         RxJavaPlugins.setComputationSchedulerHandler(ignore -> testScheduler);
         // Advance in time when primary command is received so reply will timeout
-        AbstractWebSocketTest.websocketServerHandler =
-            serverWebSocket ->
-                this.replyHello(
-                        serverWebSocket,
-                        protocolAdapter,
-                        Map.of(DummyCommand.COMMAND_TYPE, command -> testScheduler.advanceTimeBy(60, TimeUnit.SECONDS))
-                    );
+        AbstractWebSocketTest.websocketServerHandler = serverWebSocket ->
+            this.replyHello(
+                serverWebSocket,
+                protocolAdapter,
+                Map.of(DummyCommand.COMMAND_TYPE, command -> testScheduler.advanceTimeBy(60, TimeUnit.SECONDS))
+            );
         DummyCommand command = new DummyCommand(new DummyPayload());
 
-        AbstractWebSocketTest
-            .rxWebSocket()
+        AbstractWebSocketTest.rxWebSocket()
             .flatMap(webSocket -> {
                 WebSocketConnectorChannel webSocketConnectorChannel = new WebSocketConnectorChannel(
                     List.of(),
@@ -213,15 +205,13 @@ class WebSocketConnectorChannelTest extends AbstractWebSocketConnectorTest {
     void should_receive_pong(ProtocolVersion protocolVersion, VertxTestContext vertxTestContext) throws InterruptedException {
         ProtocolAdapter protocolAdapter = protocolAdapter(protocolVersion);
         Checkpoint pongCheckpoint = vertxTestContext.checkpoint();
-        AbstractWebSocketTest.websocketServerHandler =
-            serverWebSocket -> {
-                this.replyHello(serverWebSocket, protocolAdapter);
-                serverWebSocket.pongHandler(event -> pongCheckpoint.flag());
-                serverWebSocket.writePing(Buffer.buffer("ping"));
-            };
+        AbstractWebSocketTest.websocketServerHandler = serverWebSocket -> {
+            this.replyHello(serverWebSocket, protocolAdapter);
+            serverWebSocket.pongHandler(event -> pongCheckpoint.flag());
+            serverWebSocket.writePing(Buffer.buffer("ping"));
+        };
 
-        AbstractWebSocketTest
-            .rxWebSocket()
+        AbstractWebSocketTest.rxWebSocket()
             .flatMapCompletable(webSocket -> {
                 WebSocketConnectorChannel webSocketConnectorChannel = new WebSocketConnectorChannel(
                     List.of(),
@@ -246,13 +236,11 @@ class WebSocketConnectorChannelTest extends AbstractWebSocketConnectorTest {
         Checkpoint handlerCheckpoint = vertxTestContext.checkpoint();
 
         AtomicReference<ServerWebSocket> webSocketAtomicReference = new AtomicReference<>();
-        AbstractWebSocketTest.websocketServerHandler =
-            ws -> {
-                webSocketAtomicReference.set(ws);
-                this.replyHello(ws, protocolAdapter);
-            };
-        AbstractWebSocketTest
-            .rxWebSocket()
+        AbstractWebSocketTest.websocketServerHandler = ws -> {
+            webSocketAtomicReference.set(ws);
+            this.replyHello(ws, protocolAdapter);
+        };
+        AbstractWebSocketTest.rxWebSocket()
             .flatMapCompletable(webSocket -> {
                 WebSocketConnectorChannel webSocketConnectorChannel = new WebSocketConnectorChannel(
                     List.of(new DummyCommandHandler(c -> handlerCheckpoint.flag())),
@@ -272,8 +260,7 @@ class WebSocketConnectorChannelTest extends AbstractWebSocketConnectorTest {
             .get()
             .writeBinaryMessage(
                 protocolAdapter.write(
-                    ProtocolExchange
-                        .builder()
+                    ProtocolExchange.builder()
                         .type(ProtocolExchange.Type.COMMAND)
                         .exchangeType(DummyCommand.COMMAND_TYPE)
                         .exchange(new DummyCommand(new DummyPayload()))
@@ -295,26 +282,25 @@ class WebSocketConnectorChannelTest extends AbstractWebSocketConnectorTest {
             .setPort(AbstractWebSocketTest.serverPort)
             .setURI(WebsocketControllerConstants.EXCHANGE_CONTROLLER_PATH);
         AtomicReference<WebSocketConnectorChannel> webSocketConnectorChannel = new AtomicReference<>();
-        AbstractWebSocketTest.websocketServerHandler =
-            ws ->
-                this.replyHello(
-                        ws,
-                        protocolAdapter,
-                        Map.of(
-                            HelloCommand.COMMAND_TYPE,
-                            command -> {
-                                if (webSocketConnectorChannel.get().hasPendingCommands()) {
-                                    checkpoint.flag();
-                                }
-                            },
-                            io.gravitee.exchange.api.websocket.protocol.legacy.hello.HelloCommand.COMMAND_TYPE,
-                            command -> {
-                                if (webSocketConnectorChannel.get().hasPendingCommands()) {
-                                    checkpoint.flag();
-                                }
-                            }
-                        )
-                    );
+        AbstractWebSocketTest.websocketServerHandler = ws ->
+            this.replyHello(
+                ws,
+                protocolAdapter,
+                Map.of(
+                    HelloCommand.COMMAND_TYPE,
+                    command -> {
+                        if (webSocketConnectorChannel.get().hasPendingCommands()) {
+                            checkpoint.flag();
+                        }
+                    },
+                    io.gravitee.exchange.api.websocket.protocol.legacy.hello.HelloCommand.COMMAND_TYPE,
+                    command -> {
+                        if (webSocketConnectorChannel.get().hasPendingCommands()) {
+                            checkpoint.flag();
+                        }
+                    }
+                )
+            );
         webSocketClient
             .rxConnect(webSocketConnectOptions)
             .flatMapCompletable(webSocket -> {
@@ -338,25 +324,20 @@ class WebSocketConnectorChannelTest extends AbstractWebSocketConnectorTest {
 
         AtomicReference<WebSocketConnectorChannel> webSocketConnectorChannelRef = new AtomicReference<>();
         AtomicReference<ServerWebSocket> webSocketRef = new AtomicReference<>();
-        AbstractWebSocketTest.websocketServerHandler =
-            ws -> {
-                webSocketRef.set(ws);
-                this.replyHello(
-                        ws,
-                        protocolAdapter,
-                        Map.of(),
-                        Map.of(
-                            DummyCommand.COMMAND_TYPE,
-                            r -> {
-                                if (!webSocketConnectorChannelRef.get().hasPendingCommands()) {
-                                    checkpoint.flag();
-                                }
-                            }
-                        )
-                    );
-            };
-        AbstractWebSocketTest
-            .rxWebSocket()
+        AbstractWebSocketTest.websocketServerHandler = ws -> {
+            webSocketRef.set(ws);
+            this.replyHello(
+                ws,
+                protocolAdapter,
+                Map.of(),
+                Map.of(DummyCommand.COMMAND_TYPE, r -> {
+                    if (!webSocketConnectorChannelRef.get().hasPendingCommands()) {
+                        checkpoint.flag();
+                    }
+                })
+            );
+        };
+        AbstractWebSocketTest.rxWebSocket()
             .flatMapCompletable(webSocket -> {
                 webSocketConnectorChannelRef.set(
                     new WebSocketConnectorChannel(
@@ -382,8 +363,7 @@ class WebSocketConnectorChannelTest extends AbstractWebSocketConnectorTest {
             .get()
             .writeBinaryMessage(
                 protocolAdapter.write(
-                    ProtocolExchange
-                        .builder()
+                    ProtocolExchange.builder()
                         .type(ProtocolExchange.Type.COMMAND)
                         .exchangeType(DummyCommand.COMMAND_TYPE)
                         .exchange(new DummyCommand(new DummyPayload()))

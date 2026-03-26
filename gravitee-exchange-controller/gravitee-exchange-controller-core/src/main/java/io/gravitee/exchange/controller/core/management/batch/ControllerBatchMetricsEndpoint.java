@@ -57,8 +57,7 @@ public class ControllerBatchMetricsEndpoint implements ManagementEndpoint {
                 log.error("[{}] Unable to retrieve batch metrics for the given id '{}'", identifyConfiguration.id(), batchId, throwable);
                 write(
                     ctx,
-                    ManagementError
-                        .builder()
+                    ManagementError.builder()
                         .code(500)
                         .message("Unable to retrieve batch metrics for the given id [%s]".formatted(batchId))
                         .build()

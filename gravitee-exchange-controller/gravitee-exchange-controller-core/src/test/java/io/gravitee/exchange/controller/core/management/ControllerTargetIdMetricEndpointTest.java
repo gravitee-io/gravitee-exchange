@@ -105,8 +105,7 @@ class ControllerTargetIdMetricEndpointTest extends AbstractMetricEndpointTest {
     void should_return_target_metric_for_specific_target(Vertx vertx, VertxTestContext context) {
         ChannelMetric channelMetric = ChannelMetric.builder().id("id").active(true).primary(true).build();
         when(exchangeController.channelsMetricsForTarget("target")).thenReturn(Flowable.just(channelMetric));
-        BatchMetric batchMetric = BatchMetric
-            .builder()
+        BatchMetric batchMetric = BatchMetric.builder()
             .id("id1")
             .key("key1")
             .status(BatchStatus.SUCCEEDED)

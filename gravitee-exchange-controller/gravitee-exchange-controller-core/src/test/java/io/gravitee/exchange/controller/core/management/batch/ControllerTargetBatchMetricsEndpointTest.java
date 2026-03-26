@@ -101,8 +101,7 @@ class ControllerTargetBatchMetricsEndpointTest extends AbstractMetricEndpointTes
 
     @Test
     void should_return_batch_metric_for_target(Vertx vertx, VertxTestContext context) {
-        BatchMetric batch = BatchMetric
-            .builder()
+        BatchMetric batch = BatchMetric.builder()
             .id("id")
             .key("key")
             .targetId("targetId")

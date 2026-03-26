@@ -86,8 +86,7 @@ public class Batch implements Serializable {
 
     public boolean shouldRetryNow(Long retryDelayMs) {
         Instant now = Instant.now();
-        return Optional
-            .ofNullable(this.lastRetryAt)
+        return Optional.ofNullable(this.lastRetryAt)
             .map(t -> now.compareTo(t.plusMillis(this.retry * retryDelayMs)))
             .map(compare -> compare >= 0)
             .orElse(true);
@@ -96,7 +95,9 @@ public class Batch implements Serializable {
     public Batch start() {
         Instant now = Instant.now();
         this.status = BatchStatus.IN_PROGRESS;
-        this.retry = Optional.ofNullable(this.retry).map(r -> r + 1).orElse(0);
+        this.retry = Optional.ofNullable(this.retry)
+            .map(r -> r + 1)
+            .orElse(0);
         this.lastRetryAt = now;
         return this;
     }
@@ -122,27 +123,28 @@ public class Batch implements Serializable {
 
     private Batch markCommand(final String commandId, final CommandStatus commandStatus, final String errorDetails) {
         this.batchCommands.forEach(c -> {
-                if (Objects.equals(c.command().getId(), commandId)) {
-                    c.status(commandStatus).errorDetails(errorDetails);
-                }
-            });
+            if (Objects.equals(c.command().getId(), commandId)) {
+                c.status(commandStatus).errorDetails(errorDetails);
+            }
+        });
         this.status = computeStatus();
         return this;
     }
 
     public Batch setCommandReply(final String commandId, final Reply<?> reply) {
         this.batchCommands.forEach(c -> {
-                if (Objects.equals(c.command().getId(), commandId)) {
-                    c.status(reply.getCommandStatus()).reply(reply).errorDetails(reply.getErrorDetails());
-                }
-            });
+            if (Objects.equals(c.command().getId(), commandId)) {
+                c.status(reply.getCommandStatus()).reply(reply).errorDetails(reply.getErrorDetails());
+            }
+        });
         this.status = computeStatus();
         return this;
     }
 
     private BatchStatus computeStatus() {
-        boolean isActionSucceeded =
-            this.batchCommands.stream().allMatch(batchCommand -> batchCommand.status().equals(CommandStatus.SUCCEEDED));
+        boolean isActionSucceeded = this.batchCommands.stream().allMatch(batchCommand ->
+            batchCommand.status().equals(CommandStatus.SUCCEEDED)
+        );
         if (isActionSucceeded) {
             return BatchStatus.SUCCEEDED;
         }

@@ -45,16 +45,13 @@ public class PrimaryChannelCandidateRegistry {
         if (channelId == null) {
             throw new IllegalArgumentException("Channel id cannot be null");
         }
-        store.compute(
-            targetId,
-            (key, channels) -> {
-                if (channels == null) {
-                    channels = new HashSet<>();
-                }
-                channels.add(channelId);
-                return channels;
+        store.compute(targetId, (key, channels) -> {
+            if (channels == null) {
+                channels = new HashSet<>();
             }
-        );
+            channels.add(channelId);
+            return channels;
+        });
     }
 
     public void remove(final String targetId, final String channelId) {
@@ -64,18 +61,15 @@ public class PrimaryChannelCandidateRegistry {
         if (channelId == null) {
             throw new IllegalArgumentException("Channel id cannot be null");
         }
-        store.compute(
-            targetId,
-            (key, channels) -> {
-                if (channels != null) {
-                    channels.remove(channelId);
+        store.compute(targetId, (key, channels) -> {
+            if (channels != null) {
+                channels.remove(channelId);
 
-                    if (channels.isEmpty()) {
-                        return null;
-                    }
+                if (channels.isEmpty()) {
+                    return null;
                 }
-                return channels;
             }
-        );
+            return channels;
+        });
     }
 }

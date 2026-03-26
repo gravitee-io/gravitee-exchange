@@ -81,19 +81,17 @@ public class WebSocketExchangeConnector extends EmbeddedExchangeConnector {
 
     @Override
     public Completable initialize() {
-        return Completable
-            .fromRunnable(() -> setPrimary(false))
+        return Completable.fromRunnable(() -> setPrimary(false))
             .andThen(this.connect())
             .flatMapCompletable(webSocket -> {
-                connectorChannel =
-                    new WebSocketConnectorChannel(
-                        commandHandlers,
-                        commandAdapters,
-                        replyAdapters,
-                        vertx,
-                        webSocket,
-                        protocolVersion.adapterFactory().apply(exchangeSerDe)
-                    );
+                connectorChannel = new WebSocketConnectorChannel(
+                    commandHandlers,
+                    commandAdapters,
+                    replyAdapters,
+                    vertx,
+                    webSocket,
+                    protocolVersion.adapterFactory().apply(exchangeSerDe)
+                );
                 return connectorChannel
                     .initialize()
                     .doOnComplete(() ->
@@ -119,8 +117,7 @@ public class WebSocketExchangeConnector extends EmbeddedExchangeConnector {
     }
 
     private Single<WebSocket> connect() {
-        return Maybe
-            .fromCallable(webSocketConnectorClientFactory::nextEndpoint)
+        return Maybe.fromCallable(webSocketConnectorClientFactory::nextEndpoint)
             .switchIfEmpty(
                 Maybe.fromRunnable(() -> {
                     throw new WebSocketConnectorException(
@@ -169,8 +166,9 @@ public class WebSocketExchangeConnector extends EmbeddedExchangeConnector {
         if (commandHandlers != null) {
             commandHandlers.forEach(commandHandler -> {
                 if (
-                    this.commandHandlers.stream()
-                        .noneMatch(newCommandHandler -> newCommandHandler.supportType().equals(commandHandler.supportType()))
+                    this.commandHandlers.stream().noneMatch(newCommandHandler ->
+                        newCommandHandler.supportType().equals(commandHandler.supportType())
+                    )
                 ) {
                     this.commandHandlers.add(commandHandler);
                 }

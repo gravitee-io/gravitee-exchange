@@ -74,8 +74,7 @@ public class WebSocketRequestHandler implements io.vertx.core.Handler<io.vertx.r
         HttpServerRequest request = routingContext.request();
         request.pause();
 
-        Single
-            .fromCallable(() -> controllerAuthentication.authenticate(request))
+        Single.fromCallable(() -> controllerAuthentication.authenticate(request))
             .subscribeOn(RxHelper.blockingScheduler(vertx))
             .observeOn(RxHelper.scheduler(vertx))
             .subscribe(

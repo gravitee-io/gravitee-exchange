@@ -202,10 +202,9 @@ class DefaultExchangeSerDeTest {
         void should_serialize_unknown_reply() {
             UnknownReply unknownReply = new UnknownReply("commandId", "error");
             String json = cut.serialize(ProtocolVersion.V1, unknownReply);
-            assertThat(json)
-                .isEqualTo(
-                    "{\"commandId\":\"commandId\",\"type\":\"UNKNOWN\",\"commandStatus\":\"ERROR\",\"errorDetails\":\"error\",\"payload\":{}}"
-                );
+            assertThat(json).isEqualTo(
+                "{\"commandId\":\"commandId\",\"type\":\"UNKNOWN\",\"commandStatus\":\"ERROR\",\"errorDetails\":\"error\",\"payload\":{}}"
+            );
         }
 
         @ParameterizedTest
