@@ -29,10 +29,10 @@ import io.vertx.core.http.HttpServerOptions;
 import io.vertx.core.http.WebSocketConnectOptions;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
-import io.vertx.rxjava3.core.http.HttpClient;
 import io.vertx.rxjava3.core.http.HttpServer;
 import io.vertx.rxjava3.core.http.ServerWebSocket;
 import io.vertx.rxjava3.core.http.WebSocket;
+import io.vertx.rxjava3.core.http.WebSocketClient;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -104,11 +104,11 @@ public abstract class AbstractWebSocketTest {
     }
 
     protected static Single<WebSocket> rxWebSocket() {
-        HttpClient httpClient = vertx.createHttpClient();
+        WebSocketClient webSocketClient = vertx.createWebSocketClient();
         WebSocketConnectOptions webSocketConnectOptions = new WebSocketConnectOptions()
             .setHost("localhost")
             .setPort(serverPort)
             .setURI(WebsocketControllerConstants.EXCHANGE_CONTROLLER_PATH);
-        return httpClient.rxWebSocket(webSocketConnectOptions);
+        return webSocketClient.rxConnect(webSocketConnectOptions);
     }
 }

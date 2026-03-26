@@ -48,7 +48,7 @@ import io.reactivex.rxjava3.schedulers.TestScheduler;
 import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
-import io.vertx.rxjava3.core.buffer.Buffer;
+import io.vertx.core.buffer.Buffer;
 import io.vertx.rxjava3.core.http.ServerWebSocket;
 import io.vertx.rxjava3.core.http.WebSocketBase;
 import java.util.ArrayList;

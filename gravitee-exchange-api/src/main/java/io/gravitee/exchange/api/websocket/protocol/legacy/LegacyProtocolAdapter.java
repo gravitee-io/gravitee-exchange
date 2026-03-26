@@ -33,7 +33,7 @@ import io.gravitee.exchange.api.websocket.protocol.legacy.hello.HelloReplyAdapte
 import io.gravitee.exchange.api.websocket.protocol.legacy.hello.LegacyHelloReplyAdapter;
 import io.gravitee.exchange.api.websocket.protocol.legacy.ignored.NoReplyAdapter;
 import io.gravitee.exchange.api.websocket.protocol.legacy.primary.PrimaryCommandAdapter;
-import io.vertx.rxjava3.core.buffer.Buffer;
+import io.vertx.core.buffer.Buffer;
 import java.util.List;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;

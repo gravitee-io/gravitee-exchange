@@ -273,6 +273,8 @@ class ChannelManagerTest {
             .test()
             .awaitDone(10, TimeUnit.SECONDS);
         assertThat(vertxTestContext.awaitCompletion(10, TimeUnit.SECONDS)).isTrue();
+        // Allow time for async metric updates to complete after primary election events
+        Thread.sleep(200);
 
         cut
             .channelsMetricsByTarget()
