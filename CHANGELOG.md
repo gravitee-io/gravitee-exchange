@@ -1,3 +1,16 @@
+# [3.0.0-alpha.1](https://github.com/gravitee-io/gravitee-exchange/compare/2.0.1...3.0.0-alpha.1) (2026-04-01)
+
+
+### Features
+
+* bumped AM version to 4.12.0-alpha.1 ([07356f0](https://github.com/gravitee-io/gravitee-exchange/commit/07356f0401665b948d703c469376c2f9a509603e))
+* migrate to Vert.x 5 and upgrade to JDK 25 ([f651b50](https://github.com/gravitee-io/gravitee-exchange/commit/f651b50c6d1d1155951bf95446e23bb883364a30))
+
+
+### BREAKING CHANGES
+
+* Vertx5, JDK25
+
 ## [2.0.1](https://github.com/gravitee-io/gravitee-exchange/compare/2.0.0...2.0.1) (2026-02-10)
 
 
