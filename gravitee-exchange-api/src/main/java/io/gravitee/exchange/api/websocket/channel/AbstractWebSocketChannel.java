@@ -250,6 +250,7 @@ public abstract class AbstractWebSocketChannel implements Channel {
                         ((SingleEmitter<Reply<?>>) replyEmitter).onSuccess(adaptedReply);
                     }
                     if (adaptedReply.stopOnErrorStatus() && adaptedReply.getCommandStatus() == ERROR) {
+                        log.warn("Closing WS after error reply type={} details={}", adaptedReply.getType(), adaptedReply.getErrorDetails());
                         webSocket.close().subscribe();
                     }
                 })
@@ -276,6 +277,7 @@ public abstract class AbstractWebSocketChannel implements Channel {
     @Override
     public Completable close() {
         return Completable.fromRunnable(() -> {
+            log.debug("Channel.close() called");
             webSocket.close((short) 1000).subscribe();
             this.cleanChannel();
         });

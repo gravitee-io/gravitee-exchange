@@ -95,12 +95,20 @@ public class WebSocketExchangeConnector extends EmbeddedExchangeConnector {
                 return connectorChannel
                     .initialize()
                     .doOnComplete(() ->
-                        webSocket.closeHandler(v -> {
-                            log.warn("Exchange Connector has been closed with status code '{}'", webSocket.closeStatusCode());
-                            if (shouldReconnect(webSocket)) {
-                                initialize().onErrorComplete().subscribeOn(Schedulers.io()).subscribe();
-                            }
-                        })
+                        webSocket
+                            .exceptionHandler(throwable -> {
+                                log.warn("An error occurred while handling the WebSocket", throwable);
+                            })
+                            .closeHandler(v -> {
+                                log.warn(
+                                    "Exchange Connector has been closed with status code '{}' - {}",
+                                    webSocket.closeStatusCode(),
+                                    webSocket.closeReason()
+                                );
+                                if (shouldReconnect(webSocket)) {
+                                    initialize().onErrorComplete().subscribeOn(Schedulers.io()).subscribe();
+                                }
+                            })
                     );
             })
             .retryWhen(
