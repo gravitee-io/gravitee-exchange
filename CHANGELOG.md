@@ -1,3 +1,10 @@
+# [3.0.0-alpha.2](https://github.com/gravitee-io/gravitee-exchange/compare/3.0.0-alpha.1...3.0.0-alpha.2) (2026-04-22)
+
+
+### Bug Fixes
+
+* **connector:** retain WebSocketClient ref to avoid GC-triggered close ([e4c6135](https://github.com/gravitee-io/gravitee-exchange/commit/e4c6135580d0ebe7a7a426e3cf17422f5aa0d0b9))
+
 # [3.0.0-alpha.1](https://github.com/gravitee-io/gravitee-exchange/compare/2.0.1...3.0.0-alpha.1) (2026-04-01)
 
 
