@@ -48,6 +48,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayNameGeneration;
 import org.junit.jupiter.api.DisplayNameGenerator;
+import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -153,7 +154,7 @@ class PrimaryChannelManagerTest {
         cut.isPrimaryChannelFor("channelId", "targetId").test().awaitDone(1, TimeUnit.SECONDS).assertValue(false);
     }
 
-    @Test
+    @RepeatedTest(10)
     void should_reelect_after_evicted_primary_channel() {
         AtomicInteger channelElectedEventsCount = new AtomicInteger(0);
         primaryChannelElectedEventTopic.addMessageListener(message -> {
@@ -172,14 +173,11 @@ class PrimaryChannelManagerTest {
             .awaitDone(10, TimeUnit.SECONDS)
             .assertComplete();
 
-        primaryChannelCandidateCache
-            .rxGet("targetId")
-            .test()
-            .awaitDone(10, TimeUnit.SECONDS)
-            .assertValue(strings -> {
-                assertThat(strings).hasSize(2);
-                return true;
-            });
+        await()
+            .atMost(10, TimeUnit.SECONDS)
+            .untilAsserted(() ->
+                assertThat(primaryChannelCandidateCache.get("targetId")).containsExactlyInAnyOrder("channelId", "channelId2")
+            );
 
         cut
             .handleChannelCandidate(ChannelEvent.builder().channelId("channelId").targetId("targetId").active(false).build())
