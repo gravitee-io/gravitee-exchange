@@ -1,3 +1,10 @@
+## [2.0.2](https://github.com/gravitee-io/gravitee-exchange/compare/2.0.1...2.0.2) (2026-06-04)
+
+
+### Bug Fixes
+
+* handle ';;' inside payloads ([4731ddd](https://github.com/gravitee-io/gravitee-exchange/commit/4731ddd7909f95ccb604ee33d5d75c83042aae46))
+
 ## [2.0.1](https://github.com/gravitee-io/gravitee-exchange/compare/2.0.0...2.0.1) (2026-02-10)
 
 
