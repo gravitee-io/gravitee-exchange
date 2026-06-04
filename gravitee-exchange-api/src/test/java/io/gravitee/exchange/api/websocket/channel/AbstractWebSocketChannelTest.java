@@ -109,6 +109,46 @@ class AbstractWebSocketChannelTest extends AbstractWebSocketTest {
 
     @ParameterizedTest
     @EnumSource(ProtocolVersion.class)
+    void should_send_command_with_separator_in_payload_and_receive_reply(ProtocolVersion protocolVersion) {
+        ProtocolAdapter protocolAdapter = protocolAdapter(protocolVersion);
+        String content = "case x in a) foo ;; b) bar ;; esac";
+        websocketServerHandler =
+            serverWebSocket ->
+                serverWebSocket.binaryMessageHandler(buffer -> {
+                    ProtocolExchange websocketExchange = protocolAdapter.read(buffer);
+                    Command<?> command = websocketExchange.asCommand();
+                    DummyReply reply = new DummyReply(command.getId(), ((DummyCommand) command).getPayload());
+                    serverWebSocket
+                        .writeBinaryMessage(
+                            protocolAdapter.write(
+                                ProtocolExchange
+                                    .builder()
+                                    .type(ProtocolExchange.Type.REPLY)
+                                    .exchangeType(reply.getType())
+                                    .exchange(reply)
+                                    .build()
+                            )
+                        )
+                        .subscribe();
+                });
+        DummyCommand command = new DummyCommand(new DummyPayload(content));
+        rxWebSocket()
+            .<Reply<?>>flatMap(webSocket -> {
+                Channel webSocketChannel = new SimpleWebSocketChannel(List.of(), List.of(), List.of(), vertx, webSocket, protocolAdapter);
+                return webSocketChannel.initialize().andThen(webSocketChannel.send(command));
+            })
+            .test()
+            .awaitDone(10, TimeUnit.SECONDS)
+            .assertValue(reply -> {
+                assertThat(reply).isInstanceOf(DummyReply.class);
+                assertThat(reply.getCommandId()).isEqualTo(command.getId());
+                assertThat(((DummyReply) reply).getPayload().content()).isEqualTo(content);
+                return true;
+            });
+    }
+
+    @ParameterizedTest
+    @EnumSource(ProtocolVersion.class)
     void should_send_command_and_throw_exception_after_timeout(ProtocolVersion protocolVersion) {
         ProtocolAdapter protocolAdapter = protocolAdapter(protocolVersion);
         TestScheduler testScheduler = new TestScheduler();

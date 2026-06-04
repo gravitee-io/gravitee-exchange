@@ -17,4 +17,8 @@ package io.gravitee.exchange.api.websocket.channel.test;
 
 import io.gravitee.exchange.api.command.Payload;
 
-public record DummyPayload() implements Payload {}
+public record DummyPayload(String content) implements Payload {
+    public DummyPayload() {
+        this(null);
+    }
+}
