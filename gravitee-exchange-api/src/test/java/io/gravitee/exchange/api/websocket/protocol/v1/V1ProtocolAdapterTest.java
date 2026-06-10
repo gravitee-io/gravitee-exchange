@@ -23,7 +23,7 @@ import io.gravitee.exchange.api.command.goodbye.GoodByeCommand;
 import io.gravitee.exchange.api.command.goodbye.GoodByeCommandPayload;
 import io.gravitee.exchange.api.websocket.command.DefaultExchangeSerDe;
 import io.gravitee.exchange.api.websocket.protocol.ProtocolExchange;
-import io.vertx.rxjava3.core.buffer.Buffer;
+import io.vertx.core.buffer.Buffer;
 import org.junit.jupiter.api.DisplayNameGeneration;
 import org.junit.jupiter.api.DisplayNameGenerator;
 import org.junit.jupiter.api.Test;

@@ -110,25 +110,23 @@ class AbstractWebSocketChannelTest extends AbstractWebSocketTest {
     void should_send_command_with_separator_in_payload_and_receive_reply(ProtocolVersion protocolVersion) {
         ProtocolAdapter protocolAdapter = protocolAdapter(protocolVersion);
         String content = "case x in a) foo ;; b) bar ;; esac";
-        websocketServerHandler =
-            serverWebSocket ->
-                serverWebSocket.binaryMessageHandler(buffer -> {
-                    ProtocolExchange websocketExchange = protocolAdapter.read(buffer);
-                    Command<?> command = websocketExchange.asCommand();
-                    DummyReply reply = new DummyReply(command.getId(), ((DummyCommand) command).getPayload());
-                    serverWebSocket
-                        .writeBinaryMessage(
-                            protocolAdapter.write(
-                                ProtocolExchange
-                                    .builder()
-                                    .type(ProtocolExchange.Type.REPLY)
-                                    .exchangeType(reply.getType())
-                                    .exchange(reply)
-                                    .build()
-                            )
+        websocketServerHandler = serverWebSocket ->
+            serverWebSocket.binaryMessageHandler(buffer -> {
+                ProtocolExchange websocketExchange = protocolAdapter.read(buffer);
+                Command<?> command = websocketExchange.asCommand();
+                DummyReply reply = new DummyReply(command.getId(), ((DummyCommand) command).getPayload());
+                serverWebSocket
+                    .writeBinaryMessage(
+                        protocolAdapter.write(
+                            ProtocolExchange.builder()
+                                .type(ProtocolExchange.Type.REPLY)
+                                .exchangeType(reply.getType())
+                                .exchange(reply)
+                                .build()
                         )
-                        .subscribe();
-                });
+                    )
+                    .subscribe();
+            });
         DummyCommand command = new DummyCommand(new DummyPayload(content));
         rxWebSocket()
             .<Reply<?>>flatMap(webSocket -> {
