@@ -21,6 +21,7 @@ import io.gravitee.exchange.api.websocket.protocol.ProtocolExchange;
 import io.gravitee.exchange.api.websocket.protocol.ProtocolVersion;
 import io.vertx.core.buffer.Buffer;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 
@@ -59,7 +60,8 @@ public class V1ProtocolAdapter implements ProtocolAdapter {
         ProtocolExchange.Type type = ProtocolExchange.Type.UNKNOWN;
         String exchangeType = null;
         String exchange = null;
-        for (String line : lines) {
+        for (int i = 0; i < lines.length; i++) {
+            final String line = lines[i];
             if (line.startsWith(TYPE_PREFIX)) {
                 try {
                     type = ProtocolExchange.Type.valueOf(extractFrom(line, TYPE_PREFIX));
@@ -69,7 +71,11 @@ public class V1ProtocolAdapter implements ProtocolAdapter {
             } else if (line.startsWith(EXCHANGE_TYPE_PREFIX)) {
                 exchangeType = extractFrom(line, EXCHANGE_TYPE_PREFIX);
             } else if (line.startsWith(EXCHANGE_PREFIX)) {
-                exchange = extractFrom(line, EXCHANGE_PREFIX);
+                // The payload is always the last field; rejoin the remaining segments so a ";;" inside
+                // the payload doesn't truncate the JSON.
+                final String payload = String.join(SEPARATOR, Arrays.copyOfRange(lines, i, lines.length));
+                exchange = extractFrom(payload, EXCHANGE_PREFIX);
+                break;
             }
         }
 
