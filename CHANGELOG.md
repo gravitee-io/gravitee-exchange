@@ -1,3 +1,10 @@
+# [3.0.0-alpha.3](https://github.com/gravitee-io/gravitee-exchange/compare/3.0.0-alpha.2...3.0.0-alpha.3) (2026-06-12)
+
+
+### Bug Fixes
+
+* handle ';;' inside payloads ([45cb040](https://github.com/gravitee-io/gravitee-exchange/commit/45cb040c778c75b1b48181f68fb7e4ddf813821d))
+
 # [3.0.0-alpha.2](https://github.com/gravitee-io/gravitee-exchange/compare/3.0.0-alpha.1...3.0.0-alpha.2) (2026-04-22)
 
 
