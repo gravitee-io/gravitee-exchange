@@ -24,7 +24,7 @@
     <parent>
         <groupId>io.gravitee</groupId>
         <artifactId>gravitee-parent</artifactId>
-        <version>25.0.0-alpha.1</version>
+        <version>25.0.0</version>
     </parent>
 
     <groupId>io.gravitee.exchange</groupId>
@@ -34,9 +34,9 @@
     <packaging>pom</packaging>
 
     <properties>
-        <gravitee-bom.version>9.0.0-alpha.2</gravitee-bom.version>
-        <gravitee-common.version>5.0.0-alpha.1</gravitee-common.version>
-        <gravitee-node.version>9.0.0-alpha.1</gravitee-node.version>
+        <gravitee-bom.version>9.0.0</gravitee-bom.version>
+        <gravitee-common.version>5.0.0</gravitee-common.version>
+        <gravitee-node.version>9.0.0</gravitee-node.version>
 
         <commons-lang3.version>3.20.0</commons-lang3.version>
         <jakarta.annotation-api.version>3.0.0</jakarta.annotation-api.version>
