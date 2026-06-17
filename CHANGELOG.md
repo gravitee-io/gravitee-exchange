@@ -1,3 +1,22 @@
+# [3.0.0](https://github.com/gravitee-io/gravitee-exchange/compare/2.0.2...3.0.0) (2026-06-17)
+
+
+### Bug Fixes
+
+* **connector:** retain WebSocketClient ref to avoid GC-triggered close ([2e58440](https://github.com/gravitee-io/gravitee-exchange/commit/2e584407bd0ee263f9c364c273f2b1f33713e1d8))
+* handle ';;' inside payloads ([6a54b24](https://github.com/gravitee-io/gravitee-exchange/commit/6a54b2498b7d17cbb28466f01e17025b36c54a83))
+
+
+### Features
+
+* bumped AM version to 4.12.0-alpha.1 ([04a140c](https://github.com/gravitee-io/gravitee-exchange/commit/04a140cfda50719c472e587af9a7bab60dd89bfa))
+* migrate to Vert.x 5 and upgrade to JDK 25 ([9cbb442](https://github.com/gravitee-io/gravitee-exchange/commit/9cbb44268c0fcfdb5447fce0ad7ed905bdedb46a))
+
+
+### BREAKING CHANGES
+
+* Vertx5, JDK25
+
 ## [2.0.2](https://github.com/gravitee-io/gravitee-exchange/compare/2.0.1...2.0.2) (2026-06-04)
 
 

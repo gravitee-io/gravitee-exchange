@@ -24,7 +24,7 @@
     <parent>
         <groupId>io.gravitee.exchange</groupId>
         <artifactId>gravitee-exchange-connector</artifactId>
-        <version>2.0.2</version>
+        <version>3.0.0</version>
     </parent>
 
     <artifactId>gravitee-exchange-connector-websocket</artifactId>
