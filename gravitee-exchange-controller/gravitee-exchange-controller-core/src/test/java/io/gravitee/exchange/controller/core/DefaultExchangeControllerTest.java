@@ -36,6 +36,11 @@ import io.gravitee.node.api.cluster.Member;
 import io.gravitee.node.api.cluster.messaging.Queue;
 import io.gravitee.node.api.cluster.messaging.Topic;
 import io.gravitee.node.management.http.endpoint.ManagementEndpointManager;
+import io.reactivex.rxjava3.core.Completable;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayNameGeneration;
 import org.junit.jupiter.api.DisplayNameGenerator;
@@ -52,6 +57,8 @@ import org.springframework.mock.env.MockEnvironment;
 @ExtendWith(MockitoExtension.class)
 @DisplayNameGeneration(DisplayNameGenerator.ReplaceUnderscores.class)
 class DefaultExchangeControllerTest {
+
+    private static final String BATCH_ID = "a-batch-id";
 
     @Mock
     private ClusterManager clusterManager;
@@ -136,5 +143,36 @@ class DefaultExchangeControllerTest {
         verify(managementEndpointManager, times(8)).register(any());
         cut.stop();
         verify(managementEndpointManager, times(8)).unregister(any());
+    }
+
+    @Test
+    void should_emit_the_batch_when_executing_with_an_observer() throws Exception {
+        givenAnInMemoryBatchStore();
+        cut.start();
+
+        try {
+            cut
+                .executeBatchAndObserve(aBatch(), batch -> Completable.complete())
+                .test()
+                .awaitDone(5, TimeUnit.SECONDS)
+                .assertComplete()
+                .assertValue(batch -> BATCH_ID.equals(batch.id()));
+        } finally {
+            cut.stop();
+        }
+    }
+
+    private void givenAnInMemoryBatchStore() {
+        Map<String, Batch> stored = new HashMap<>();
+        lenient()
+            .when(cache.containsKey(anyString()))
+            .thenAnswer(invocation -> stored.containsKey(invocation.getArgument(0)));
+        lenient()
+            .when(cache.put(anyString(), any(Batch.class)))
+            .thenAnswer(invocation -> stored.put(invocation.getArgument(0), invocation.getArgument(1)));
+    }
+
+    private static Batch aBatch() {
+        return Batch.builder().id(BATCH_ID).key("A_BATCH_KEY").targetId("a-target-id").batchCommands(List.of()).build();
     }
 }

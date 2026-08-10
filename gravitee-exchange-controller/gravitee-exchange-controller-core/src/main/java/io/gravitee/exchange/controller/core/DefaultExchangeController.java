@@ -426,8 +426,13 @@ public class DefaultExchangeController extends AbstractService<ExchangeControlle
 
     @Override
     public Completable executeBatch(final Batch batch, final BatchObserver batchObserver) {
+        return executeBatchAndObserve(batch, batchObserver).ignoreElement();
+    }
+
+    @Override
+    public Single<Batch> executeBatchAndObserve(final Batch batch, final BatchObserver batchObserver) {
         return Completable.fromRunnable(() -> this.idBasedBatchObservers.put(batch.id(), batchObserver))
-            .andThen(executeBatch(batch).ignoreElement())
+            .andThen(executeBatch(batch))
             .doOnError(throwable -> this.idBasedBatchObservers.remove(batch.id()));
     }
 

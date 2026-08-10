@@ -18,6 +18,7 @@ package io.gravitee.exchange.controller.core.channel;
 import static io.gravitee.exchange.controller.core.channel.ChannelManager.CHANNEL_EVENTS_QUEUE;
 import static org.assertj.core.api.Assertions.as;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 
 import io.gravitee.exchange.api.command.Command;
 import io.gravitee.exchange.api.command.CommandHandler;
@@ -318,17 +319,14 @@ class ChannelManagerTest {
             .awaitDone(10, TimeUnit.SECONDS);
         assertThat(vertxTestContext.awaitCompletion(10, TimeUnit.SECONDS)).isTrue();
 
-        cut
-            .channelsMetricsForTarget("targetId")
-            .toList()
-            .test()
-            .awaitDone(10, TimeUnit.SECONDS)
-            .assertValue(channelMetrics -> {
-                assertThat(channelMetrics)
+        // the election event is published before the metric is updated, on another scheduler, so the metric is awaited
+        await()
+            .atMost(10, TimeUnit.SECONDS)
+            .untilAsserted(() ->
+                assertThat(cut.channelsMetricsForTarget("targetId").toList().blockingGet())
                     .extracting(ChannelMetric::id, ChannelMetric::active, ChannelMetric::primary)
-                    .containsOnly(Tuple.tuple("channelId", true, true), Tuple.tuple("channelId2", false, false));
-                return true;
-            });
+                    .containsOnly(Tuple.tuple("channelId", true, true), Tuple.tuple("channelId2", false, false))
+            );
     }
 
     @Test

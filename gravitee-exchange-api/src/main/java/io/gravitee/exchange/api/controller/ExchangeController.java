@@ -138,6 +138,14 @@ public interface ExchangeController extends Service<ExchangeController> {
     Completable executeBatch(final Batch batch, final BatchObserver batchObserver);
 
     /**
+     * As {@link ExchangeController#executeBatch(Batch, BatchObserver)} but emits the batch instead of discarding it.
+     * <p>
+     * It is emitted once the first attempt has been replied to, so its commands already carry the outcome of that
+     * attempt. Retries, if any, keep running in the background.
+     */
+    Single<Batch> executeBatchAndObserve(final Batch batch, final BatchObserver batchObserver);
+
+    /**
      * Add a key based {@link BatchObserver} which will be called when any batches with the according key finish
      *
      * @param keyBasedObserver the given will be executed when any batch with the according key finish
