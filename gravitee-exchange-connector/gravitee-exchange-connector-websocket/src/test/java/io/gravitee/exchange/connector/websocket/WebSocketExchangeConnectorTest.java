@@ -26,16 +26,22 @@ import io.gravitee.exchange.api.websocket.protocol.ProtocolVersion;
 import io.gravitee.exchange.connector.websocket.client.WebSocketClientConfiguration;
 import io.gravitee.exchange.connector.websocket.client.WebSocketConnectorClientFactory;
 import io.gravitee.exchange.connector.websocket.exception.WebSocketConnectorException;
+import io.vertx.core.http.WebSocketClient;
+import io.vertx.core.internal.VertxInternal;
 import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.VertxTestContext;
 import io.vertx.rxjava3.core.http.ServerWebSocket;
+import java.lang.reflect.Field;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.env.MockEnvironment;
+import org.springframework.test.util.TestSocketUtils;
 
 /**
  * @author Guillaume LAMIRAND (guillaume.lamirand at graviteesource.com)
@@ -133,5 +139,57 @@ class WebSocketExchangeConnectorTest extends AbstractWebSocketConnectorTest {
         // Close websocket to execute reconnect
         ws.get().close((short) 1001);
         assertThat(testContext.awaitCompletion(10, TimeUnit.SECONDS)).isTrue();
+    }
+
+    @Test
+    void should_reuse_one_websocket_client_across_reconnections() throws Exception {
+        AtomicReference<ServerWebSocket> ws = new AtomicReference<>();
+        AtomicInteger connections = new AtomicInteger();
+        websocketServerHandler = serverWebSocket -> {
+            replyHello(serverWebSocket, protocolAdapter(ProtocolVersion.V1));
+            ws.set(serverWebSocket);
+            connections.incrementAndGet();
+        };
+        long before = registeredWebSocketClients();
+        websocketExchangeConnector.initialize().test().awaitDone(10, TimeUnit.SECONDS).assertComplete();
+
+        for (int i = 2; i <= 4; i++) {
+            ws.get().close((short) 1001);
+            long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10);
+            while (connections.get() < i && System.nanoTime() < deadline) {
+                Thread.sleep(50);
+            }
+            assertThat(connections.get()).isEqualTo(i);
+        }
+
+        assertThat(registeredWebSocketClients() - before).isEqualTo(1);
+        websocketExchangeConnector.close().test().awaitDone(10, TimeUnit.SECONDS).assertComplete();
+    }
+
+    @Test
+    void should_reuse_one_websocket_client_across_failed_connection_attempts() throws Exception {
+        environment.setProperty(
+            "exchange.connector.ws.endpoints[0]",
+            "http://localhost:%s".formatted(TestSocketUtils.findAvailableTcpPort())
+        );
+        long before = registeredWebSocketClients();
+
+        // Backoff starts at 1 s and grows by 1.5: a few seconds cover several failed attempts.
+        websocketExchangeConnector.initialize().test().awaitDone(4, TimeUnit.SECONDS).dispose();
+
+        assertThat(registeredWebSocketClients() - before).isEqualTo(1);
+    }
+
+    /**
+     * Vert.x keeps every client it creates in the private {@code children} map of its owner's close future, and only
+     * releases them when that owner closes. Counting them is the only way to observe from a test that a client is
+     * retained for the whole life of the node rather than released after the call that created it.
+     */
+    private long registeredWebSocketClients() throws Exception {
+        Object closeFuture = ((VertxInternal) vertx.getDelegate()).closeFuture();
+        Field childrenField = closeFuture.getClass().getDeclaredField("children");
+        childrenField.setAccessible(true);
+        Map<?, ?> children = (Map<?, ?>) childrenField.get(closeFuture);
+        return children == null ? 0 : children.keySet().stream().filter(WebSocketClient.class::isInstance).count();
     }
 }
