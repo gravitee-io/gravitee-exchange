@@ -29,6 +29,7 @@ import io.gravitee.exchange.api.websocket.protocol.ProtocolVersion;
 import io.gravitee.exchange.connector.embedded.EmbeddedExchangeConnector;
 import io.gravitee.exchange.connector.websocket.channel.WebSocketConnectorChannel;
 import io.gravitee.exchange.connector.websocket.client.WebSocketConnectorClientFactory;
+import io.gravitee.exchange.connector.websocket.client.WebSocketEndpoint;
 import io.gravitee.exchange.connector.websocket.exception.WebSocketConnectorException;
 import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Maybe;
@@ -40,7 +41,9 @@ import io.vertx.rxjava3.core.http.WebSocket;
 import io.vertx.rxjava3.core.http.WebSocketClient;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import lombok.experimental.SuperBuilder;
 import lombok.extern.slf4j.Slf4j;
@@ -60,7 +63,13 @@ public class WebSocketExchangeConnector extends EmbeddedExchangeConnector {
     private final Vertx vertx;
     private final WebSocketConnectorClientFactory webSocketConnectorClientFactory;
     private final ExchangeSerDe exchangeSerDe;
-    private volatile WebSocketClient webSocketClient;
+
+    /**
+     * Vert.x holds on to every client it creates until the Vert.x instance itself is closed, even after the client is
+     * closed, so a client per connection attempt would accumulate for as long as the node runs. One client per
+     * endpoint is reused across reconnections and closed with the connector.
+     */
+    private final Map<WebSocketEndpoint, WebSocketClient> webSocketClients = new ConcurrentHashMap<>();
 
     public WebSocketExchangeConnector(
         final ProtocolVersion protocolVersion,
@@ -138,51 +147,54 @@ public class WebSocketExchangeConnector extends EmbeddedExchangeConnector {
             .toSingle()
             .flatMap(webSocketEndpoint -> {
                 log.debug("Trying to connect to the Exchange Controller WebSocket '{}'", webSocketEndpoint.getUrl());
-                Completable closePrevious = webSocketClient != null
-                    ? Completable.defer(() -> {
-                        log.debug("Closing previous WebSocketClient before creating a new one (reconnect attempt).");
-                        return webSocketClient.close().onErrorComplete();
-                    })
-                    : Completable.complete();
+                return Single.defer(() -> {
+                    WebSocketClient webSocketClient = webSocketClients.computeIfAbsent(
+                        webSocketEndpoint,
+                        webSocketConnectorClientFactory::createWebSocketClient
+                    );
+                    WebSocketConnectOptions webSocketConnectOptions = new WebSocketConnectOptions()
+                        .setURI(webSocketEndpoint.resolvePath(WebsocketControllerConstants.EXCHANGE_CONTROLLER_PATH))
+                        .addHeader(EXCHANGE_PROTOCOL_HEADER, protocolVersion.version());
 
-                return closePrevious.andThen(
-                    Single.defer(() -> {
-                        webSocketClient = webSocketConnectorClientFactory.createWebSocketClient(webSocketEndpoint);
-                        WebSocketConnectOptions webSocketConnectOptions = new WebSocketConnectOptions()
-                            .setURI(webSocketEndpoint.resolvePath(WebsocketControllerConstants.EXCHANGE_CONTROLLER_PATH))
-                            .addHeader(EXCHANGE_PROTOCOL_HEADER, protocolVersion.version());
-
-                        if (webSocketConnectorClientFactory.getConfiguration().headers() != null) {
-                            webSocketConnectorClientFactory.getConfiguration().headers().forEach(webSocketConnectOptions::addHeader);
-                        }
-                        return webSocketClient
-                            .rxConnect(webSocketConnectOptions)
-                            .doOnSuccess(webSocket -> {
-                                webSocketConnectorClientFactory.resetEndpointRetries();
-                                log.debug("Exchange Connector has successfully connected to the Exchange Controller WebSocket");
-                            })
-                            .onErrorResumeNext(throwable -> {
-                                log.error(
-                                    "Unable to connect to the Exchange Controller Endpoint {} times, retrying...",
-                                    webSocketConnectorClientFactory.endpointRetries(),
-                                    throwable
-                                );
-                                // Force the WebSocket client to close after a defect.
-                                return webSocketClient
-                                    .close()
-                                    .andThen(
-                                        Single.error(
-                                            new WebSocketConnectorException(
-                                                "Unable to connect to Exchange Controller Endpoint",
-                                                throwable,
-                                                true
-                                            )
-                                        )
-                                    );
-                            });
-                    })
-                );
+                    if (webSocketConnectorClientFactory.getConfiguration().headers() != null) {
+                        webSocketConnectorClientFactory.getConfiguration().headers().forEach(webSocketConnectOptions::addHeader);
+                    }
+                    return webSocketClient
+                        .rxConnect(webSocketConnectOptions)
+                        .doOnSuccess(webSocket -> {
+                            webSocketConnectorClientFactory.resetEndpointRetries();
+                            log.debug("Exchange Connector has successfully connected to the Exchange Controller WebSocket");
+                        })
+                        .onErrorResumeNext(throwable -> {
+                            log.error(
+                                "Unable to connect to the Exchange Controller Endpoint {} times, retrying...",
+                                webSocketConnectorClientFactory.endpointRetries(),
+                                throwable
+                            );
+                            return Single.error(
+                                new WebSocketConnectorException("Unable to connect to Exchange Controller Endpoint", throwable, true)
+                            );
+                        });
+                });
             });
+    }
+
+    @Override
+    public Completable close() {
+        return super
+            .close()
+            .andThen(
+                Completable.defer(() -> {
+                    List<WebSocketClient> clients = new ArrayList<>(webSocketClients.values());
+                    webSocketClients.clear();
+                    return Completable.merge(
+                        clients
+                            .stream()
+                            .map(client -> client.close().onErrorComplete())
+                            .toList()
+                    );
+                })
+            );
     }
 
     @Override
