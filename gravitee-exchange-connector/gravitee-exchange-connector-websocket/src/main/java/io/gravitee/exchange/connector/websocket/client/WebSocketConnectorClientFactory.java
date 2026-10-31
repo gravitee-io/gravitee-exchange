@@ -24,6 +24,7 @@ import io.gravitee.node.vertx.client.ssl.jks.JKSKeyStore;
 import io.gravitee.node.vertx.client.ssl.jks.JKSTrustStore;
 import io.gravitee.node.vertx.client.ssl.none.NoneKeyStore;
 import io.gravitee.node.vertx.client.ssl.none.NoneTrustStore;
+import io.gravitee.node.vertx.client.ssl.pem.PEMKeyStore;
 import io.gravitee.node.vertx.client.ssl.pem.PEMTrustStore;
 import io.gravitee.node.vertx.client.ssl.pkcs12.PKCS12KeyStore;
 import io.gravitee.node.vertx.client.ssl.pkcs12.PKCS12TrustStore;
@@ -116,6 +117,10 @@ public class WebSocketConnectorClientFactory {
         try {
             KeyStore keyStore = null;
             switch (KeyStoreType.valueOf(type.toUpperCase())) {
+                case PEM -> keyStore = PEMKeyStore.builder()
+                    .certPath(configuration.keyStoreCertPath())
+                    .keyPath(configuration.keyStoreKeyPath())
+                    .build();
                 case PKCS12 -> keyStore = PKCS12KeyStore.builder().path(path).password(password).build();
                 case JKS -> keyStore = JKSKeyStore.builder().path(path).password(password).build();
                 case NONE -> keyStore = NoneKeyStore.builder().build();
