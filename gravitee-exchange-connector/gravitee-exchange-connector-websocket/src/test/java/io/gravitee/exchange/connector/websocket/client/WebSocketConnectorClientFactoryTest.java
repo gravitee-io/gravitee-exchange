@@ -17,11 +17,13 @@ package io.gravitee.exchange.connector.websocket.client;
 
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
 import com.google.common.io.Resources;
 import io.gravitee.exchange.api.configuration.IdentifyConfiguration;
+import io.gravitee.exchange.connector.websocket.exception.WebSocketConnectorException;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.WebSocketConnectOptions;
 import io.vertx.junit5.VertxExtension;
@@ -313,6 +315,37 @@ class WebSocketConnectorClientFactoryTest {
                 .awaitDone(30, TimeUnit.SECONDS)
                 // TLS+mTLS handshake succeeds but WireMock rejects WebSocket upgrade - not an SSL error
                 .assertError(throwable -> !(throwable.getCause() instanceof SSLHandshakeException));
+        }
+
+        @Test
+        void should_connect_with_pem_keystore() {
+            environment
+                .withProperty("exchange.connector.ws.ssl.truststore.type", "JKS")
+                .withProperty("exchange.connector.ws.ssl.truststore.path", toPath("truststore.jks"))
+                .withProperty("exchange.connector.ws.ssl.truststore.password", "password")
+                .withProperty("exchange.connector.ws.ssl.keystore.type", "PEM")
+                .withProperty("exchange.connector.ws.ssl.keystore.certPath", toPath("keystore-cert.pem"))
+                .withProperty("exchange.connector.ws.ssl.keystore.keyPath", toPath("keystore-key.pem"));
+            WebSocketClient webSocketClient = cut.createWebSocketClient(webSocketEndpoint);
+            assertThat(webSocketClient).isNotNull();
+            webSocketClient
+                .rxConnect(
+                    new WebSocketConnectOptions().setHost("localhost").setPort(wireMockServer.httpsPort()).setURI("/test").setSsl(true)
+                )
+                .test()
+                .awaitDone(30, TimeUnit.SECONDS)
+                // TLS+mTLS handshake succeeds but WireMock rejects WebSocket upgrade - not an SSL error
+                .assertError(throwable -> !(throwable.getCause() instanceof SSLHandshakeException));
+        }
+
+        @Test
+        void should_fail_to_create_client_with_pem_keystore_without_key() {
+            environment
+                .withProperty("exchange.connector.ws.ssl.keystore.type", "PEM")
+                .withProperty("exchange.connector.ws.ssl.keystore.certPath", toPath("keystore-cert.pem"));
+            assertThatThrownBy(() -> cut.createWebSocketClient(webSocketEndpoint))
+                .isInstanceOf(WebSocketConnectorException.class)
+                .hasMessage("Missing PEM key value");
         }
     }
 

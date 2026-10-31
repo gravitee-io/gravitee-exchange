@@ -42,6 +42,8 @@ public class WebSocketClientConfiguration {
     public static final String KEYSTORE_TYPE_KEY = "connector.ws.ssl.keystore.type";
     public static final String KEYSTORE_PATH_KEY = "connector.ws.ssl.keystore.path";
     public static final String KEYSTORE_PASSWORD_KEY = "connector.ws.ssl.keystore.password";
+    public static final String KEYSTORE_CERT_PATH_KEY = "connector.ws.ssl.keystore.certPath";
+    public static final String KEYSTORE_KEY_PATH_KEY = "connector.ws.ssl.keystore.keyPath";
     public static final String TRUSTSTORE_TYPE_KEY = "connector.ws.ssl.truststore.type";
     public static final String TRUSTSTORE_PATH_KEY = "connector.ws.ssl.truststore.path";
     public static final String TRUSTSTORE_CONTENT_KEY = "connector.ws.ssl.truststore.content";
@@ -112,6 +114,14 @@ public class WebSocketClientConfiguration {
 
     public String keyStorePassword() {
         return identifyConfiguration.getProperty(KEYSTORE_PASSWORD_KEY);
+    }
+
+    public String keyStoreCertPath() {
+        return identifyConfiguration.getProperty(KEYSTORE_CERT_PATH_KEY);
+    }
+
+    public String keyStoreKeyPath() {
+        return identifyConfiguration.getProperty(KEYSTORE_KEY_PATH_KEY);
     }
 
     public String trustStoreType() {

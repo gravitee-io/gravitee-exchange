@@ -129,6 +129,28 @@ class WebSocketClientConfigurationTest {
         }
 
         @Test
+        void should_return_key_store_cert_path() {
+            environment.withProperty("%s.connector.ws.ssl.keystore.certPath".formatted(prefix), "/cert.pem");
+            assertThat(cut.keyStoreCertPath()).isEqualTo("/cert.pem");
+        }
+
+        @Test
+        void should_return_null_key_store_cert_path_without_configuration() {
+            assertThat(cut.keyStoreCertPath()).isNull();
+        }
+
+        @Test
+        void should_return_key_store_key_path() {
+            environment.withProperty("%s.connector.ws.ssl.keystore.keyPath".formatted(prefix), "/key.pem");
+            assertThat(cut.keyStoreKeyPath()).isEqualTo("/key.pem");
+        }
+
+        @Test
+        void should_return_null_key_store_key_path_without_configuration() {
+            assertThat(cut.keyStoreKeyPath()).isNull();
+        }
+
+        @Test
         void should_return_trust_store_type() {
             environment.withProperty("%s.connector.ws.ssl.truststore.type".formatted(prefix), "PEM");
             assertThat(cut.trustStoreType()).isEqualTo("PEM");
