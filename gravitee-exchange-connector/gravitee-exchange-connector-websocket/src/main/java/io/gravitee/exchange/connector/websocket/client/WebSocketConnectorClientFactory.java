@@ -27,11 +27,13 @@ import io.gravitee.node.vertx.client.ssl.none.NoneTrustStore;
 import io.gravitee.node.vertx.client.ssl.pem.PEMTrustStore;
 import io.gravitee.node.vertx.client.ssl.pkcs12.PKCS12KeyStore;
 import io.gravitee.node.vertx.client.ssl.pkcs12.PKCS12TrustStore;
+import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.WebSocketClientOptions;
 import io.vertx.core.net.*;
 import io.vertx.rxjava3.core.Vertx;
 import io.vertx.rxjava3.core.http.WebSocketClient;
 import java.net.URL;
+import java.util.Base64;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -148,11 +150,34 @@ public class WebSocketConnectorClientFactory {
             return;
         }
 
+        // gravitee-node has no BCFKS truststore type either
+        if (BCFKS_STORE_TYPE.equalsIgnoreCase(configuration.trustStoreType())) {
+            options.setTrustOptions(createBcfksTrustStore());
+            return;
+        }
+
         try {
             createTrustStore().flatMap(TrustStore::trustOptions).ifPresent(options::setTrustOptions);
         } catch (TrustStore.TrustOptionsException e) {
             throw new WebSocketConnectorException(e.getMessage(), false);
         }
+    }
+
+    private KeyStoreOptions createBcfksTrustStore() {
+        KeyStoreOptions trustOptions = new KeyStoreOptions()
+            .setType(BCFKS_STORE_TYPE)
+            .setPassword(configuration.trustStorePassword())
+            .setAlias(configuration.trustStoreAlias());
+        String path = configuration.trustStorePath();
+        String content = configuration.trustStoreContent();
+
+        if (path != null && !path.isEmpty()) {
+            return trustOptions.setPath(path);
+        }
+        if (content != null && !content.isEmpty()) {
+            return trustOptions.setValue(Buffer.buffer(Base64.getDecoder().decode(content)));
+        }
+        throw new WebSocketConnectorException("Missing BCFKS truststore value", false);
     }
 
     private Optional<TrustStore> createTrustStore() {
