@@ -259,6 +259,54 @@ class WebSocketConnectorClientFactoryTest {
                 // TLS handshake succeeds but WireMock rejects WebSocket upgrade - not an SSL error
                 .assertError(throwable -> !(throwable.getCause() instanceof SSLHandshakeException));
         }
+
+        @Test
+        void should_connect_with_bcfks_trust_store() {
+            environment
+                .withProperty("exchange.connector.ws.ssl.truststore.type", "bcfks")
+                .withProperty("exchange.connector.ws.ssl.truststore.path", toPath("truststore.bcfks"))
+                .withProperty("exchange.connector.ws.ssl.truststore.password", "password");
+            WebSocketClient webSocketClient = cut.createWebSocketClient(webSocketEndpoint);
+            assertThat(webSocketClient).isNotNull();
+            webSocketClient
+                .rxConnect(
+                    new WebSocketConnectOptions().setHost("localhost").setPort(wireMockServer.httpsPort()).setURI("/test").setSsl(true)
+                )
+                .test()
+                .awaitDone(30, TimeUnit.SECONDS)
+                .assertError(WebSocketConnectorClientFactoryTest::isUpgradeRejected);
+        }
+
+        @Test
+        void should_connect_with_bcfks_trust_store_content_as_base64() throws Exception {
+            File truststoreFile = new File(Resources.getResource("truststore.bcfks").toURI());
+            String base64Content = Base64.getEncoder().encodeToString(Files.readAllBytes(truststoreFile.toPath()));
+
+            environment
+                .withProperty("exchange.connector.ws.ssl.truststore.type", "bcfks")
+                .withProperty("exchange.connector.ws.ssl.truststore.content", base64Content)
+                .withProperty("exchange.connector.ws.ssl.truststore.password", "password");
+
+            WebSocketClient webSocketClient = cut.createWebSocketClient(webSocketEndpoint);
+            assertThat(webSocketClient).isNotNull();
+            webSocketClient
+                .rxConnect(
+                    new WebSocketConnectOptions().setHost("localhost").setPort(wireMockServer.httpsPort()).setURI("/test").setSsl(true)
+                )
+                .test()
+                .awaitDone(30, TimeUnit.SECONDS)
+                .assertError(WebSocketConnectorClientFactoryTest::isUpgradeRejected);
+        }
+
+        @Test
+        void should_fail_to_create_client_with_bcfks_trust_store_without_value() {
+            environment
+                .withProperty("exchange.connector.ws.ssl.truststore.type", "bcfks")
+                .withProperty("exchange.connector.ws.ssl.truststore.password", "password");
+            assertThatThrownBy(() -> cut.createWebSocketClient(webSocketEndpoint))
+                .isInstanceOf(WebSocketConnectorException.class)
+                .hasMessage("Missing BCFKS truststore value");
+        }
     }
 
     @Nested
