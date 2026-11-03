@@ -1,3 +1,11 @@
+# [3.1.0](https://github.com/gravitee-io/gravitee-exchange/compare/3.0.1...3.1.0) (2026-11-03)
+
+
+### Features
+
+* **connector:** accept a BCFKS keystore ([a38879a](https://github.com/gravitee-io/gravitee-exchange/commit/a38879a2738f3ebc164abc6397cb9e19942a0d13))
+* **connector:** accept a BCFKS truststore ([0f57740](https://github.com/gravitee-io/gravitee-exchange/commit/0f5774091db88d76e52fcce275cd79df5267b676))
+
 ## [3.0.1](https://github.com/gravitee-io/gravitee-exchange/compare/3.0.0...3.0.1) (2026-10-21)
 
 
