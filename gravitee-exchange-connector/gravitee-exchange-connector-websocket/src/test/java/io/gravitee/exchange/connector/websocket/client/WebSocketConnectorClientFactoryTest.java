@@ -34,7 +34,6 @@ import java.nio.file.Files;
 import java.security.Security;
 import java.util.Base64;
 import java.util.concurrent.TimeUnit;
-import javax.net.ssl.SSLHandshakeException;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -155,8 +154,7 @@ class WebSocketConnectorClientFactoryTest {
                 .rxConnect(new WebSocketConnectOptions().setHost("localhost").setPort(wireMockServer.port()).setURI("/test"))
                 .test()
                 .awaitDone(30, TimeUnit.SECONDS)
-                // WireMock doesn't support WebSocket, so we expect a connection error (not SSL)
-                .assertError(throwable -> !(throwable.getCause() instanceof SSLHandshakeException));
+                .assertError(WebSocketConnectorClientFactoryTest::isUpgradeRejected);
         }
     }
 
@@ -214,8 +212,7 @@ class WebSocketConnectorClientFactoryTest {
                 )
                 .test()
                 .awaitDone(30, TimeUnit.SECONDS)
-                // TLS handshake succeeds but WireMock rejects WebSocket upgrade - not an SSL error
-                .assertError(throwable -> !(throwable.getCause() instanceof SSLHandshakeException));
+                .assertError(WebSocketConnectorClientFactoryTest::isUpgradeRejected);
         }
 
         @Test
@@ -232,8 +229,7 @@ class WebSocketConnectorClientFactoryTest {
                 )
                 .test()
                 .awaitDone(30, TimeUnit.SECONDS)
-                // TLS handshake succeeds but WireMock rejects WebSocket upgrade - not an SSL error
-                .assertError(throwable -> !(throwable.getCause() instanceof SSLHandshakeException));
+                .assertError(WebSocketConnectorClientFactoryTest::isUpgradeRejected);
         }
 
         @Test
@@ -256,8 +252,7 @@ class WebSocketConnectorClientFactoryTest {
                 )
                 .test()
                 .awaitDone(30, TimeUnit.SECONDS)
-                // TLS handshake succeeds but WireMock rejects WebSocket upgrade - not an SSL error
-                .assertError(throwable -> !(throwable.getCause() instanceof SSLHandshakeException));
+                .assertError(WebSocketConnectorClientFactoryTest::isUpgradeRejected);
         }
 
         @Test
@@ -375,8 +370,7 @@ class WebSocketConnectorClientFactoryTest {
                 )
                 .test()
                 .awaitDone(30, TimeUnit.SECONDS)
-                // TLS+mTLS handshake succeeds but WireMock rejects WebSocket upgrade - not an SSL error
-                .assertError(throwable -> !(throwable.getCause() instanceof SSLHandshakeException));
+                .assertError(WebSocketConnectorClientFactoryTest::isUpgradeRejected);
         }
 
         @Test
