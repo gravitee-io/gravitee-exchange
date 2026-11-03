@@ -17,20 +17,25 @@ package io.gravitee.exchange.connector.websocket.client;
 
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
 import com.google.common.io.Resources;
 import io.gravitee.exchange.api.configuration.IdentifyConfiguration;
+import io.gravitee.exchange.connector.websocket.exception.WebSocketConnectorException;
 import io.vertx.core.Vertx;
+import io.vertx.core.http.UpgradeRejectedException;
 import io.vertx.core.http.WebSocketConnectOptions;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.rxjava3.core.http.WebSocketClient;
 import java.io.File;
 import java.nio.file.Files;
+import java.security.Security;
 import java.util.Base64;
 import java.util.concurrent.TimeUnit;
 import javax.net.ssl.SSLHandshakeException;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -53,6 +58,17 @@ class WebSocketConnectorClientFactoryTest {
     private MockEnvironment environment;
     private WebSocketClientConfiguration webSocketClientConfiguration;
     private WebSocketConnectorClientFactory cut;
+
+    @BeforeAll
+    static void registerBcfksProvider() {
+        // Stands in for BC-FIPS, the BCFKS provider of FIPS JVMs
+        Security.addProvider(new BouncyCastleProvider());
+    }
+
+    @AfterAll
+    static void unregisterBcfksProvider() {
+        Security.removeProvider(BouncyCastleProvider.PROVIDER_NAME);
+    }
 
     @BeforeEach
     public void beforeEach(Vertx vertx) {
@@ -314,6 +330,36 @@ class WebSocketConnectorClientFactoryTest {
                 // TLS+mTLS handshake succeeds but WireMock rejects WebSocket upgrade - not an SSL error
                 .assertError(throwable -> !(throwable.getCause() instanceof SSLHandshakeException));
         }
+
+        @Test
+        void should_connect_with_bcfks_keystore() {
+            environment
+                .withProperty("exchange.connector.ws.ssl.truststore.type", "JKS")
+                .withProperty("exchange.connector.ws.ssl.truststore.path", toPath("truststore.jks"))
+                .withProperty("exchange.connector.ws.ssl.truststore.password", "password")
+                .withProperty("exchange.connector.ws.ssl.keystore.type", "bcfks")
+                .withProperty("exchange.connector.ws.ssl.keystore.path", toPath("keystore.bcfks"))
+                .withProperty("exchange.connector.ws.ssl.keystore.password", "password");
+            WebSocketClient webSocketClient = cut.createWebSocketClient(webSocketEndpoint);
+            assertThat(webSocketClient).isNotNull();
+            webSocketClient
+                .rxConnect(
+                    new WebSocketConnectOptions().setHost("localhost").setPort(wireMockServer.httpsPort()).setURI("/test").setSsl(true)
+                )
+                .test()
+                .awaitDone(30, TimeUnit.SECONDS)
+                .assertError(WebSocketConnectorClientFactoryTest::isUpgradeRejected);
+        }
+
+        @Test
+        void should_fail_to_create_client_with_bcfks_keystore_without_path() {
+            environment
+                .withProperty("exchange.connector.ws.ssl.keystore.type", "bcfks")
+                .withProperty("exchange.connector.ws.ssl.keystore.password", "password");
+            assertThatThrownBy(() -> cut.createWebSocketClient(webSocketEndpoint))
+                .isInstanceOf(WebSocketConnectorException.class)
+                .hasMessage("Missing BCFKS keystore path");
+        }
     }
 
     @Nested
@@ -376,6 +422,13 @@ class WebSocketConnectorClientFactoryTest {
                 // Proxy routes the connection (TCP succeeds) but WireMock rejects WebSocket upgrade
                 .assertError(throwable -> !(throwable instanceof java.net.ConnectException));
         }
+    }
+
+    /**
+     * WireMock does not support WebSocket and answers the upgrade with a 404: getting that response proves the TCP and TLS handshakes succeeded.
+     */
+    private static boolean isUpgradeRejected(Throwable throwable) {
+        return throwable instanceof UpgradeRejectedException rejected && rejected.getStatus() == 404;
     }
 
     private static String toPath(String resourcePath) {

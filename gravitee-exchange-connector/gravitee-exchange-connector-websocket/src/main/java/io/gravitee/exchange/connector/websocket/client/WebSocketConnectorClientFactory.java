@@ -47,6 +47,8 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class WebSocketConnectorClientFactory {
 
+    private static final String BCFKS_STORE_TYPE = "BCFKS";
+
     private final AtomicInteger counter = new AtomicInteger(0);
     private final Vertx vertx;
 
@@ -101,11 +103,25 @@ public class WebSocketConnectorClientFactory {
             return;
         }
 
+        // gravitee-node has no BCFKS keystore type, yet it is the only one BC-FIPS approved-only mode loads with a private key
+        if (BCFKS_STORE_TYPE.equalsIgnoreCase(configuration.keyStoreType())) {
+            options.setKeyCertOptions(createBcfksKeyStore());
+            return;
+        }
+
         try {
             createKeystore().flatMap(KeyStore::keyCertOptions).ifPresent(options::setKeyCertOptions);
         } catch (KeyStore.KeyStoreCertOptionsException e) {
             throw new WebSocketConnectorException(e.getMessage(), false);
         }
+    }
+
+    private KeyStoreOptions createBcfksKeyStore() {
+        String path = configuration.keyStorePath();
+        if (path == null || path.isEmpty()) {
+            throw new WebSocketConnectorException("Missing BCFKS keystore path", false);
+        }
+        return new KeyStoreOptions().setType(BCFKS_STORE_TYPE).setPath(path).setPassword(configuration.keyStorePassword());
     }
 
     private Optional<KeyStore> createKeystore() {
